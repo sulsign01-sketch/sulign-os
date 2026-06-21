@@ -76,7 +76,17 @@ tr:hover td{background:var(--g100)}
     <div class="sec-title">Repasse por Fornecedor</div>
     <div id="forn-wrap"><div class="loading">Carregando...</div></div>
   </div>
-  <div class="foot">Custo orçado/venda vêm do orçamento (memorial × BDI). Custo realizado soma "Fechado" das compras + lançamentos avulsos vinculados ao número do orçamento. Margem realizada = Venda − Custo Realizado. Repasse por fornecedor soma compras + lançamentos por fornecedor, categoria e job — base para conferência e pagamento (ex: PDVEX).</div>
+  <div class="sec">
+    <div class="sec-title">Despesas Fixas da Empresa</div>
+    <div class="kpis" style="margin:0 0 14px 0;">
+      <div class="kpi"><div class="kpi-l">Receitas (aportes etc.)</div><div class="kpi-v green" id="kf-receita">—</div></div>
+      <div class="kpi"><div class="kpi-l">Despesas Realizadas</div><div class="kpi-v" id="kf-despesa">—</div></div>
+      <div class="kpi"><div class="kpi-l">Pendente</div><div class="kpi-v" id="kf-pendente">—</div></div>
+      <div class="kpi"><div class="kpi-l">Saldo</div><div class="kpi-v" id="kf-saldo">—</div></div>
+    </div>
+    <div id="fixas-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+  <div class="foot">Custo orçado/venda vêm do orçamento (memorial × BDI). Custo realizado soma "Fechado" das compras + lançamentos avulsos vinculados ao número do orçamento. Margem realizada = Venda − Custo Realizado. Repasse por fornecedor soma compras + lançamentos por fornecedor, categoria e job — base para conferência e pagamento (ex: PDVEX). Despesas fixas são custos/receitas da empresa sem vínculo a um job específico (impostos, contador, aportes de sócio).</div>
 </div>
 
 <script>
@@ -183,22 +193,60 @@ function renderRepasse(rows){
   wrap.innerHTML=html;
 }
 
+function renderFixas(rows){
+  var wrap=document.getElementById('fixas-wrap');
+  var kReceita=0,kDespesaR=0,kPendente=0;
+  rows.forEach(function(d){
+    var v=parseFloat(d.valor)||0;
+    if(d.tipo==='Receita')kReceita+=v;
+    else if(d.status==='Pendente')kPendente+=v;
+    else kDespesaR+=v;
+  });
+  document.getElementById('kf-receita').textContent=fmt(kReceita);
+  document.getElementById('kf-despesa').textContent=fmt(kDespesaR);
+  document.getElementById('kf-pendente').textContent=fmt(kPendente);
+  var saldoEl=document.getElementById('kf-saldo');
+  var saldo=kReceita-kDespesaR;
+  saldoEl.textContent=fmt(saldo);
+  saldoEl.className='kpi-v '+(saldo>=0?'green':'red');
+
+  if(!rows.length){wrap.innerHTML='<div class="loading">Nenhuma despesa fixa lançada ainda.</div>';return;}
+  var html='<table><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Status</th><th class="n">Valor</th></tr></thead><tbody>';
+  rows.forEach(function(d){
+    var dt=d.data?new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+    var sinal=d.tipo==='Receita'?'pos':'neg';
+    html+='<tr>'
+      +'<td>'+dt+'</td>'
+      +'<td>'+(d.categoria||'—')+(d.subcategoria?' · '+d.subcategoria:'')+'</td>'
+      +'<td>'+(d.descricao||'—')+'</td>'
+      +'<td>'+(d.status==='Pendente'?'<span class="badge and">pendente</span>':'<span class="badge fec">realizado</span>')+'</td>'
+      +'<td class="n '+sinal+'">'+(d.tipo==='Receita'?'+ ':'− ')+fmt(d.valor)+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
 async function carregar(){
   var wrap=document.getElementById('tbl-wrap');
   try{
-    var [rOrc, rOs, rLanc] = await Promise.all([
+    var [rOrc, rOs, rLanc, rFixas] = await Promise.all([
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
-      fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}})
+      fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
+      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=data.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}})
     ]);
     if(!rOrc.ok)throw new Error('Erro orçamentos: HTTP '+rOrc.status);
     if(!rOs.ok)throw new Error('Erro OS: HTTP '+rOs.status);
     if(!rLanc.ok)throw new Error('Erro lançamentos: HTTP '+rLanc.status);
+    if(!rFixas.ok)throw new Error('Erro despesas fixas: HTTP '+rFixas.status);
     var orcamentos=await rOrc.json();
     var todasOs=await rOs.json();
     var todosLanc=await rLanc.json();
+    var todasFixas=await rFixas.json();
 
     renderRepasse(montarRepasse(todasOs, todosLanc));
+    renderFixas(todasFixas);
 
     var kVendaTotal=0, kCustoRealTotal=0, kMargemTotal=0;
 
