@@ -62,6 +62,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   <div class="tabs">
     <div class="tab active" id="tab-novo" onclick="setTab('novo')">+ Novo</div>
     <div class="tab" id="tab-lista" onclick="setTab('lista')">Lançamentos</div>
+    <div class="tab" id="tab-fixas" onclick="setTab('fixas')">Despesas Fixas</div>
   </div>
 
   <div id="view-novo" class="sec">
@@ -116,6 +117,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <label>Comprovante (foto, opcional)</label>
       <input type="file" id="f-comprovante" accept="image/*" capture="environment">
     </div>
+    <div class="fl" style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="f-tem-nota" checked style="width:auto;">
+      <label style="margin:0;text-transform:none;font-size:12px;color:#333;">Possui nota fiscal</label>
+    </div>
     <button class="btn" id="btn-salvar" onclick="salvarLancamento()">Salvar Lançamento</button>
     <div class="status" id="status">—</div>
   </div>
@@ -126,6 +131,79 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
     <div class="totbar"><span>Total filtrado</span><b id="filt-total">R$ 0,00</b></div>
     <div id="lista-body"><div class="empty">Carregando...</div></div>
+  </div>
+
+  <div id="view-fixas" class="sec" style="display:none;">
+    <div class="row2">
+      <div class="fl">
+        <label>Tipo</label>
+        <select id="ff-tipo">
+          <option value="Despesa">Despesa</option>
+          <option value="Receita">Receita</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Data</label>
+        <input type="date" id="ff-data">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Categoria</label>
+        <select id="ff-categoria">
+          <option>Impostos</option>
+          <option>Serviços</option>
+          <option>Aporte de Sócio</option>
+          <option>Aluguel</option>
+          <option>Energia</option>
+          <option>Água</option>
+          <option>Internet</option>
+          <option>Software</option>
+          <option>Manutenção</option>
+          <option>Transporte</option>
+          <option>Seguro</option>
+          <option>Outros</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Subcategoria</label>
+        <input type="text" id="ff-subcategoria" placeholder="Ex: Receita Federal">
+      </div>
+    </div>
+    <div class="fl">
+      <label>Descrição</label>
+      <input type="text" id="ff-descricao" placeholder="Ex: DARF parcela 05/05">
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Valor (R$)</label>
+        <input type="number" id="ff-valor" step="0.01" placeholder="0,00">
+      </div>
+      <div class="fl">
+        <label>Forma de Pagamento</label>
+        <input type="text" id="ff-forma" placeholder="Ex: PIX, C6Bank">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Status</label>
+        <select id="ff-status">
+          <option>Realizado</option>
+          <option>Pendente</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Mês Ref.</label>
+        <input type="text" id="ff-mes" placeholder="Ex: Jun/2026">
+      </div>
+    </div>
+    <button class="btn" id="btn-salvar-fixa" onclick="salvarDespesaFixa()">Salvar</button>
+    <div class="status" id="status-fixa">—</div>
+
+    <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;">
+      <div class="totbar" style="margin:0 -20px 10px -20px;"><span>Saldo (Receitas − Despesas)</span><b id="fixa-saldo">R$ 0,00</b></div>
+      <div id="fixas-lista-body"><div class="empty">Carregando...</div></div>
+    </div>
   </div>
 </div>
 
@@ -142,9 +220,12 @@ function fmt(v){return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currenc
 function setTab(t){
   document.getElementById('tab-novo').classList.toggle('active',t==='novo');
   document.getElementById('tab-lista').classList.toggle('active',t==='lista');
+  document.getElementById('tab-fixas').classList.toggle('active',t==='fixas');
   document.getElementById('view-novo').style.display=t==='novo'?'block':'none';
   document.getElementById('view-lista').style.display=t==='lista'?'block':'none';
+  document.getElementById('view-fixas').style.display=t==='fixas'?'block':'none';
   if(t==='lista')carregarLancamentos();
+  if(t==='fixas')carregarDespesasFixas();
 }
 
 // localStorage autocomplete helpers (últimos 8)
@@ -248,11 +329,12 @@ async function salvarLancamento(){
 
   processarComprovante(async function(comprovanteB64){
     try{
+      var temNota=document.getElementById('f-tem-nota').checked;
       var payload={
         orcamento_numero:jobSelecionado.numero,
         pessoa:pessoa,funcao:funcao,categoria:categoria,
         data:data,fornecedor:fornecedor,descricao:descricao,valor:valor,
-        comprovante:comprovanteB64
+        comprovante:comprovanteB64,tem_nota:temNota
       };
       var r=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
         method:'POST',
@@ -268,6 +350,7 @@ async function salvarLancamento(){
       document.getElementById('f-descricao').value='';
       document.getElementById('f-valor').value='';
       fileInput.value='';
+      document.getElementById('f-tem-nota').checked=true;
     }catch(e){
       setStatus('✗ Erro: '+e.message,'err');
     }finally{
@@ -303,8 +386,9 @@ function renderLista(){
   filtrados.forEach(function(l){
     var div=document.createElement('div');div.className='list-item';
     var dt=l.data?new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+    var semNota = (l.tem_nota===false);
     div.innerHTML='<div>'
-      +'<div class="li-desc"><strong>'+l.orcamento_numero+'</strong> · '+(l.categoria||'—')+' · '+l.descricao+'</div>'
+      +'<div class="li-desc"><strong>'+l.orcamento_numero+'</strong> · '+(l.categoria||'—')+' · '+l.descricao+(semNota?' <span style="color:#c62828;font-weight:600;font-size:10px;border:1px solid #c62828;border-radius:2px;padding:1px 5px;">SEM NOTA</span>':'')+'</div>'
       +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · forn: '+l.fornecedor:'')+'</div>'
       +'</div>'
       +'<div style="text-align:right;"><span class="li-val">'+fmt(l.valor)+'</span><br><span class="li-del" data-id="'+l.id+'">remover</span></div>';
@@ -318,6 +402,97 @@ async function deletarLancamento(id,el){
   await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
   lancamentosCache=lancamentosCache.filter(function(l){return l.id!==id;});
   renderLista();
+}
+
+document.getElementById('ff-data').valueAsDate=new Date();
+var despesasFixasCache=[];
+
+function setStatusFixa(msg,cls){
+  var el=document.getElementById('status-fixa');
+  el.textContent=msg;el.className='status'+(cls?' '+cls:'');
+}
+
+async function salvarDespesaFixa(){
+  var tipo=document.getElementById('ff-tipo').value;
+  var data=document.getElementById('ff-data').value;
+  var categoria=document.getElementById('ff-categoria').value;
+  var subcategoria=document.getElementById('ff-subcategoria').value.trim();
+  var descricao=document.getElementById('ff-descricao').value.trim();
+  var valor=parseFloat(document.getElementById('ff-valor').value)||0;
+  var forma=document.getElementById('ff-forma').value.trim();
+  var status=document.getElementById('ff-status').value;
+  var mes=document.getElementById('ff-mes').value.trim();
+
+  if(!descricao){setStatusFixa('✗ Descreva o lançamento','err');return;}
+  if(!valor){setStatusFixa('✗ Informe o valor','err');return;}
+
+  var btn=document.getElementById('btn-salvar-fixa');
+  btn.disabled=true;setStatusFixa('Salvando...','');
+  try{
+    var payload={tipo:tipo,data:data,categoria:categoria,subcategoria:subcategoria,descricao:descricao,valor:valor,forma_pgto:forma,status:status,mes_ref:mes};
+    var r=await fetch(SUPA_URL+'/rest/v1/despesas_fixas',{
+      method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' — '+t);}
+    setStatusFixa('✓ Salvo — '+new Date().toLocaleTimeString('pt-BR'),'ok');
+    document.getElementById('ff-descricao').value='';
+    document.getElementById('ff-valor').value='';
+    document.getElementById('ff-subcategoria').value='';
+    document.getElementById('ff-forma').value='';
+    carregarDespesasFixas();
+  }catch(e){
+    setStatusFixa('✗ Erro: '+e.message,'err');
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+async function carregarDespesasFixas(){
+  var body=document.getElementById('fixas-lista-body');
+  body.innerHTML='<div class="empty">Carregando...</div>';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=data.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    despesasFixasCache=await r.json();
+    renderDespesasFixas();
+  }catch(e){
+    body.innerHTML='<div class="empty">Erro: '+e.message+'</div>';
+  }
+}
+
+function renderDespesasFixas(){
+  var body=document.getElementById('fixas-lista-body');
+  var saldo=despesasFixasCache.reduce(function(a,d){
+    var v=parseFloat(d.valor)||0;
+    return a+(d.tipo==='Receita'?v:-v);
+  },0);
+  var saldoEl=document.getElementById('fixa-saldo');
+  saldoEl.textContent=fmt(saldo);
+
+  if(!despesasFixasCache.length){body.innerHTML='<div class="empty">Nenhuma despesa fixa lançada ainda.</div>';return;}
+  body.innerHTML='';
+  despesasFixasCache.forEach(function(d){
+    var div=document.createElement('div');div.className='list-item';
+    var dt=d.data?new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+    var sinal=d.tipo==='Receita'?'+ ':'− ';
+    div.innerHTML='<div>'
+      +'<div class="li-desc"><strong>'+(d.categoria||'—')+'</strong>'+(d.subcategoria?' · '+d.subcategoria:'')+' · '+d.descricao+(d.status==='Pendente'?' <span style="color:#8a6d00;font-weight:600;font-size:10px;border:1px solid #ffc107;border-radius:2px;padding:1px 5px;">PENDENTE</span>':'')+'</div>'
+      +'<div class="li-meta">'+dt+(d.mes_ref?' · '+d.mes_ref:'')+(d.forma_pgto?' · '+d.forma_pgto:'')+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;"><span class="li-val" style="color:'+(d.tipo==='Receita'?'#2d6a4f':'#c62828')+';">'+sinal+fmt(d.valor)+'</span><br><span class="li-del" data-id="'+d.id+'">remover</span></div>';
+    div.querySelector('.li-del').onclick=function(){deletarDespesaFixa(d.id);};
+    body.appendChild(div);
+  });
+}
+
+async function deletarDespesaFixa(id){
+  if(!confirm('Remover este lançamento fixo?'))return;
+  await fetch(SUPA_URL+'/rest/v1/despesas_fixas?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  despesasFixasCache=despesasFixasCache.filter(function(d){return d.id!==id;});
+  renderDespesasFixas();
 }
 </script>
 </body>
