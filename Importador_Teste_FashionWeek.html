@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sul Sign · Importador Teste — Fashion Week</title>
+<style>
+:root{--black:#0f0f0f;--green:#2d6a4f;--ga:#52b788;--g100:#f5f5f5;--g200:#e8e8e8;--g600:#5a5a5a;--white:#fff;--red:#c62828}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:var(--g100);padding:0}
+.page{max-width:600px;margin:24px auto;background:var(--white);box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.hd{background:var(--black);padding:18px 24px}
+.hd-tipo{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#9e9e9e;margin-bottom:4px}
+.hd-tit{font-size:15px;font-weight:600;color:var(--white)}
+.ab{height:3px;background:var(--ga)}
+.body{padding:20px 24px}
+.item{border:1px solid var(--g200);border-radius:3px;padding:12px 14px;margin-bottom:10px;font-size:12px}
+.btn{padding:11px 18px;font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;background:var(--ga);color:var(--white);border:none;border-radius:2px;cursor:pointer;width:100%;margin-top:10px}
+.btn:hover{background:var(--green)}
+.btn:disabled{background:var(--g200);color:var(--g600)}
+.status{font-size:12px;margin-top:10px;text-align:center;color:var(--g600)}
+.status.ok{color:var(--green);font-weight:600}
+.status.err{color:var(--red);font-weight:600}
+.expect{background:#e8f5e9;border:1px solid var(--ga);border-radius:3px;padding:12px 14px;font-size:12px;margin-top:14px}
+.expect b{color:var(--green)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hd"><div class="hd-tipo">SUL SIGN GROUP</div><div class="hd-tit">Teste: SS-2026_03-07 — Fashion Week</div></div>
+  <div class="ab"></div>
+  <div class="body">
+    <div class="item"><b>Orçamento:</b> SS-2026_03-07 — Gaia Cenografia LTDA — Venda c/NF ≈ R$ 15.824,02</div>
+    <div class="item"><b>Lançamento 1:</b> 15/04 · Material · Lona impressa (Rodrigo Cesar Cano) · R$ 237,60</div>
+    <div class="item"><b>Lançamento 2:</b> 17/04 · Mão de Obra · MO Aplicador (Pedro Ivo) · R$ 250,00</div>
+    <div class="item"><b>Lançamento 3:</b> 17/04 · Logística · Frete ao evento (Pedro Ivo) · R$ 50,00</div>
+    <button class="btn" id="btn-importar">Importar Teste Completo</button>
+    <div class="status" id="status">—</div>
+    <div class="expect">
+      <b>Resultado esperado no Painel:</b><br>
+      Custo Realizado: R$ 537,60<br>
+      Margem: R$ 15.286,42 (96,6%) — igual ao já calculado na planilha
+    </div>
+  </div>
+</div>
+
+<script>
+var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+
+var bdi_default = {"ac":"8","df":"2","ri":"3","lc":"18","im":"10","bv":"5","ir":"12","desc-pct":"0"};
+
+var orcamento = {
+  numero:"SS-2026_03-07",
+  cliente:"Gaia Cenografia LTDA",
+  agencia:"-",
+  atendimento:"Cadu / Carlos",
+  projeto:"Diversos itens de Comunicação Visual — Rio Fashion Week",
+  ref:"Pier Mauá",
+  validade:"07 dias",
+  bdi:bdi_default,
+  grupos:[
+    {nome:"Comunicação Visual — Fashion Week", dim:"", pecaId:null, setor:"CV",
+     linhas:[{desc:"Diversos itens de Comunicação Visual (lona, aplicação, frete)", qtd:1, unit:9003.30, un:"vb", m2:false, lv:0, av:0, modified:false}]}
+  ],
+  inclusos:[], nao_inclusos:[], condicoes:{}, estr:{descricoes:{},imagens:{}}
+};
+
+var lancamentos = [
+  {orcamento_numero:"SS-2026_03-07", pessoa:"Carlos", funcao:"Compras", categoria:"Material", data:"2026-04-15", fornecedor:"Rodrigo Cesar Cano", descricao:"Lona impressa", valor:237.60},
+  {orcamento_numero:"SS-2026_03-07", pessoa:"Pedro Ivo Principe Bie Viana", funcao:"Aplicador", categoria:"Mão de Obra", data:"2026-04-17", fornecedor:"Pedro Ivo Principe Bie Viana", descricao:"MO Aplicador — instalação local", valor:250.00},
+  {orcamento_numero:"SS-2026_03-07", pessoa:"Pedro Ivo Principe Bie Viana", funcao:"Logística", categoria:"Logística", data:"2026-04-17", fornecedor:"Pedro Ivo Principe Bie Viana", descricao:"Frete material ao evento — Pier Mauá", valor:50.00}
+];
+
+document.getElementById('btn-importar').onclick=async function(){
+  var btn=this, statusEl=document.getElementById('status');
+  btn.disabled=true; statusEl.textContent='Importando...'; statusEl.className='status';
+  try{
+    // orçamento (delete-then-post, mesmo padrão do app)
+    await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(orcamento.numero),{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    var r1=await fetch(SUPA_URL+'/rest/v1/orcamentos',{
+      method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(Object.assign({},orcamento,{updated_at:new Date().toISOString()}))
+    });
+    if(!r1.ok){var t1=await r1.text();throw new Error('Orçamento: HTTP '+r1.status+' — '+t1);}
+
+    // limpa lançamentos antigos desse job (se reimportar)
+    await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(orcamento.numero),{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+
+    var r2=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
+      method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(lancamentos)
+    });
+    if(!r2.ok){var t2=await r2.text();throw new Error('Lançamentos: HTTP '+r2.status+' — '+t2);}
+
+    statusEl.textContent='✓ Importado com sucesso — '+new Date().toLocaleTimeString('pt-BR');
+    statusEl.className='status ok';
+    btn.textContent='Importado ✓';
+  }catch(e){
+    statusEl.textContent='✗ Erro: '+e.message;
+    statusEl.className='status err';
+    btn.disabled=false;
+  }
+};
+</script>
+</body>
+</html>
