@@ -1754,7 +1754,7 @@ async function abrirCarregarOrcamento(){
   var lista=document.getElementById('orc-lista');
   lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,cliente_nome,projeto,updated_at&order=updated_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,updated_at&order=updated_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var data=await r.json();
@@ -2731,7 +2731,7 @@ async function carregarListaOrcamentos(){
   var body=document.getElementById('lv-body');
   body.innerHTML='<div class="lv-loading">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,cliente_nome,projeto,updated_at&order=updated_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,updated_at&order=updated_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
