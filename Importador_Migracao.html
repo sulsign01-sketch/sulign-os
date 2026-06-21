@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sul Sign · Migração Completa</title>
+<style>
+:root{--black:#0f0f0f;--green:#2d6a4f;--ga:#52b788;--g100:#f5f5f5;--g200:#e8e8e8;--g600:#5a5a5a;--white:#fff;--red:#c62828}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:var(--g100)}
+.page{max-width:640px;margin:24px auto;background:var(--white);box-shadow:0 2px 20px rgba(0,0,0,.08)}
+.hd{background:var(--black);padding:18px 24px}
+.hd-tipo{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:#9e9e9e;margin-bottom:4px}
+.hd-tit{font-size:16px;font-weight:600;color:var(--white)}
+.ab{height:3px;background:var(--ga)}
+.body{padding:20px 24px}
+.sec-title{font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--green);margin:18px 0 8px 0;}
+.item{border:1px solid var(--g200);border-radius:3px;padding:10px 12px;margin-bottom:8px;font-size:12px}
+.btn{padding:13px 18px;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:var(--ga);color:var(--white);border:none;border-radius:3px;cursor:pointer;width:100%;margin-top:16px}
+.btn:hover{background:var(--green)}
+.btn:disabled{background:var(--g200);color:var(--g600)}
+.log{margin-top:14px;font-size:12px;font-family:monospace;background:#0f0f0f;color:#52b788;padding:12px;border-radius:3px;min-height:40px;white-space:pre-wrap;}
+.log .err{color:#ff6b6b}
+.warn{background:#fff8e1;border:1px solid #ffc107;border-radius:3px;padding:10px 12px;font-size:11px;margin-top:14px;color:#8a6d00}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="hd"><div class="hd-tipo">SUL SIGN GROUP</div><div class="hd-tit">Migração Completa — Planilha → Sistema</div></div>
+  <div class="ab"></div>
+  <div class="body">
+    <div class="sec-title">6 Orçamentos (ativos/fechados)</div>
+    <div class="item">SS-2026_03-06 — Infinitamente — R$ 23.788,29</div>
+    <div class="item">SS-2026_03-03B — 212 Race Garage — R$ 13.572,00</div>
+    <div class="item">SS-2026_04-08 — Escola Eleva — R$ 2.860,94</div>
+    <div class="item">SS-2026_04-14 — PRIO Ring Cenográfico — R$ 14.000,00</div>
+    <div class="item">SS-2026_06-18 — Eleva Backlight — R$ 48.500,00</div>
+    <div class="item">SS-2026_05-17 — PRIO Festa Junina — R$ 42.998,77</div>
+
+    <div class="sec-title">2 Lançamentos (despesas já reais desses jobs)</div>
+    <div class="item">SS-2026_04-08 — Acrílico Dacrilmulticor — R$ 975,00</div>
+    <div class="item">SS-2026_03-06 — Adesivo holográfico (amostra) — R$ 90,81</div>
+
+    <div class="sec-title">11 Despesas Fixas (empresa)</div>
+    <div class="item">8 despesas (Impostos R$9.023,81 + Contador R$800,00) + 3 aportes de sócio (R$12.000,00)</div>
+
+    <div class="warn">⚠ SS-2026_06-23 (GWM) e SS-2026_06-24 (Harley/igreja, R$18) da planilha foram <b>ignorados</b> nessa migração — colidem com números já usados no sistema novo (Casa do Samba e Igreja Batista). Jobs NEGADA/VENCIDA/CANCELADA também foram ignorados por não terem valor operacional.</div>
+
+    <button class="btn" id="btn-go">Rodar Migração Completa</button>
+    <div class="log" id="log">Aguardando...</div>
+  </div>
+</div>
+
+<script>
+var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+
+var orcamentos = [{"numero": "SS-2026_03-06", "cliente": "Infinitamente", "agencia": "-", "atendimento": "Eduardo", "projeto": "CV Escada Rolante — Ativação Globo Rio2C", "ref": "Alexei", "validade": "15 dias", "bdi": {"ac": "8", "df": "2", "ri": "3", "lc": "18", "im": "10", "bv": "5", "ir": "12", "desc-pct": "0"}, "grupos": [{"nome": "Comunicação Visual", "dim": "", "pecaId": null, "setor": "CV", "linhas": [{"desc": "Ativação Globo — Escada Rolante Rio2C", "qtd": 1, "unit": 13533.16, "un": "vb", "m2": false, "lv": 0, "av": 0, "modified": false}]}], "inclusos": [], "nao_inclusos": [], "condicoes": {}, "estr": {"descricoes": {}, "imagens": {}}}, {"numero": "SS-2026_03-03B", "cliente": "212 Race Garage", "agencia": "-", "atendimento": "Jovita", "projeto": "Instagramável interior da loja — Revisão", "ref": "Cadu", "validade": "15 dias", "bdi": {"ac": "8", "df": "2", "ri": "3", "lc": "18", "im": "10", "bv": "5", "ir": "12", "desc-pct": "0"}, "grupos": [{"nome": "Comunicação Visual", "dim": "", "pecaId": null, "setor": "CV", "linhas": [{"desc": "Instagramável com letreiro — interior da loja", "qtd": 1, "unit": 7721.11, "un": "vb", "m2": false, "lv": 0, "av": 0, "modified": false}]}], "inclusos": [], "nao_inclusos": [], "condicoes": {}, "estr": {"descricoes": {}, "imagens": {}}}, {"numero": "SS-2026_04-08", "cliente": "Escola Eleva", "agencia": "-", "atendimento": "Pondé", "projeto": "Acrílico Tabela de Basquete", "ref": "", "validade": "15 dias", "bdi": {"ac": "8", "df": "2", "ri": "3", "lc": "18", "im": "10", "bv": "5", "ir": "12", "desc-pct": "0"}, "grupos": [{"nome": "Material", "dim": "", "pecaId": null, "setor": "CV", "linhas": [{"desc": "Acrílico Tabela de Basquete", "qtd": 1, "unit": 1627.59, "un": "vb", "m2": false, "lv": 0, "av": 0, "modified": false}]}], "inclusos": [], "nao_inclusos": [], "condicoes": {}, "estr": {"descricoes": {}, "imagens": {}}}, {"numero": "SS-2026_04-14", "cliente": "PRIO", "agencia": "Dio Mkt", "atendimento": "Eduardo", "projeto": "Ring Cenográfico — Lona, marcenaria, ring de luta (aula 1h)", "ref": "Felipe Dantas", "validade": "15 dias", "bdi": {"ac": "8", "df": "2", "ri": "3", "lc": "18", "im": "10", "bv": "5", "ir": "12", "desc-pct": "0"}, "grupos": [{"nome": "Cenografia", "dim": "4,00 x 4,00", "pecaId": null, "setor": "CV", "linhas": [{"desc": "Ring Cenográfico completo", "qtd": 1, "unit": 7964.6, "un": "vb", "m2": false, "lv": 0, "av": 0, "modified": false}]}], "inclusos": [], "nao_inclusos": [], "condicoes": {}, "estr": {"descricoes": {}, "imagens": {}}}, {"numero": "SS-2026_06-18", "cliente": "Eleva", "agencia": "-", "atendimento": "Pondé", "projeto": "Letra caixa Backlight — Festa Junina", "ref": "Matheus Leal", "validade": "15 dias", "bdi": {"ac": "8", "df": "2", "ri": "3", "lc": "18", "im": "10", "bv": "5", "ir": "12", "desc-pct": "0"}, "grupos": [{"nome": "Letreiro", "dim": "10,24 x 1,14 x 0,31", "pecaId": null, "setor": "CV", "linhas": [{"desc": "Letra caixa Backlight", "qtd": 1, "unit": 27591.66, "un": "vb", "m2": false, "lv": 0, "av": 0, "modified": false}]}], "inclusos": [], "nao_inclusos": [], "condicoes": {}, "estr": {"descricoes": {}, "imagens": {}}}, {"numero": "SS-2026_05-17", "cliente": "PRIO", "agencia": "Dio Mkt", "atendimento": "Carlos", "projeto": "Cenografia Festa Junina", "ref": "Felipe Dantas", "validade": "15 dias", "bdi": {"ac": "8", "df": "2", "ri": "3", "lc": "18", "im": "10", "bv": "5", "ir": "12", "desc-pct": "0"}, "grupos": [{"nome": "Cenografia", "dim": "", "pecaId": null, "setor": "CV", "linhas": [{"desc": "Cenografia Festa Junina completa", "qtd": 1, "unit": 24462.01, "un": "vb", "m2": false, "lv": 0, "av": 0, "modified": false}]}], "inclusos": [], "nao_inclusos": [], "condicoes": {}, "estr": {"descricoes": {}, "imagens": {}}}];
+var lancamentos = [{"orcamento_numero": "SS-2026_04-08", "pessoa": "Carlos", "funcao": "Compras", "categoria": "Material", "data": "2026-04-27", "fornecedor": "Dacrilmulticor", "descricao": "Acrílico 8mm (Basquete)", "valor": 975.0, "tem_nota": true}, {"orcamento_numero": "SS-2026_03-06", "pessoa": "Carlos", "funcao": "Compras", "categoria": "Material", "data": "2026-04-27", "fornecedor": "", "descricao": "Adesivo holográfico — Amostra Escada Rolante", "valor": 90.81, "tem_nota": true}];
+var despesasFixas = [{"tipo": "Despesa", "data": "2026-03-30", "categoria": "Impostos", "subcategoria": "Receita Federal", "descricao": "DARF – Parcelamento Receita Federal 03/05", "valor": 3355.42, "forma_pgto": "C6Bank", "status": "Realizado", "mes_ref": "Mar/2026"}, {"tipo": "Despesa", "data": "2026-03-30", "categoria": "Impostos", "subcategoria": "Receita Federal", "descricao": "DARF – Parcelamento Receita Federal (RF2) 03/03", "valor": 613.88, "forma_pgto": "C6Bank", "status": "Realizado", "mes_ref": "Mar/2026"}, {"tipo": "Despesa", "data": "2026-03-30", "categoria": "Impostos", "subcategoria": "Prefeitura PGM", "descricao": "Prefeitura PGM – Parcela 3/10", "valor": 529.33, "forma_pgto": "C6Bank", "status": "Realizado", "mes_ref": "Mar/2026"}, {"tipo": "Despesa", "data": "2026-03-30", "categoria": "Serviços", "subcategoria": "Contador", "descricao": "Contador – Parcela 03/12", "valor": 400.0, "forma_pgto": "PIX", "status": "Realizado", "mes_ref": "Mar/2026"}, {"tipo": "Despesa", "data": "2026-04-27", "categoria": "Impostos", "subcategoria": "Receita Federal", "descricao": "DARF – Parcelamento Receita Federal 04/05", "valor": 3395.22, "forma_pgto": "C6Bank", "status": "Realizado", "mes_ref": "Abr/2026"}, {"tipo": "Despesa", "data": "2026-04-27", "categoria": "Impostos", "subcategoria": "Prefeitura PGM", "descricao": "Prefeitura PGM – Parcela 4/10", "valor": 529.33, "forma_pgto": "C6Bank", "status": "Realizado", "mes_ref": "Abr/2026"}, {"tipo": "Despesa", "data": "2026-04-27", "categoria": "Impostos", "subcategoria": "Prefeitura RJ", "descricao": "Prefeitura RJ – Parcela 3/4", "valor": 600.63, "forma_pgto": "C6Bank", "status": "Realizado", "mes_ref": "Abr/2026"}, {"tipo": "Despesa", "data": "2026-04-27", "categoria": "Serviços", "subcategoria": "Contador", "descricao": "Contador – Parcela 04/12", "valor": 400.0, "forma_pgto": "PIX", "status": "Realizado", "mes_ref": "Abr/2026"}, {"tipo": "Receita", "data": "2026-03-30", "categoria": "Aporte de Sócio", "subcategoria": "OG Locações", "descricao": "Aporte OG Locações e Serviços – Mar/2026", "valor": 5500.0, "forma_pgto": "PIX", "status": "Realizado", "mes_ref": "Mar/2026"}, {"tipo": "Receita", "data": "2026-04-15", "categoria": "Aporte de Sócio", "subcategoria": "OG Locações", "descricao": "Aporte OG Locações e Serviços – Abr/2026", "valor": 500.0, "forma_pgto": "PIX", "status": "Realizado", "mes_ref": "Abr/2026"}, {"tipo": "Receita", "data": "2026-04-27", "categoria": "Aporte de Sócio", "subcategoria": "OG Locações", "descricao": "Aporte OG Locações e Serviços – Abr/2026", "valor": 6000.0, "forma_pgto": "PIX", "status": "Realizado", "mes_ref": "Abr/2026"}];
+
+var logEl=document.getElementById('log');
+function log(msg,isErr){
+  logEl.textContent += (logEl.textContent==='Aguardando...'?'':'\n') + msg;
+  if(isErr)logEl.classList.add('err');
+}
+
+async function headers(){
+  return {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'};
+}
+
+document.getElementById('btn-go').onclick=async function(){
+  var btn=this;
+  btn.disabled=true;
+  logEl.textContent='Iniciando...';
+  var h=await headers();
+  var okCount=0, errCount=0;
+
+  for(var i=0;i<orcamentos.length;i++){
+    var o=orcamentos[i];
+    try{
+      await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(o.numero),{method:'DELETE',headers:h});
+      var r=await fetch(SUPA_URL+'/rest/v1/orcamentos',{method:'POST',headers:h,body:JSON.stringify(Object.assign({},o,{updated_at:new Date().toISOString()}))});
+      if(!r.ok){var t=await r.text();throw new Error('HTTP '+r.status+' '+t);}
+      log('✓ Orçamento '+o.numero+' importado');
+      okCount++;
+    }catch(e){
+      log('✗ Orçamento '+o.numero+': '+e.message, true);
+      errCount++;
+    }
+  }
+
+  try{
+    var r2=await fetch(SUPA_URL+'/rest/v1/lancamentos',{method:'POST',headers:h,body:JSON.stringify(lancamentos)});
+    if(!r2.ok){var t2=await r2.text();throw new Error('HTTP '+r2.status+' '+t2);}
+    log('✓ '+lancamentos.length+' lançamentos importados');
+    okCount++;
+  }catch(e){
+    log('✗ Lançamentos: '+e.message, true);
+    errCount++;
+  }
+
+  try{
+    var r3=await fetch(SUPA_URL+'/rest/v1/despesas_fixas',{method:'POST',headers:h,body:JSON.stringify(despesasFixas)});
+    if(!r3.ok){var t3=await r3.text();throw new Error('HTTP '+r3.status+' '+t3);}
+    log('✓ '+despesasFixas.length+' despesas fixas importadas');
+    okCount++;
+  }catch(e){
+    log('✗ Despesas Fixas: '+e.message, true);
+    errCount++;
+  }
+
+  log('--- CONCLUÍDO: '+okCount+' ok, '+errCount+' erro(s) ---');
+  btn.textContent='Migração Concluída';
+};
+</script>
+</body>
+</html>
