@@ -466,6 +466,7 @@ function renderForm(){
   LOG.forEach(function(l){h+='<option value="'+l+'"'+(os.logistica===l?' selected':'')+'>'+l+'</option>';});
   h+='</select></div>';
   h+='</div></div>';
+  }
   // Acabamento
   var ac=disc==='COMPRAS'?[]:(ACAB[disc]||[]);
   if(ac.length){
