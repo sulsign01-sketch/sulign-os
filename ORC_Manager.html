@@ -28,6 +28,7 @@
   .hd-info-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);display:block;margin-bottom:2px;}
   .hd-info-val{font-size:11px;color:var(--white);font-weight:500;}
   .ab{height:3px;background:var(--ga);}
+  #escopo-text:empty:before{content:attr(data-placeholder);color:var(--g600);font-style:italic;}
 
   /* EDITAVEL */
   [contenteditable]{outline:none;cursor:text;}
@@ -216,9 +217,11 @@
   .dim-recalc:hover{background:var(--gl);}
   .grupo-origem{font-size:9px;color:var(--g400);font-style:italic;margin-left:4px;}
   /* SETOR DO GRUPO */
-  .setor-sel{border:none;border-bottom:1.5px solid transparent;background:transparent;padding:2px 4px;font-family:'DM Sans',sans-serif;font-size:10px;font-weight:600;color:var(--green);cursor:pointer;outline:none;border-radius:2px;max-width:130px;}
-  .setor-sel:hover{border-bottom-color:var(--ga);background:rgba(82,183,136,.08);}
-  .setor-sel:focus{border-bottom-color:var(--ga);background:var(--ylw);}
+  .setor-chks{display:flex;flex-wrap:wrap;gap:3px;align-items:center;}
+  .setor-chk-lbl{display:flex;align-items:center;gap:2px;font-size:9px;font-weight:600;color:var(--g600);background:var(--g100);border:1px solid var(--g200);border-radius:2px;padding:1px 5px;cursor:pointer;white-space:nowrap;}
+  .setor-chk-lbl:hover{background:var(--ylw);border-color:var(--ylwb);color:#8a6d00;}
+  .setor-chk-lbl input{width:10px;height:10px;accent-color:var(--ga);cursor:pointer;}
+  .setor-chk-lbl.checked{background:#e8f5e9;border-color:var(--ga);color:var(--green);}
   .setor-badge{display:inline-block;font-size:9px;padding:1px 6px;border-radius:2px;background:#e8f5e9;color:var(--green);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-right:4px;vertical-align:middle;}
   /* MODAL OS SETORIAL */
   .gos2-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1300;align-items:center;justify-content:center;}
@@ -402,6 +405,9 @@
   .lv-new:hover{background:var(--green);}
   .lv-toolbar{padding:14px 24px;display:flex;gap:10px;align-items:center;background:#f9f9f9;border-bottom:1px solid var(--g200);}
   .lv-search{flex:1;border:1.5px solid var(--g200);background:var(--white);border-radius:2px;padding:7px 12px;font-family:'DM Sans',sans-serif;font-size:12px;outline:none;}
+  .lv-tabs{display:flex;background:var(--g100);border-bottom:1px solid var(--g200);}
+  .lv-tab{flex:1;padding:9px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--g600);cursor:pointer;border-bottom:2px solid transparent;}
+  .lv-tab.active{color:var(--green);border-bottom-color:var(--ga);background:var(--white);}
   .lv-search:focus{border-color:var(--ga);}
   .lv-body{background:var(--white);min-height:200px;}
   .lv-item{display:flex;justify-content:space-between;align-items:center;padding:14px 24px;border-bottom:1px solid var(--g200);cursor:pointer;}
@@ -439,6 +445,10 @@
     </div>
   </div>
   <div class="ab"></div>
+  <div class="lv-tabs">
+    <div class="lv-tab active" id="lv-tab-ativos" onclick="setLvTab('ativos')">Ativos</div>
+    <div class="lv-tab" id="lv-tab-arquivo" onclick="setLvTab('arquivo')">Arquivo</div>
+  </div>
   <div class="lv-toolbar">
     <input class="lv-search" id="lv-search-inp" type="text" placeholder="Buscar por número, cliente ou projeto...">
   </div>
@@ -482,6 +492,11 @@
         </select>
       </div>
     </div>
+  </div>
+  <!-- ESCOPO DO PROJETO -->
+  <div id="escopo-section" style="background:#111;border-top:1px solid #2a2a2a;padding:10px 20px;">
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">Escopo do Projeto</div>
+    <div id="escopo-text" contenteditable="true" style="font-size:12px;color:var(--white);line-height:1.5;min-height:20px;outline:none;" data-placeholder="Descreva o escopo do projeto..."></div>
   </div>
   <div class="ab"></div>
 
@@ -982,8 +997,9 @@ function calcLogOp(f){
   tables.forEach(function(t){
     if(t.opcional)return;
     var nm=(t.nameEl?t.nameEl.value:'').toLowerCase();
-    var st=(t.setorEl?t.setorEl.value:'').toLowerCase();
-    var isLogOp=nm.indexOf('logí')>=0||nm.indexOf('logi')>=0||nm.indexOf('opera')>=0||st==='log';
+    var stArr=t.setorChks?Object.keys(t.setorChks).filter(function(k){return t.setorChks[k].checked;}):[];
+    var stStr=(t.setorEl?t.setorEl.value:'').toLowerCase();
+    var isLogOp=nm.indexOf('logi')>=0||nm.indexOf('oper')>=0||stArr.indexOf('LOG')>=0||stStr.indexOf('log')>=0;
     if(!isLogOp)return;
     t.rows.forEach(function(row){
       var r=calcRow((parseFloat(row.qEl.value)||0)*(parseFloat(row.uEl.value)||0),f);
@@ -1001,7 +1017,7 @@ function calcLogOp(f){
     pctVal=gl2*opPct/100;
   }
   var total=logOpTotal+pctVal;
-  return {total:total,hasGroups:logOpTotal>=0&&tables.some(function(t){if(t.opcional)return false;var nm=(t.nameEl?t.nameEl.value:'').toLowerCase();var st=(t.setorEl?t.setorEl.value:'').toLowerCase();return nm.indexOf('logi')>=0||nm.indexOf('logí')>=0||nm.indexOf('opera')>=0||st==='log';}),hasPct:pctVal>0};
+  return {total:total,hasGroups:logOpTotal>=0&&tables.some(function(t){if(t.opcional)return false;var nm=(t.nameEl?t.nameEl.value:'').toLowerCase();var st=(t.setorEl?t.setorEl.value:'').toLowerCase();var _st2=t.setorChks?Object.keys(t.setorChks).filter(function(k){return t.setorChks[k].checked;}):[]; return nm.indexOf('logi')>=0||nm.indexOf('oper')>=0||_st2.indexOf('LOG')>=0;}),hasPct:pctVal>0};
 }
 
 function reindexar(){
@@ -1286,22 +1302,25 @@ function makeTable(name,rows,dim,pecaId,pecaComps){
   // Seletor de setor
   var setorWrap=document.createElement('div');setorWrap.style.cssText='display:flex;align-items:center;gap:4px;margin-right:6px;';
   var setorLbl=document.createElement('span');setorLbl.style.cssText='font-size:9px;color:var(--g400);letter-spacing:.8px;text-transform:uppercase;';setorLbl.textContent='Setor:';
-  var setorSel=document.createElement('select');setorSel.className='setor-sel';
-  [
-    {v:'',l:'— nenhum —'},
-    {v:'FORR',l:'Forração'},
-    {v:'SERR',l:'Serralheria'},
-    {v:'MARC',l:'Marcenaria'},
-    {v:'PINT',l:'Pintura'},
-    {v:'DETA',l:'Detalhamento'},
-    {v:'ROUTER',l:'Router CNC'},
-    {v:'CV',l:'CV / Impressão'},
-    {v:'ELET',l:'Elétrica'},
-    {v:'MO',l:'Mão de Obra'},
-    {v:'LOG',l:'Logística'}
-  ].forEach(function(op){var o=document.createElement('option');o.value=op.v;o.textContent=op.l;setorSel.appendChild(o);});
-  tblObj.setorEl=setorSel;
-  setorWrap.appendChild(setorLbl);setorWrap.appendChild(setorSel);
+  var SETORES=[
+    {v:'FORR',l:'Forração'},{v:'SERR',l:'Serralheria'},{v:'MARC',l:'Marcenaria'},
+    {v:'PINT',l:'Pintura'},{v:'DETA',l:'Detalhamento'},{v:'ROUTER',l:'Router CNC'},
+    {v:'CV',l:'CV/Impressão'},{v:'ELET',l:'Elétrica'},{v:'MO',l:'Mão de Obra'},{v:'LOG',l:'Logística'}
+  ];
+  var setorChksWrap=document.createElement('div');setorChksWrap.className='setor-chks';
+  var setorCheckboxes={};
+  SETORES.forEach(function(s){
+    var lbl=document.createElement('label');lbl.className='setor-chk-lbl';
+    var chk=document.createElement('input');chk.type='checkbox';chk.value=s.v;
+    chk.onchange=function(){lbl.classList.toggle('checked',this.checked);};
+    lbl.appendChild(chk);lbl.appendChild(document.createTextNode(s.l));
+    setorChksWrap.appendChild(lbl);
+    setorCheckboxes[s.v]=chk;
+  });
+  tblObj.setorEl=null;  // compat: não mais usado
+  tblObj.setorChks=setorCheckboxes;
+  tblObj.setorChksWrap=setorChksWrap;
+  setorWrap.appendChild(setorLbl);setorWrap.appendChild(setorChksWrap);
 
   // Checkbox opcional
   var optChk=document.createElement('input');optChk.type='checkbox';optChk.className='opt-chk';optChk.title='Marcar como Opcional (não entra na soma)';
@@ -1860,10 +1879,12 @@ function coletarEstado(){
   hdVals.forEach(function(el,i){if(campos[i])header[campos[i]]=el.textContent;});
   header.numero=document.querySelector('.doc-num-el')?document.querySelector('.doc-num-el').textContent:'';
   header.validade=document.querySelector('.hd-right span[contenteditable]')?document.querySelector('.hd-right span[contenteditable]').textContent:'';
+  var _stEl=document.getElementById('orc-status');header.status=_stEl?_stEl.value:'Em Orçamento';
+  var _escopoEl=document.getElementById('escopo-text');header.escopo=_escopoEl?_escopoEl.textContent:'';
 
   // BDI
   var bdi={};
-  ['ac','df','ri','lc','im','bv','ir','desc-pct'].forEach(function(id){
+  ['ac','df','ri','lc','im','bv','ir','desc-pct','op-pct'].forEach(function(id){
     var el=document.getElementById(id);if(el)bdi[id]=el.value;
   });
 
@@ -1873,7 +1894,8 @@ function coletarEstado(){
       nome:tbl.nameEl.value,
       dim:tbl.dimEl?tbl.dimEl.value:'',
       pecaId:tbl.pecaId||null,
-      setor:tbl.setorEl?tbl.setorEl.value:'',
+      setores:tbl.setorChks?Object.keys(tbl.setorChks).filter(function(k){return tbl.setorChks[k].checked;}):( tbl.setorEl?[tbl.setorEl.value].filter(Boolean):[]),
+      setor:tbl.setorChks?Object.keys(tbl.setorChks).filter(function(k){return tbl.setorChks[k].checked;}).join(','):(tbl.setorEl?tbl.setorEl.value:''),
       opcional:tbl.opcional||false,
       linhas:tbl.rows.map(function(row){
         return {
@@ -1929,6 +1951,8 @@ async function salvarOrcamento(){
     nao_inclusos:estado.nao_inclusos,
     condicoes:estado.condicoes,
     estr:estado.estr,
+    status:estado.header.status||'Em Orçamento',
+    escopo:estado.header.escopo||'',
     updated_at:new Date().toISOString()
   };
   try{
@@ -2012,6 +2036,8 @@ async function carregarOrcamento(id){
     campos.forEach(function(c,i){if(hdVals[i]&&orc[c])hdVals[i].textContent=orc[c];});
     var numEl=document.querySelector('.doc-num-el');if(numEl&&orc.numero)numEl.textContent=orc.numero;
     var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl&&orc.validade)valEl.textContent=orc.validade;
+    var _stElR=document.getElementById('orc-status');if(_stElR)_stElR.value=orc.status||'Em Orçamento';
+    var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';
 
     // Restaurar BDI
     if(orc.bdi)Object.keys(orc.bdi).forEach(function(k){var el=document.getElementById(k);if(el)el.value=orc.bdi[k];});
@@ -2021,7 +2047,9 @@ async function carregarOrcamento(id){
     cont.innerHTML='';tables=[];tableCounter=0;
     if(orc.grupos)orc.grupos.forEach(function(g){
       var tbl=makeTable(g.nome,[],g.dim,g.pecaId||null,null);
-      if(g.setor&&tbl.setorEl)tbl.setorEl.value=g.setor;
+      // Restaurar setores (suporte a formato novo array e antigo string)
+      var setoresArr=g.setores||(g.setor?g.setor.split(',').filter(Boolean):[]);
+      if(tbl.setorChks){setoresArr.forEach(function(s){if(tbl.setorChks[s]){tbl.setorChks[s].checked=true;tbl.setorChks[s].closest('.setor-chk-lbl').classList.add('checked');}});}
       if(g.opcional){
         tbl.opcional=true;
         var _wrap=document.getElementById(tbl.id);
@@ -3015,7 +3043,7 @@ function inserirGrupoLogistica(){
     ['Hospedagem (se necessário)',1,0,'vb']
   ];
   var tbl=makeTable('Logística',[],''  ,null,null);
-  if(tbl.setorEl)tbl.setorEl.value='LOG';
+  if(tbl.setorChks&&tbl.setorChks['LOG']){tbl.setorChks['LOG'].checked=true;tbl.setorChks['LOG'].closest('.setor-chk-lbl').classList.add('checked');}
   linhas.forEach(function(l){addRow(tbl,l[0],l[1],l[2],l[3],false,0,0,false);});
   calcAll();
   var wrap=document.getElementById(tbl.id);
@@ -3075,10 +3103,19 @@ function checkVencido(orc){
 }
 
 function renderListaOrcamentos(data){
+  window._lvOrcamentosCache=data;
+  // filtrar por aba ativa
+  var isArquivo=_lvTabAtual==='arquivo';
+  var filtrados=data.filter(function(orc){
+    var st=checkVencido(orc);
+    return isArquivo?ARQUIVO_STATUS.indexOf(st)>=0:ARQUIVO_STATUS.indexOf(st)<0;
+  });
   var body=document.getElementById('lv-body');
-  if(!data.length){body.innerHTML='<div class="lv-empty">Nenhum orçamento salvo ainda. Clique em "+ Novo Orçamento" para começar.</div>';return;}
+  if(!filtrados.length){
+    body.innerHTML='<div class="lv-empty">'+(isArquivo?'Nenhum orçamento arquivado.':'Nenhum orçamento ativo.')+'</div>';return;
+  }
   body.innerHTML='';
-  data.forEach(function(orc){
+  filtrados.forEach(function(orc){
     var item=document.createElement('div');item.className='lv-item';
     var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
     var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Cancelado':'background:#ffebee;color:#c62828'};
@@ -3106,12 +3143,12 @@ function renderListaOrcamentos(data){
   });
 }
 document.getElementById('lv-search-inp').addEventListener('input',function(){
+  var cache=window._lvOrcamentosCache||lvCache;
   var q=this.value.trim().toLowerCase();
-  if(!q){renderListaOrcamentos(lvCache);return;}
-  renderListaOrcamentos(lvCache.filter(function(o){
+  if(!q){renderListaOrcamentos(cache);return;}
+  renderListaOrcamentos(cache.filter(function(o){
     return (o.numero||'').toLowerCase().includes(q)
       ||(o.cliente||'').toLowerCase().includes(q)
-      ||(o.cliente_nome||'').toLowerCase().includes(q)
       ||(o.projeto||'').toLowerCase().includes(q);
   }));
 });
@@ -3152,6 +3189,7 @@ async function novoOrcamento(){
   hdVals.forEach(function(el){el.textContent='—';});
   var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl)valEl.textContent='15 dias';
   var _stN=document.getElementById('orc-status');if(_stN)_stN.value='Em Orçamento';
+  var _escopoN=document.getElementById('escopo-text');if(_escopoN)_escopoN.textContent='';
   // Resetar BDI para defaults
   var bdiDefaults={ac:8,df:2,ri:3,lc:18,im:10,bv:5,ir:12,'desc-pct':0,'op-pct':0};
   Object.keys(bdiDefaults).forEach(function(k){var el=document.getElementById(k);if(el)el.value=bdiDefaults[k];});
