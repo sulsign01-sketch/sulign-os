@@ -491,7 +491,7 @@
       <div style="width:1px;background:var(--g200);height:20px;margin:0 4px;"></div>
       <button class="save-btn" onclick="salvarOrcamento()">💾 Salvar</button>
       <button class="save-btn load" onclick="voltarLista()">📋 Lista de Orçamentos</button>
-      <button class="save-btn" onclick="inserirGrupoOperacional()" style="background:var(--ga);" title="Inserir grupo operacional pré-populado">⚙ Operacional</button>
+      <button class="save-btn" onclick="inserirGrupoLogOperacional()" style="background:var(--ga);" title="Inserir grupos de Logística e Operacional">🚛⚙ Log+Operacional</button>
       <button class="save-btn" onclick="exportarHTML()" style="background:#5c6bc0;" title="Baixar HTML com estado atual para salvar no Drive">⬇ HTML</button>
       <button class="save-btn" onclick="abrirGerarOS()" style="background:#00695c;" title="Gerar Ordens de Serviço a partir deste orçamento">⚙ Gerar OS CV</button>
       <button class="save-btn" onclick="abrirGerarOSSetorial()" style="background:#4a148c;" title="Gerar OS por setor: Forração, Serralheria, Marcenaria, Pintura...">🏭 OS Setorial</button>
@@ -527,7 +527,7 @@
           <div class="bi"><label>BV — Comissão (%)</label><input type="number" id="bv" value="5" step="0.5" oninput="calcAll()" title="Comissionamento sobre faturamento líquido (descontado do preço de venda)"></div>
           <div class="bi"><label>Taxa Imposto NF (%)</label><input type="number" id="ir" value="12" step="0.5" oninput="calcAll()"></div>
           <div class="bi"><label>Desconto (%)</label><input type="number" id="desc-pct" value="0" min="0" max="100" step="0.5" oninput="calcAll()"></div>
-          <div class="bi" style="border-top:1.5px solid var(--ga);padding-top:8px;margin-top:4px;"><label style="color:var(--ga);font-weight:600;">Operacional (%)</label><input type="number" id="op-pct" value="14.5" min="0" max="100" step="0.5" oninput="calcAll()" title="Verba operacional sobre venda líquida — Projeto, RRT, Logística, Mobilização etc."></div>
+          <div class="bi" style="border-top:1.5px solid var(--ga);padding-top:8px;margin-top:4px;"><label style="color:var(--ga);font-weight:600;">Operacional (%)</label><input type="number" id="op-pct" value="0" min="0" max="100" step="0.5" oninput="calcAll()" title="% sobre venda líquida (alternativa ao grupo itemizado)"></div>
         </div>
         <div class="btt">
           <div>
@@ -551,6 +551,7 @@
       <div class="rr tot" id="r-liq-row" style="display:none;"><span class="rl">Total líquido</span><span class="rv" id="r-liq">—</span></div>
       <div class="rr" id="r-op-row"><span class="rl">Operacional (<span id="r-op-lbl">14,5</span>%)</span><span class="rv" style="color:var(--ga);" id="r-op-val">—</span></div>
       <div class="rr tot" style="background:var(--black);padding:10px 14px;border-radius:2px;margin-top:4px;"><span class="rl" style="color:var(--white);font-weight:700;">TOTAL GERAL</span><span class="rv" style="color:var(--ga);font-size:15px;font-weight:700;" id="r-geral">—</span></div>
+      <div class="rr" id="r-opc-row" style="display:none;border-top:1px dashed var(--g200);margin-top:8px;padding-top:8px;"><span class="rl" style="color:var(--g400);font-style:italic;">Opcionais (não inclusos)</span><span class="rv" style="color:var(--g400);font-style:italic;" id="r-opc-val">—</span></div>
     </div>
   </div>
 
@@ -1025,8 +1026,8 @@ function calcAll(){
   var dr=document.getElementById('r-desc-row'),lr=document.getElementById('r-liq-row');
   if(dr)dr.style.display=dp>0?'flex':'none';if(lr)lr.style.display=dp>0?'flex':'none';
   // Operacional sobre venda líquida
-  var opPct=parseFloat(document.getElementById('op-pct')?document.getElementById('op-pct').value:14.5)||0;
-  var vendaBase=dp>0?gl:gT;  // usa líquido se há desconto, bruto caso contrário
+  var opPct=parseFloat(document.getElementById('op-pct')?document.getElementById('op-pct').value:0)||0;
+  var vendaBase=dp>0?gl:gT;
   var opVal=vendaBase*opPct/100;
   var totalGeral=vendaBase+opVal;
   var opRow=document.getElementById('r-op-row');
@@ -1034,6 +1035,20 @@ function calcAll(){
   s('r-op-lbl',(opPct%1===0?opPct.toFixed(0):opPct.toFixed(1)).replace('.',','));
   s('r-op-val',opPct>0?fmt(opVal):'—');
   s('r-geral',fmt(totalGeral));
+  // Opcionais não inclusos
+  var totalOpc=0;
+  tables.forEach(function(t){
+    if(!t.opcional)return;
+    var f2=getBDI(),ir2=getIR();
+    t.rows.forEach(function(row){
+      var q=parseFloat(row.qEl.value)||0,u=parseFloat(row.uEl.value)||0;
+      var c=q*u;
+      totalOpc+=c*f2*(1+ir2);
+    });
+  });
+  var opcRow=document.getElementById('r-opc-row');
+  if(opcRow)opcRow.style.display=totalOpc>0?'flex':'none';
+  s('r-opc-val',totalOpc>0?fmt(totalOpc):'—');
   renderProposta(f);renderDescritivo();renderBlocado(f);
 }
 
@@ -2901,30 +2916,47 @@ function showListView(){
   document.getElementById('list-view').style.display='block';
   carregarListaOrcamentos();
 }
+function inserirGrupoLogOperacional(){
+  inserirGrupoLogistica();
+  inserirGrupoOperacional();
+}
+
+function inserirGrupoLogistica(){
+  var linhas=[
+    ['Viagens e transporte de material',1,0,'vb'],
+    ['Fretes e cargas especiais',1,0,'vb'],
+    ['Pedágios e estacionamentos',1,0,'vb'],
+    ['Locação de veículo/van/caminhão',1,0,'vb'],
+    ['Diárias de motorista/equipe in loco',1,0,'vb'],
+    ['Alimentação em campo',1,0,'vb'],
+    ['Hospedagem (se necessário)',1,0,'vb']
+  ];
+  var tbl=makeTable('Logística',[],''  ,null,null);
+  if(tbl.setorEl)tbl.setorEl.value='LOG';
+  linhas.forEach(function(l){addRow(tbl,l[0],l[1],l[2],l[3],false,0,0,false);});
+  calcAll();
+  var wrap=document.getElementById(tbl.id);
+  if(wrap)wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function inserirGrupoOperacional(){
   var linhasOp=[
-    ['Projeto e detalhamento técnico',1,0,'vb'],
-    ['Visitas técnicas ao local',1,0,'vb'],
-    ['Emissão de RRT',1,0,'un'],
-    ['Locação de equipamentos',1,0,'vb'],
+    ['Projeto executivo e detalhamento técnico',1,0,'vb'],
+    ['Visitas técnicas ao local (pré-evento)',1,0,'vb'],
+    ['Emissão de RRT (Responsabilidade Técnica)',1,0,'un'],
+    ['Locação de andaimes',1,0,'vb'],
+    ['Locação de equipamentos e ferramentas',1,0,'vb'],
     ['Mobilização de equipe',1,0,'vb'],
-    ['Desmobilização e retirada',1,0,'vb'],
-    ['Contratações externas',1,0,'vb'],
-    ['Logística — viagens e transporte',1,0,'vb'],
-    ['Alimentação e diárias de equipe',1,0,'vb'],
+    ['Desmobilização e limpeza final',1,0,'vb'],
+    ['Contratações externas e terceiros',1,0,'vb'],
+    ['Gerenciamento e coordenação in loco',1,0,'vb'],
     ['Imprevistos operacionais',1,0,'vb']
   ];
   var tbl=makeTable('Operacional',[],''  ,null,null);
-  tbl.opcional=true;
-  var wrap=document.getElementById(tbl.id);
-  if(wrap){
-    wrap.classList.add('opcional');
-    var chk=wrap.querySelector('.opt-chk');if(chk)chk.checked=true;
-    var tag=wrap.querySelector('.opcional-tag');if(tag)tag.style.display='inline';
-  }
+  if(tbl.setorEl)tbl.setorEl.value='';
   linhasOp.forEach(function(l){addRow(tbl,l[0],l[1],l[2],l[3],false,0,0,false);});
   calcAll();
-  // scroll ao grupo
+  var wrap=document.getElementById(tbl.id);
   if(wrap)wrap.scrollIntoView({behavior:'smooth',block:'start'});
 }
 
@@ -3025,7 +3057,7 @@ async function novoOrcamento(){
   var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl)valEl.textContent='15 dias';
   var _stN=document.getElementById('orc-status');if(_stN)_stN.value='Cotação';
   // Resetar BDI para defaults
-  var bdiDefaults={ac:8,df:2,ri:3,lc:18,im:10,bv:5,ir:12,'desc-pct':0};
+  var bdiDefaults={ac:8,df:2,ri:3,lc:18,im:10,bv:5,ir:12,'desc-pct':0,'op-pct':0};
   Object.keys(bdiDefaults).forEach(function(k){var el=document.getElementById(k);if(el)el.value=bdiDefaults[k];});
   // Resetar inclusos/não inclusos
   ['inc-sim','inc-nao'].forEach(function(id){var ul=document.getElementById(id);if(ul)ul.innerHTML='';});
