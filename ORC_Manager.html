@@ -2770,9 +2770,23 @@ async function gerarDescricao(tbl,descEl,btn){
       return;
     }
     var data=await resp.json();
-    var texto=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]?data.candidates[0].content.parts[0].text:'Resposta vazia da IA.';
-    descEl.textContent=texto.trim();
-    estrDescricoes[tbl.id]=texto.trim();
+    // parsing defensivo + log do payload completo em caso de falha
+    var texto='';
+    try{
+      var cand=data.candidates&&data.candidates[0];
+      var parts=cand&&cand.content&&cand.content.parts;
+      if(parts&&parts[0]&&parts[0].text){
+        texto=parts[0].text.trim();
+      } else if(data.promptFeedback&&data.promptFeedback.blockReason){
+        texto='Bloqueado pela API: '+data.promptFeedback.blockReason;
+      } else {
+        texto='Resposta inesperada: '+JSON.stringify(data).substring(0,200);
+      }
+    }catch(pe){
+      texto='Erro ao processar resposta: '+pe.message;
+    }
+    descEl.textContent=texto;
+    estrDescricoes[tbl.id]=texto;
   }catch(e){
     descEl.textContent='Erro ao gerar: '+e.message;
   }
