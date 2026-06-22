@@ -391,6 +391,13 @@
   .lv-item-date{font-size:10px;color:var(--g400);font-family:'DM Mono',monospace;}
   .lv-item-del{font-size:11px;color:var(--g400);cursor:pointer;padding:4px 8px;}
   .lv-item-del:hover{color:var(--red);}
+  .lv-badge-st{font-size:9px;padding:1px 6px;border-radius:2px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:inline-block;}
+  .st-cotacao{background:#e3f2fd;color:#1565c0;}
+  .st-enviado{background:#fff8e1;color:#8a6d00;}
+  .st-aprovado{background:#e8f5e9;color:var(--green);}
+  .st-producao{background:#f3e5f5;color:#7b1fa2;}
+  .st-entregue{background:#e0e0e0;color:#424242;}
+  .st-cancelado{background:#ffebee;color:var(--red);}
   .lv-empty{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
   .lv-loading{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
 </style>
@@ -440,6 +447,16 @@
       <div class="hd-info-item"><span class="hd-info-label">Atendimento</span><span class="hd-info-val" contenteditable="true">—</span></div>
       <div class="hd-info-item"><span class="hd-info-label">Projeto</span><span class="hd-info-val" contenteditable="true">Letreiro Fachada — Igreja Batista Nova Filadélfia</span></div>
       <div class="hd-info-item"><span class="hd-info-label">Ref.</span><span class="hd-info-val" contenteditable="true">Faca 410×160cm — PVC 20mm pintado branco</span></div>
+      <div class="hd-info-item"><span class="hd-info-label">Status</span>
+        <select id="orc-status" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:12px;padding:2px 4px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          <option value="Cotação">Cotação</option>
+          <option value="Proposta Enviada">Proposta Enviada</option>
+          <option value="Aprovado">Aprovado</option>
+          <option value="Em Produção">Em Produção</option>
+          <option value="Entregue">Entregue</option>
+          <option value="Cancelado">Cancelado</option>
+        </select>
+      </div>
     </div>
   </div>
   <div class="ab"></div>
@@ -886,6 +903,18 @@
 </div>
 
 </div><!-- /editor-view -->
+<datalist id="un-options">
+  <option value="m²"></option>
+  <option value="m"></option>
+  <option value="un"></option>
+  <option value="vb"></option>
+  <option value="h"></option>
+  <option value="chapa"></option>
+  <option value="ml"></option>
+  <option value="kg"></option>
+  <option value="l"></option>
+  <option value="rolo"></option>
+</datalist>
 <script>
 var tableCounter=0,tables=[];
 
@@ -1192,7 +1221,10 @@ function addRow(tblObj,desc,qty,unit,un,m2Active,lv,av,fromBase){
   // qty
   var td3=document.createElement('td');td3.className='n';var qEl=document.createElement('input');qEl.type='number';qEl.className='ed';qEl.value=qty||0;qEl.min=0;qEl.step='0.0001';qEl.oninput=calcAll;td3.appendChild(qEl);tr.appendChild(td3);
   // un
-  var td4=document.createElement('td');td4.className='mu';var unEl=document.createElement('input');unEl.type='text';unEl.className='ed-un';unEl.value=un||'un';unEl.oninput=calcAll;td4.appendChild(unEl);tr.appendChild(td4);
+  var td4=document.createElement('td');td4.className='mu';
+  var unEl=document.createElement('input');unEl.type='text';unEl.className='ed-un';unEl.value=un||'un';unEl.oninput=calcAll;
+  unEl.setAttribute('list','un-options');
+  td4.appendChild(unEl);tr.appendChild(td4);
   // custo unit
   var td5=document.createElement('td');td5.className='n';var uEl=document.createElement('input');uEl.type='number';uEl.className='ed';uEl.value=unit||0;uEl.min=0;uEl.step='0.01';uEl.title='Se m² ativo: custo por m². Qtd = (L×A cm)/10000';uEl.oninput=calcAll;td5.appendChild(uEl);tr.appendChild(td5);
   // computed
@@ -1754,7 +1786,7 @@ async function abrirCarregarOrcamento(){
   var lista=document.getElementById('orc-lista');
   lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,updated_at&order=updated_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,updated_at&order=updated_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var data=await r.json();
@@ -2731,7 +2763,7 @@ async function carregarListaOrcamentos(){
   var body=document.getElementById('lv-body');
   body.innerHTML='<div class="lv-loading">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,updated_at&order=updated_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,updated_at&order=updated_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -2748,11 +2780,14 @@ function renderListaOrcamentos(data){
   data.forEach(function(orc){
     var item=document.createElement('div');item.className='lv-item';
     var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
+    var stMap={'Cotação':'cotacao','Proposta Enviada':'enviado','Aprovado':'aprovado','Em Produção':'producao','Entregue':'entregue','Cancelado':'cancelado'};
+    var stCls=stMap[orc.status]||'cotacao';
     item.innerHTML='<div>'
       +'<div class="lv-item-num">'+(orc.numero||'—')+'</div>'
       +'<div class="lv-item-info">'+(orc.cliente||orc.cliente_nome||'—')+' · '+(orc.projeto||'—')+'</div>'
       +'</div>'
-      +'<div style="display:flex;align-items:center;gap:14px;">'
+      +'<div style="display:flex;align-items:center;gap:10px;">'
+      +'<span class="lv-badge-st st-'+stCls+'">'+(orc.status||'Cotação')+'</span>'
       +'<span class="lv-item-date">'+dt+'</span>'
       +'<span class="lv-item-del">× remover</span>'
       +'</div>';
@@ -2814,6 +2849,7 @@ async function novoOrcamento(){
   var hdVals=document.querySelectorAll('.hd-info-val[contenteditable]');
   hdVals.forEach(function(el){el.textContent='—';});
   var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl)valEl.textContent='15 dias';
+  var _stN=document.getElementById('orc-status');if(_stN)_stN.value='Cotação';
   // Resetar BDI para defaults
   var bdiDefaults={ac:8,df:2,ri:3,lc:18,im:10,bv:5,ir:12,'desc-pct':0};
   Object.keys(bdiDefaults).forEach(function(k){var el=document.getElementById(k);if(el)el.value=bdiDefaults[k];});
