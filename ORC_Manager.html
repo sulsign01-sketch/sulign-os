@@ -491,6 +491,7 @@
       <div style="width:1px;background:var(--g200);height:20px;margin:0 4px;"></div>
       <button class="save-btn" onclick="salvarOrcamento()">💾 Salvar</button>
       <button class="save-btn load" onclick="voltarLista()">📋 Lista de Orçamentos</button>
+      <button class="save-btn" onclick="inserirGrupoOperacional()" style="background:var(--ga);" title="Inserir grupo operacional pré-populado">⚙ Operacional</button>
       <button class="save-btn" onclick="exportarHTML()" style="background:#5c6bc0;" title="Baixar HTML com estado atual para salvar no Drive">⬇ HTML</button>
       <button class="save-btn" onclick="abrirGerarOS()" style="background:#00695c;" title="Gerar Ordens de Serviço a partir deste orçamento">⚙ Gerar OS CV</button>
       <button class="save-btn" onclick="abrirGerarOSSetorial()" style="background:#4a148c;" title="Gerar OS por setor: Forração, Serralheria, Marcenaria, Pintura...">🏭 OS Setorial</button>
@@ -526,6 +527,7 @@
           <div class="bi"><label>BV — Comissão (%)</label><input type="number" id="bv" value="5" step="0.5" oninput="calcAll()" title="Comissionamento sobre faturamento líquido (descontado do preço de venda)"></div>
           <div class="bi"><label>Taxa Imposto NF (%)</label><input type="number" id="ir" value="12" step="0.5" oninput="calcAll()"></div>
           <div class="bi"><label>Desconto (%)</label><input type="number" id="desc-pct" value="0" min="0" max="100" step="0.5" oninput="calcAll()"></div>
+          <div class="bi" style="border-top:1.5px solid var(--ga);padding-top:8px;margin-top:4px;"><label style="color:var(--ga);font-weight:600;">Operacional (%)</label><input type="number" id="op-pct" value="14.5" min="0" max="100" step="0.5" oninput="calcAll()" title="Verba operacional sobre venda líquida — Projeto, RRT, Logística, Mobilização etc."></div>
         </div>
         <div class="btt">
           <div>
@@ -547,6 +549,8 @@
       <div class="rr tot" id="r-bruto-row"><span class="rl">Total bruto</span><span class="rv" id="r-total">—</span></div>
       <div class="rr" id="r-desc-row" style="display:none;"><span class="rl">Desconto (<span id="r-desc-lbl">0</span>%)</span><span class="rv" style="color:#ff8a80;" id="r-desc-val">—</span></div>
       <div class="rr tot" id="r-liq-row" style="display:none;"><span class="rl">Total líquido</span><span class="rv" id="r-liq">—</span></div>
+      <div class="rr" id="r-op-row"><span class="rl">Operacional (<span id="r-op-lbl">14,5</span>%)</span><span class="rv" style="color:var(--ga);" id="r-op-val">—</span></div>
+      <div class="rr tot" style="background:var(--black);padding:10px 14px;border-radius:2px;margin-top:4px;"><span class="rl" style="color:var(--white);font-weight:700;">TOTAL GERAL</span><span class="rv" style="color:var(--ga);font-size:15px;font-weight:700;" id="r-geral">—</span></div>
     </div>
   </div>
 
@@ -1020,6 +1024,16 @@ function calcAll(){
   s('r-desc-lbl',g('desc-pct'));s('r-desc-val',dp>0?'− '+fmt(dv):'—');s('r-liq',fmt(gl));
   var dr=document.getElementById('r-desc-row'),lr=document.getElementById('r-liq-row');
   if(dr)dr.style.display=dp>0?'flex':'none';if(lr)lr.style.display=dp>0?'flex':'none';
+  // Operacional sobre venda líquida
+  var opPct=parseFloat(document.getElementById('op-pct')?document.getElementById('op-pct').value:14.5)||0;
+  var vendaBase=dp>0?gl:gT;  // usa líquido se há desconto, bruto caso contrário
+  var opVal=vendaBase*opPct/100;
+  var totalGeral=vendaBase+opVal;
+  var opRow=document.getElementById('r-op-row');
+  if(opRow)opRow.style.display=opPct>0?'flex':'none';
+  s('r-op-lbl',(opPct%1===0?opPct.toFixed(0):opPct.toFixed(1)).replace('.',','));
+  s('r-op-val',opPct>0?fmt(opVal):'—');
+  s('r-geral',fmt(totalGeral));
   renderProposta(f);renderDescritivo();renderBlocado(f);
 }
 
@@ -2887,6 +2901,33 @@ function showListView(){
   document.getElementById('list-view').style.display='block';
   carregarListaOrcamentos();
 }
+function inserirGrupoOperacional(){
+  var linhasOp=[
+    ['Projeto e detalhamento técnico',1,0,'vb'],
+    ['Visitas técnicas ao local',1,0,'vb'],
+    ['Emissão de RRT',1,0,'un'],
+    ['Locação de equipamentos',1,0,'vb'],
+    ['Mobilização de equipe',1,0,'vb'],
+    ['Desmobilização e retirada',1,0,'vb'],
+    ['Contratações externas',1,0,'vb'],
+    ['Logística — viagens e transporte',1,0,'vb'],
+    ['Alimentação e diárias de equipe',1,0,'vb'],
+    ['Imprevistos operacionais',1,0,'vb']
+  ];
+  var tbl=makeTable('Operacional',[],''  ,null,null);
+  tbl.opcional=true;
+  var wrap=document.getElementById(tbl.id);
+  if(wrap){
+    wrap.classList.add('opcional');
+    var chk=wrap.querySelector('.opt-chk');if(chk)chk.checked=true;
+    var tag=wrap.querySelector('.opcional-tag');if(tag)tag.style.display='inline';
+  }
+  linhasOp.forEach(function(l){addRow(tbl,l[0],l[1],l[2],l[3],false,0,0,false);});
+  calcAll();
+  // scroll ao grupo
+  if(wrap)wrap.scrollIntoView({behavior:'smooth',block:'start'});
+}
+
 function voltarLista(){
   showListView();
 }
