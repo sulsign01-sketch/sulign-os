@@ -2740,7 +2740,7 @@ async function gerarDescricao(tbl,descEl,btn){
 
   try{
     var resp=await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key='+key,
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='+key,
       {
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -2748,16 +2748,29 @@ async function gerarDescricao(tbl,descEl,btn){
       }
     );
     if(resp.status===400||resp.status===403){
-      localStorage.removeItem(GEMINI_KEY_LS);
-      descEl.textContent='';
+      var errData=await resp.json().catch(function(){return {};});
+      var errMsg=(errData.error&&errData.error.message)||'API key inválida ou sem permissão';
+      if(resp.status===400&&errMsg.indexOf('API_KEY')>=0||resp.status===403){
+        localStorage.removeItem(GEMINI_KEY_LS);
+        descEl.textContent='';
+        btn.disabled=false;btn.innerHTML='✨ Gerar descrição';
+        _gerarPendingTbl=tbl;_gerarPendingDesc=descEl;_gerarPendingBtn=btn;
+        document.getElementById('apikey-inp').value='';
+        document.getElementById('apikey-modal').classList.add('open');
+        return;
+      }
+      descEl.textContent='Erro '+resp.status+': '+errMsg;
       btn.disabled=false;btn.innerHTML='✨ Gerar descrição';
-      _gerarPendingTbl=tbl;_gerarPendingDesc=descEl;_gerarPendingBtn=btn;
-      document.getElementById('apikey-inp').value='';
-      document.getElementById('apikey-modal').classList.add('open');
+      return;
+    }
+    if(!resp.ok){
+      var errTxt=await resp.text().catch(function(){return 'erro desconhecido';});
+      descEl.textContent='Erro HTTP '+resp.status+': '+errTxt.substring(0,120);
+      btn.disabled=false;btn.innerHTML='✨ Gerar descrição';
       return;
     }
     var data=await resp.json();
-    var texto=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]?data.candidates[0].content.parts[0].text:'Erro ao gerar.';
+    var texto=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]?data.candidates[0].content.parts[0].text:'Resposta vazia da IA.';
     descEl.textContent=texto.trim();
     estrDescricoes[tbl.id]=texto.trim();
   }catch(e){
