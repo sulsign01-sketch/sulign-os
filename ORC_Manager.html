@@ -1,7 +1,7 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0058)file:///C:/Users/Pdvex-Carlos/Downloads/ORC_Manager_1.html -->
+<html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Sul Sign · Orçamentos</title>
 <style>
@@ -429,8 +429,8 @@
   .lv-loading{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
 </style>
 </head>
-<body>
-<div id="list-view">
+<body class="">
+<div id="list-view" style="display: block;">
   <div class="page" style="margin:24px auto;">
   <div class="hd">
     <div class="hd-top">
@@ -446,13 +446,13 @@
   </div>
   <div class="ab"></div>
   <div class="lv-tabs">
-    <div class="lv-tab active" id="lv-tab-ativos" onclick="setLvTab('ativos')">Ativos</div>
-    <div class="lv-tab" id="lv-tab-arquivo" onclick="setLvTab('arquivo')">Arquivo</div>
+    <div class="lv-tab active" id="lv-tab-ativos" onclick="setLvTab(&#39;ativos&#39;)">Ativos</div>
+    <div class="lv-tab" id="lv-tab-arquivo" onclick="setLvTab(&#39;arquivo&#39;)">Arquivo</div>
   </div>
   <div class="lv-toolbar">
     <input class="lv-search" id="lv-search-inp" type="text" placeholder="Buscar por número, cliente ou projeto...">
   </div>
-  <div class="lv-body" id="lv-body"><div class="lv-loading">Carregando...</div></div>
+  <div class="lv-body" id="lv-body"><div class="lv-empty">Erro ao carregar: _lvTabAtual is not defined</div></div>
   </div>
 </div>
 <div id="editor-view" style="display:none;">
@@ -467,7 +467,7 @@
         <div class="doc-num-el" contenteditable="true">SS-2026_06-24</div>
       </div>
       <div class="hd-right">
-        <div class="mr">Data <span id="dt"></span></div>
+        <div class="mr">Data <span id="dt">22/06/2026</span></div>
         <div class="mr">Validade <span contenteditable="true">15 dias</span></div>
         <div class="mr">CNPJ <span contenteditable="true">03.952.317/0001-16</span></div>
       </div>
@@ -479,7 +479,7 @@
       <div class="hd-info-item"><span class="hd-info-label">Projeto</span><span class="hd-info-val" contenteditable="true">Letreiro Fachada — Igreja Batista Nova Filadélfia</span></div>
       <div class="hd-info-item"><span class="hd-info-label">Ref.</span><span class="hd-info-val" contenteditable="true">Faca 410×160cm — PVC 20mm pintado branco</span></div>
       <div class="hd-info-item"><span class="hd-info-label">Status</span>
-        <select id="orc-status" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:12px;padding:2px 4px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+        <select id="orc-status" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:12px;padding:2px 4px;cursor:pointer;font-family:&#39;DM Sans&#39;,sans-serif;">
           <option value="Em Orçamento">Em Orçamento</option>
           <option value="Cotação">Cotação</option>
           <option value="Proposta Enviada">Proposta Enviada</option>
@@ -505,8 +505,8 @@
     <div class="toolbar-left">
       <button class="tbtn add" onclick="abrirInserirPeca()">⊕ Inserir peça</button>
       <button class="tbtn" onclick="addTable()">+ Grupo avulso</button>
-      <button class="tbtn" onclick="addIncItem('inc-sim')">+ Item incluso</button>
-      <button class="tbtn" onclick="addIncItem('inc-nao')">+ Item não incluso</button>
+      <button class="tbtn" onclick="addIncItem(&#39;inc-sim&#39;)">+ Item incluso</button>
+      <button class="tbtn" onclick="addIncItem(&#39;inc-nao&#39;)">+ Item não incluso</button>
       <div style="width:1px;background:var(--g200);height:20px;margin:0 4px;"></div>
       <button class="save-btn" onclick="salvarOrcamento()">💾 Salvar</button>
       <button class="save-btn load" onclick="voltarLista()">📋 Lista de Orçamentos</button>
@@ -518,15 +518,15 @@
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="mt">
-        <button class="mbtn active" onclick="setModo('memorial',event)">Memorial</button>
-        <button class="mbtn" onclick="setModo('proposta',event)">Proposta</button>
-        <button class="mbtn" onclick="setModo('descritivo',event)">Descritivo</button>
-        <button class="mbtn" onclick="setModo('blocado',event)">Blocado</button>
-        <button class="mbtn" onclick="setModo('estr',event)">✦ Estratificado</button>
+        <button class="mbtn active" onclick="setModo(&#39;memorial&#39;,event)">Memorial</button>
+        <button class="mbtn" onclick="setModo(&#39;proposta&#39;,event)">Proposta</button>
+        <button class="mbtn" onclick="setModo(&#39;descritivo&#39;,event)">Descritivo</button>
+        <button class="mbtn" onclick="setModo(&#39;blocado&#39;,event)">Blocado</button>
+        <button class="mbtn" onclick="setModo(&#39;estr&#39;,event)">✦ Estratificado</button>
       </div>
       <div style="display:flex;gap:4px;border-left:1px solid var(--g200);padding-left:8px;">
-        <button class="tbtn" onclick="setModo('pecas',event)" style="font-size:10px;padding:5px 10px;">🧩 Peças</button>
-        <button class="tbtn" onclick="setModo('base',event)" style="font-size:10px;padding:5px 10px;">📋 Base</button>
+        <button class="tbtn" onclick="setModo(&#39;pecas&#39;,event)" style="font-size:10px;padding:5px 10px;">🧩 Peças</button>
+        <button class="tbtn" onclick="setModo(&#39;base&#39;,event)" style="font-size:10px;padding:5px 10px;">📋 Base</button>
       </div>
     </div>
   </div>
@@ -551,9 +551,9 @@
         <div class="btt">
           <div>
             <span class="btl">Fator BDI Total</span>
-            <span class="btv" id="bdi-f">—</span>
+            <span class="btv" id="bdi-f">56.9% (1.5694x)</span>
             <span style="margin-left:16px;" class="btl">BV sobre venda líquida</span>
-            <span class="btv" id="bv-val" style="margin-left:4px;">—</span>
+            <span class="btv" id="bv-val" style="margin-left:4px;">R$ 0,00</span>
           </div>
           <div style="font-size:10px;color:var(--g400);">BDI = (1+AC+DF+RI)/(1−L−I)−1 · BV calculado sobre preço líquido</div>
         </div>
@@ -561,15 +561,15 @@
       <div id="tables-container"></div>
     </div>
     <div class="rb">
-      <div class="rr"><span class="rl">Custo direto total</span><span class="rv" id="r-custo">—</span></div>
-      <div class="rr"><span class="rl">Imposto NF total</span><span class="rv" style="color:#ff8a80;" id="r-imp">—</span></div>
-      <div class="rr"><span class="rl">BDI aplicado</span><span class="rv" id="r-bdi">—</span></div>
-      <div class="rr"><span class="rl">BV (comissão sobre venda líquida)</span><span class="rv" style="color:#ffd54f;" id="r-bv">—</span></div>
-      <div class="rr tot" id="r-bruto-row"><span class="rl">Total bruto</span><span class="rv" id="r-total">—</span></div>
+      <div class="rr"><span class="rl">Custo direto total</span><span class="rv" id="r-custo">R$ 0,00</span></div>
+      <div class="rr"><span class="rl">Imposto NF total</span><span class="rv" style="color:#ff8a80;" id="r-imp">R$ 0,00</span></div>
+      <div class="rr"><span class="rl">BDI aplicado</span><span class="rv" id="r-bdi">56.9%</span></div>
+      <div class="rr"><span class="rl">BV (comissão sobre venda líquida)</span><span class="rv" style="color:#ffd54f;" id="r-bv">R$ 0,00</span></div>
+      <div class="rr tot" id="r-bruto-row"><span class="rl">Total bruto</span><span class="rv" id="r-total">R$ 0,00</span></div>
       <div class="rr" id="r-desc-row" style="display:none;"><span class="rl">Desconto (<span id="r-desc-lbl">0</span>%)</span><span class="rv" style="color:#ff8a80;" id="r-desc-val">—</span></div>
-      <div class="rr tot" id="r-liq-row" style="display:none;"><span class="rl">Total líquido</span><span class="rv" id="r-liq">—</span></div>
-      <div class="rr" id="r-op-row"><span class="rl">Operacional (<span id="r-op-lbl">14,5</span>%)</span><span class="rv" style="color:var(--ga);" id="r-op-val">—</span></div>
-      <div class="rr tot" style="background:var(--black);padding:10px 14px;border-radius:2px;margin-top:4px;"><span class="rl" style="color:var(--white);font-weight:700;">TOTAL GERAL</span><span class="rv" style="color:var(--ga);font-size:15px;font-weight:700;" id="r-geral">—</span></div>
+      <div class="rr tot" id="r-liq-row" style="display:none;"><span class="rl">Total líquido</span><span class="rv" id="r-liq">R$ 0,00</span></div>
+      <div class="rr" id="r-op-row" style="display: none;"><span class="rl">Operacional (<span id="r-op-lbl">0</span>%)</span><span class="rv" style="color:var(--ga);" id="r-op-val">—</span></div>
+      <div class="rr tot" style="background:var(--black);padding:10px 14px;border-radius:2px;margin-top:4px;"><span class="rl" style="color:var(--white);font-weight:700;">TOTAL GERAL</span><span class="rv" style="color:var(--ga);font-size:15px;font-weight:700;" id="r-geral">R$ 0,00</span></div>
       <div class="rr" id="r-opc-row" style="display:none;border-top:1px dashed var(--g200);margin-top:8px;padding-top:8px;"><span class="rl" style="color:var(--g400);font-style:italic;">Opcionais (não inclusos)</span><span class="rv" style="color:var(--g400);font-style:italic;" id="r-opc-val">—</span></div>
     </div>
   </div>
@@ -579,7 +579,7 @@
     <div class="sec">
       <div class="sec-title">Escopo do Projeto</div>
       <p style="font-size:12px;color:var(--g600);margin-bottom:14px;" contenteditable="true">Fornecimento e produção de letreiro em PVC 20mm pintado branco para fachada da Igreja Batista Nova Filadélfia, conforme faca aprovada 410×160cm.</p>
-      <div id="prop-tables-container"></div>
+      <div id="prop-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th style="width: 8%;">Qtd</th><th style="width: 6%; text-align: center;">Un.</th><th class="n">Valor Venda</th><th class="n" style="color: rgb(255, 138, 128);">Imposto</th><th class="n">Total</th></tr></thead><tbody><tr class="grand"><td colspan="4"><strong>Total Geral</strong></td><td class="imp2">—</td><td class="n" style="color: rgb(82, 183, 136); font-size: 14px;">R$ 0,00</td></tr></tbody></table></div>
     </div>
     <div class="sec">
       <div class="sec-title">Condições Comerciais</div>
@@ -607,7 +607,7 @@
             <li><span contenteditable="true">Gabarito de instalação em MDF 3mm</span></li>
             <li><span contenteditable="true">Emissão de Nota Fiscal</span></li>
           </ul>
-          <span class="inc-add" onclick="addIncItem('inc-sim')">+ adicionar item</span>
+          <span class="inc-add" onclick="addIncItem(&#39;inc-sim&#39;)">+ adicionar item</span>
         </div>
         <div>
           <div class="sec-title">Não Incluso</div>
@@ -616,7 +616,7 @@
             <li><span contenteditable="true">Iluminação externa</span></li>
             <li><span contenteditable="true">Tratamento ou preparo da parede</span></li>
           </ul>
-          <span class="inc-add" onclick="addIncItem('inc-nao')">+ adicionar item</span>
+          <span class="inc-add" onclick="addIncItem(&#39;inc-nao&#39;)">+ adicionar item</span>
         </div>
       </div>
     </div>
@@ -626,7 +626,7 @@
         <p contenteditable="true">Ao aprovar esta proposta por escrito (e-mail ou WhatsApp), o contratante confirma a leitura e aceite de todas as especificações técnicas, escopo, prazos e condições comerciais descritas neste documento. A aprovação implica início do processo produtivo mediante pagamento do sinal.</p>
         <div class="sign-line">
           <div class="sign-item"><span id="sign-cliente">Contratante</span><br><span style="color:var(--g400)">Data: _____ / _____ / _____</span></div>
-          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt2"></span></span></div>
+          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt2">22/06/2026</span></span></div>
         </div>
       </div>
     </div>
@@ -637,7 +637,7 @@
     <div class="sec">
       <div class="sec-title">Especificação Técnica</div>
       <div class="desc-nota">Documento descritivo — valores suprimidos. Para orçamento completo solicite a Proposta Comercial.</div>
-      <div id="desc-tables-container"></div>
+      <div id="desc-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th class="n" style="width: 10%;">Qtd</th><th style="width: 8%; text-align: center;">Un.</th></tr></thead><tbody></tbody></table></div>
     </div>
   </div>
 
@@ -646,7 +646,7 @@
     <div class="sec">
       <div class="sec-title">Escopo do Projeto</div>
       <p style="font-size:12px;color:var(--g600);margin-bottom:14px;" contenteditable="true">Fornecimento e produção de letreiro em PVC 20mm pintado branco para fachada da Igreja Batista Nova Filadélfia, conforme faca aprovada 410×160cm.</p>
-      <div id="bloc-tables-container"></div>
+      <div id="bloc-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th class="n" style="color: rgb(255, 138, 128); width: 15%;">Imposto</th><th class="n" style="width: 17%;">Total do Grupo</th></tr></thead><tbody><tr class="grand"><td colspan="2"><strong>Total Geral</strong></td><td class="n" style="color: rgb(82, 183, 136); font-size: 14px;">R$ 0,00</td></tr></tbody></table></div>
     </div>
     <div class="sec">
       <div class="sec-title">Condições Comerciais</div>
@@ -681,7 +681,7 @@
         <p contenteditable="true">Ao aprovar esta proposta por escrito (e-mail ou WhatsApp), o contratante confirma a leitura e aceite de todas as especificações técnicas, escopo, prazos e condições comerciais descritas neste documento. A aprovação implica início do processo produtivo mediante pagamento do sinal.</p>
         <div class="sign-line">
           <div class="sign-item"><span id="sign-cliente">Contratante</span><br><span style="color:var(--g400)">Data: _____ / _____ / _____</span></div>
-          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt3"></span></span></div>
+          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt3">22/06/2026</span></span></div>
         </div>
       </div>
     </div>
@@ -693,7 +693,7 @@
     <div class="gos-box">
       <div class="gos-title">
         <span>⚙ Gerar Ordens de Serviço</span>
-        <button onclick="document.getElementById('gos-modal').classList.remove('open')" style="background:none;border:none;font-size:18px;color:var(--g400);cursor:pointer;">×</button>
+        <button onclick="document.getElementById(&#39;gos-modal&#39;).classList.remove(&#39;open&#39;)" style="background:none;border:none;font-size:18px;color:var(--g400);cursor:pointer;">×</button>
       </div>
       <p style="font-size:11px;color:var(--g600);margin-bottom:12px;">Selecione os grupos, confirme a disciplina de cada um e gere as OSs no sistema de produção.</p>
       <div id="gos-grupos"></div>
@@ -714,7 +714,7 @@
         </div>
       </div>
       <div class="modal-btns" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--g200);">
-        <button class="btn btn-outline" onclick="document.getElementById('gos-modal').classList.remove('open')">Cancelar</button>
+        <button class="btn btn-outline" onclick="document.getElementById(&#39;gos-modal&#39;).classList.remove(&#39;open&#39;)">Cancelar</button>
         <button class="btn btn-green btn-lg" id="gos-btn-gerar" onclick="confirmarGerarOS()">⚙ Gerar OSs Selecionadas</button>
       </div>
       <div class="gos-result" id="gos-result">
@@ -729,7 +729,7 @@
     <div class="orc-modal-box">
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--g200);display:flex;justify-content:space-between;">
         <span>Orçamentos Salvos</span>
-        <span style="cursor:pointer;color:var(--g400);" onclick="document.getElementById('orc-modal').classList.remove('open')">×</span>
+        <span style="cursor:pointer;color:var(--g400);" onclick="document.getElementById(&#39;orc-modal&#39;).classList.remove(&#39;open&#39;)">×</span>
       </div>
       <div id="orc-lista">
         <div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>
@@ -742,10 +742,9 @@
     <div class="ins-modal-box">
       <div style="font-size:13px;font-weight:600;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--g200);display:flex;justify-content:space-between;">
         <span>Inserir Peça no Memorial</span>
-        <span style="cursor:pointer;color:var(--g400);" onclick="document.getElementById('ins-modal').classList.remove('open')">×</span>
+        <span style="cursor:pointer;color:var(--g400);" onclick="document.getElementById(&#39;ins-modal&#39;).classList.remove(&#39;open&#39;)">×</span>
       </div>
-      <input type="text" id="ins-search" placeholder="Buscar peça..." oninput="filtrarPecasIns()"
-        style="width:100%;border:1px solid var(--g200);border-bottom:2px solid var(--ylwb);background:var(--ylw);padding:6px 10px;font-size:12px;outline:none;border-radius:2px;margin-bottom:10px;">
+      <input type="text" id="ins-search" placeholder="Buscar peça..." oninput="filtrarPecasIns()" style="width:100%;border:1px solid var(--g200);border-bottom:2px solid var(--ylwb);background:var(--ylw);padding:6px 10px;font-size:12px;outline:none;border-radius:2px;margin-bottom:10px;">
       <div id="ins-lista" style="max-height:280px;overflow-y:auto;"></div>
       <div class="ins-dim-row" id="ins-dim-row" style="display:none;">
         <label>Peça selecionada:</label>
@@ -827,8 +826,8 @@
           <button class="sync-btn" onclick="sincronizarDrive()">⟳ Sync Drive</button>
         </div>
       </div>
-      <div id="bc-filtros" class="bc-filtros"></div>
-      <div class="bc-nota" id="bc-status">⏳ Carregando base...</div>
+      <div id="bc-filtros" class="bc-filtros"><button class="bc-filtro-btn ativo">Todos</button><button class="bc-filtro-btn">Chapas</button><button class="bc-filtro-btn">Impressão</button><button class="bc-filtro-btn">Perfil/Metalon</button><button class="bc-filtro-btn">Madeira</button><button class="bc-filtro-btn">LED/Elétrica</button><button class="bc-filtro-btn">Mão de Obra</button><button class="bc-filtro-btn">Consumível</button><button class="bc-filtro-btn">Locação</button></div>
+      <div class="bc-nota" id="bc-status" style="background: rgb(232, 245, 233); color: rgb(45, 106, 79); border-left-color: rgb(82, 183, 136);">✓ Base carregada — 81 insumos</div>
 
       <!-- Formulário novo item -->
       <div class="bc-form">
@@ -874,13 +873,13 @@
           <thead><tr>
             <th>Insumo</th><th>Categoria</th><th>Preço/chapa</th><th>L×A (cm)</th><th>R$/m²</th><th>Unid.</th><th></th>
           </tr></thead>
-          <tbody id="bc-tbody"></tbody>
+          <tbody id="bc-tbody"><tr data-cat="chapa"><td><strong>ACM 3mm Terzian (5,00×1,22m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 340,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">500x122cm</td><td><span class="m2-badge">R$ 55,74</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>ACM 3mm Vinil Sul (5,00×1,22m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 390,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">500x122cm</td><td><span class="m2-badge">R$ 63,93</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>ACM 4mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 250,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 250,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Acrílico Cristal 3mm (2×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 300,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x100cm</td><td><span class="m2-badge">R$ 150,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Acrílico Leitoso 3mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 180,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 180,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Acrílico Leitoso 3mm (2×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 350,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x100cm</td><td><span class="m2-badge">R$ 175,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Acrílico Leitoso 3mm (3×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 520,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">300x100cm</td><td><span class="m2-badge">R$ 173,33</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Chapa Galvanizada 24 (3×1,20m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 149,78</td><td style="font-family:DM Mono,monospace;color:var(--g600);">300x120cm</td><td><span class="m2-badge">R$ 41,61</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Compensado Naval 15mm (2,20×1,60m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 218,40</td><td style="font-family:DM Mono,monospace;color:var(--g600);">220x160cm</td><td><span class="m2-badge">R$ 62,05</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Compensado Pinus 15mm (2,20×1,60m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 129,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">220x160cm</td><td><span class="m2-badge">R$ 36,65</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Compensado Pinus 6mm (2,20×1,60m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 51,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">220x160cm</td><td><span class="m2-badge">R$ 14,49</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Branco 15mm 2F (1,85×2,75m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 229,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 45,01</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Branco Ultra 15mm 2F</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 302,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 59,36</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Crú 15mm (1,85×2,75m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 179,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 35,18</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Crú 3mm (1,85×2,75m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 49,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 9,73</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Crú 6mm (1,85×2,75m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 99,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 19,46</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Crú 9mm (1,85×2,75m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 123,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 24,18</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>MDF Naval Crú 15mm (1,85×2,75m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 279,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">185x275cm</td><td><span class="m2-badge">R$ 54,84</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Placa PS 1mm (2×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 42,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x100cm</td><td><span class="m2-badge">R$ 21,25</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Placa PS 2mm (3×1,30m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 168,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">300x130cm</td><td><span class="m2-badge">R$ 43,08</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Placa PS 2mm (3×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 127,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">300x100cm</td><td><span class="m2-badge">R$ 42,33</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Placa PS 3mm (2×1,30m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 188,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x130cm</td><td><span class="m2-badge">R$ 72,31</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Placa PS Cristal 2mm (2×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 118,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x100cm</td><td><span class="m2-badge">R$ 59,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Placa PS Cristal 3mm (2×1m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 175,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x100cm</td><td><span class="m2-badge">R$ 87,50</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Policarbonato Alveolar 4mm (6×2,10m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 386,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">600x210cm</td><td><span class="m2-badge">R$ 30,67</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Policarbonato Alveolar 6mm (6×2,10m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 570,45</td><td style="font-family:DM Mono,monospace;color:var(--g600);">600x210cm</td><td><span class="m2-badge">R$ 45,27</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Policarbonato Compacto 3mm (2,05×3m)</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 791,98</td><td style="font-family:DM Mono,monospace;color:var(--g600);">205x300cm</td><td><span class="m2-badge">R$ 128,78</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>Poliondas 3mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 140,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 140,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>PS 1mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 120,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 120,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>PS 2mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 120,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 120,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>PS 3mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 170,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 170,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>PVC Expandido 10mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 260,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">244x122cm</td><td><span class="m2-badge">R$ 87,34</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>PVC Expandido 20mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 250,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 250,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="chapa"><td><strong>PVC Expandido 9mm</strong></td><td>Chapa</td><td style="font-family:DM Mono,monospace;">R$ 227,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">244x122cm</td><td><span class="m2-badge">R$ 76,26</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="consumivel"><td><strong>Bagum Branco 1,40m (60m rolo)</strong></td><td>Consumivel</td><td style="font-family:DM Mono,monospace;">R$ 360,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 360,00</span></td><td style="color:var(--g400);">rolo</td><td><span class="bc-del">×</span></td></tr><tr data-cat="consumivel"><td><strong>Carpete Grafite</strong></td><td>Consumivel</td><td style="font-family:DM Mono,monospace;">R$ 12,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 12,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="consumivel"><td><strong>Carpete Premium Ecoloop</strong></td><td>Consumivel</td><td style="font-family:DM Mono,monospace;">R$ 30,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 30,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="consumivel"><td><strong>Cola Spray 340g</strong></td><td>Consumivel</td><td style="font-family:DM Mono,monospace;">R$ 33,95</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 33,95</span></td><td style="color:var(--g400);">lata</td><td><span class="bc-del">×</span></td></tr><tr data-cat="consumivel"><td><strong>Consumíveis (4% matéria-prima)</strong></td><td>Consumivel</td><td style="font-family:DM Mono,monospace;">—</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td>—</td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lambe-lambe</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 22,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 22,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lona 5m sem emenda</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 55,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 55,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lona B.O</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 70,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 70,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lona Backlight</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 45,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 45,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lona Fosca 380gr</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 35,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 35,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lona Fosca+UV</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 45,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 45,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Lona Sannet</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 55,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 55,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Manta Vinílica Impressa Amadeirada</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 150,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 150,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Papel Fotográfico</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 65,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 65,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Blackout Fosco</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 39,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 39,50</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Blackout+UV</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 49,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 49,50</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Branco Fosco Removível</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 37,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 37,50</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Fosco</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 35,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 35,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Fosco+Laminação</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 55,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 55,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Fosco+UV</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 45,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 45,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Laminação Piso</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 60,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 60,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Perfurado</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 55,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 55,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Perfurado UV</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 60,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 60,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Recorte Eletrônico</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 100,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 100,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Transparente</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 35,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 35,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="impressao"><td><strong>Vinil Transparente+UV</strong></td><td>Impressao</td><td style="font-family:DM Mono,monospace;">R$ 55,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 55,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="led"><td><strong>Driver LED</strong></td><td>LED/Eletrica</td><td style="font-family:DM Mono,monospace;">R$ 279,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 279,00</span></td><td style="color:var(--g400);">un</td><td><span class="bc-del">×</span></td></tr><tr data-cat="led"><td><strong>Fita LED</strong></td><td>LED/Eletrica</td><td style="font-family:DM Mono,monospace;">R$ 35,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 35,00</span></td><td style="color:var(--g400);">m.l.</td><td><span class="bc-del">×</span></td></tr><tr data-cat="led"><td><strong>Fita LED Branco Frio</strong></td><td>LED/Eletrica</td><td style="font-family:DM Mono,monospace;">R$ 35,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 35,00</span></td><td style="color:var(--g400);">m</td><td><span class="bc-del">×</span></td></tr><tr data-cat="led"><td><strong>Neon Flex RGB</strong></td><td>LED/Eletrica</td><td style="font-family:DM Mono,monospace;">R$ 90,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 90,00</span></td><td style="color:var(--g400);">m</td><td><span class="bc-del">×</span></td></tr><tr data-cat="locacao"><td><strong>Piso praticável 2,00 x 1,00m</strong></td><td>Locacao</td><td style="font-family:DM Mono,monospace;">R$ 60,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">200x100cm</td><td><span class="m2-badge">R$ 30,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="locacao"><td><strong>Treliça PDVEX</strong></td><td>Locacao</td><td style="font-family:DM Mono,monospace;">R$ 60,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 60,00</span></td><td style="color:var(--g400);">m.l.</td><td><span class="bc-del">×</span></td></tr><tr data-cat="madeira"><td><strong>MDF Cru 15mm</strong></td><td>Madeira</td><td style="font-family:DM Mono,monospace;">R$ 180,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 180,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="madeira"><td><strong>Sarrafo Pinus 5cm (vara 2m)</strong></td><td>Madeira</td><td style="font-family:DM Mono,monospace;">R$ 7,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 7,00</span></td><td style="color:var(--g400);">vara</td><td><span class="bc-del">×</span></td></tr><tr data-cat="madeira"><td><strong>Sarrafo Pinus 7cm (vara 2m)</strong></td><td>Madeira</td><td style="font-family:DM Mono,monospace;">R$ 10,50</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 10,50</span></td><td style="color:var(--g400);">vara</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Aplicação Adesivo/Lona</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 8,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 8,00</span></td><td style="color:var(--g400);">m²</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Arte-Finalização</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 30,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 30,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Auxiliar CV</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 22,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 22,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Eletricista ArtCom</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 40,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 40,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Instalação Volumétrico</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 30,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 30,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Operador Router CNC</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 30,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 30,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Pintura</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 38,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 38,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="mao_de_obra"><td><strong>MO Programador CNC</strong></td><td>Mao de Obra</td><td style="font-family:DM Mono,monospace;">R$ 30,00</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 30,00</span></td><td style="color:var(--g400);">h</td><td><span class="bc-del">×</span></td></tr><tr data-cat="perfil"><td><strong>Metalon 20×20 NA18 (vara 6m)</strong></td><td>Perfil/Metalon</td><td style="font-family:DM Mono,monospace;">R$ 30,87</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 30,87</span></td><td style="color:var(--g400);">vara</td><td><span class="bc-del">×</span></td></tr><tr data-cat="perfil"><td><strong>Metalon 30×30 NA18 (vara 6m)</strong></td><td>Perfil/Metalon</td><td style="font-family:DM Mono,monospace;">R$ 46,32</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 46,32</span></td><td style="color:var(--g400);">vara</td><td><span class="bc-del">×</span></td></tr><tr data-cat="perfil"><td><strong>Metalon 40×40 NA18 (vara 6m)</strong></td><td>Perfil/Metalon</td><td style="font-family:DM Mono,monospace;">R$ 61,82</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 61,82</span></td><td style="color:var(--g400);">vara</td><td><span class="bc-del">×</span></td></tr><tr data-cat="perfil"><td><strong>Metalon 50×50 NA18 (vara 6m)</strong></td><td>Perfil/Metalon</td><td style="font-family:DM Mono,monospace;">R$ 78,67</td><td style="font-family:DM Mono,monospace;color:var(--g600);">—</td><td><span class="m2-badge">R$ 78,67</span></td><td style="color:var(--g400);">vara</td><td><span class="bc-del">×</span></td></tr></tbody>
         </table>
       </div>
 
       <div style="display:flex;justify-content:space-between;align-items:center;padding-top:10px;border-top:1px solid var(--g200);margin-top:10px;">
         <span id="bc-sync-status" style="font-size:11px;color:var(--g400);">—</span>
-        <span style="font-size:10px;color:var(--g400);" id="bc-count"></span>
+        <span style="font-size:10px;color:var(--g400);" id="bc-count">81 insumos cadastrados</span>
       </div>
     </div>
   </div>
@@ -913,7 +912,7 @@
     <div class="gos2-box">
       <div class="gos2-title">
         <span>⚙ Gerar OS por Setor</span>
-        <span style="cursor:pointer;color:var(--g400);font-size:18px;" onclick="document.getElementById('gos2-modal').classList.remove('open')">×</span>
+        <span style="cursor:pointer;color:var(--g400);font-size:18px;" onclick="document.getElementById(&#39;gos2-modal&#39;).classList.remove(&#39;open&#39;)">×</span>
       </div>
       <div id="gos2-setores"></div>
       <div class="gos2-resp-row">
@@ -935,7 +934,7 @@
         </div>
       </div>
       <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
-        <button class="tbtn" onclick="document.getElementById('gos2-modal').classList.remove('open')">Cancelar</button>
+        <button class="tbtn" onclick="document.getElementById(&#39;gos2-modal&#39;).classList.remove(&#39;open&#39;)">Cancelar</button>
         <button class="tbtn add" id="gos2-btn-gerar" onclick="confirmarGerarOSSetorial()">⚙ Gerar OSs Selecionadas</button>
       </div>
       <div class="gos2-result" id="gos2-result">
@@ -3205,4 +3204,4 @@ async function novoOrcamento(){
 // Boot: sempre inicia na lista
 showListView();
 
-</script>
+</script></body></html>
