@@ -418,6 +418,7 @@
   .st-producao{background:#f3e5f5;color:#7b1fa2;}
   .st-entregue{background:#e0e0e0;color:#424242;}
   .st-cancelado{background:#ffebee;color:var(--red);}
+  .st-vencido{background:#f3e5f5;color:#6a1b9a;}
   .lv-empty{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
   .lv-loading{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
 </style>
@@ -469,9 +470,12 @@
       <div class="hd-info-item"><span class="hd-info-label">Ref.</span><span class="hd-info-val" contenteditable="true">Faca 410×160cm — PVC 20mm pintado branco</span></div>
       <div class="hd-info-item"><span class="hd-info-label">Status</span>
         <select id="orc-status" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:12px;padding:2px 4px;cursor:pointer;font-family:'DM Sans',sans-serif;">
+          <option value="Em Orçamento">Em Orçamento</option>
           <option value="Cotação">Cotação</option>
           <option value="Proposta Enviada">Proposta Enviada</option>
-          <option value="Aprovado">Aprovado</option>
+          <option value="Orçamento Aprovado">Orçamento Aprovado</option>
+          <option value="Orçamento Recusado">Orçamento Recusado</option>
+          <option value="Orçamento Vencido">Orçamento Vencido</option>
           <option value="Em Produção">Em Produção</option>
           <option value="Entregue">Entregue</option>
           <option value="Cancelado">Cancelado</option>
@@ -2979,6 +2983,18 @@ async function carregarListaOrcamentos(){
     body.innerHTML='<div class="lv-empty">Erro ao carregar: '+e.message+'</div>';
   }
 }
+function checkVencido(orc){
+  // Se já tem status definitivo, não altera
+  var finais=['Orçamento Aprovado','Orçamento Recusado','Em Produção','Entregue','Cancelado'];
+  if(finais.indexOf(orc.status)>=0) return orc.status;
+  // Se updated_at > 15 dias e ainda em orçamento, marca como vencido
+  if(orc.updated_at){
+    var diff=(new Date()-new Date(orc.updated_at))/(1000*60*60*24);
+    if(diff>15) return 'Orçamento Vencido';
+  }
+  return orc.status||'Em Orçamento';
+}
+
 function renderListaOrcamentos(data){
   var body=document.getElementById('lv-body');
   if(!data.length){body.innerHTML='<div class="lv-empty">Nenhum orçamento salvo ainda. Clique em "+ Novo Orçamento" para começar.</div>';return;}
@@ -2986,14 +3002,15 @@ function renderListaOrcamentos(data){
   data.forEach(function(orc){
     var item=document.createElement('div');item.className='lv-item';
     var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
-    var stMap={'Cotação':'cotacao','Proposta Enviada':'enviado','Aprovado':'aprovado','Em Produção':'producao','Entregue':'entregue','Cancelado':'cancelado'};
-    var stCls=stMap[orc.status]||'cotacao';
+    var stMap={'Em Orçamento':'cotacao','Cotação':'cotacao','Proposta Enviada':'enviado','Orçamento Aprovado':'aprovado','Orçamento Recusado':'cancelado','Orçamento Vencido':'vencido','Em Produção':'producao','Entregue':'entregue','Cancelado':'cancelado'};
+    var statusEfetivo=checkVencido(orc);
+    var stCls=stMap[statusEfetivo]||'cotacao';
     item.innerHTML='<div>'
       +'<div class="lv-item-num">'+(orc.numero||'—')+'</div>'
       +'<div class="lv-item-info">'+(orc.cliente||orc.cliente_nome||'—')+' · '+(orc.projeto||'—')+'</div>'
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:10px;">'
-      +'<span class="lv-badge-st st-'+stCls+'">'+(orc.status||'Cotação')+'</span>'
+      +'<span class="lv-badge-st st-'+stCls+'">'+statusEfetivo+'</span>'
       +'<span class="lv-item-date">'+dt+'</span>'
       +'<span class="lv-item-del">× remover</span>'
       +'</div>';
@@ -3055,7 +3072,7 @@ async function novoOrcamento(){
   var hdVals=document.querySelectorAll('.hd-info-val[contenteditable]');
   hdVals.forEach(function(el){el.textContent='—';});
   var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl)valEl.textContent='15 dias';
-  var _stN=document.getElementById('orc-status');if(_stN)_stN.value='Cotação';
+  var _stN=document.getElementById('orc-status');if(_stN)_stN.value='Em Orçamento';
   // Resetar BDI para defaults
   var bdiDefaults={ac:8,df:2,ri:3,lc:18,im:10,bv:5,ir:12,'desc-pct':0,'op-pct':0};
   Object.keys(bdiDefaults).forEach(function(k){var el=document.getElementById(k);if(el)el.value=bdiDefaults[k];});
