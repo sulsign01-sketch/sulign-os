@@ -339,6 +339,20 @@
   .estr-body{display:grid;grid-template-columns:1fr 2fr;gap:0;}
   .estr-img{background:#f9f9f9;border-right:1px solid var(--g200);min-height:140px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:8px;}
   .estr-img img{max-width:100%;max-height:140px;object-fit:contain;border-radius:2px;}
+  /* modal api key */
+  .apikey-modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:999;align-items:center;justify-content:center;}
+  .apikey-modal.open{display:flex;}
+  .apikey-box{background:var(--white);border-radius:4px;padding:24px;max-width:480px;width:90%;}
+  .apikey-box h3{font-size:14px;font-weight:600;margin-bottom:8px;}
+  .apikey-box p{font-size:12px;color:var(--g600);margin-bottom:12px;line-height:1.5;}
+  .apikey-box input{width:100%;border:1.5px solid var(--g200);border-radius:3px;padding:9px 12px;font-family:'DM Mono',monospace;font-size:12px;outline:none;margin-bottom:10px;}
+  .apikey-box input:focus{border-color:var(--ga);}
+  .apikey-box a{color:var(--ga);font-size:11px;}
+  .apikey-btns{display:flex;gap:8px;margin-top:4px;}
+  .apikey-btns button{flex:1;padding:9px;font-size:12px;font-weight:600;border:none;border-radius:3px;cursor:pointer;}
+  .apikey-save{background:var(--ga);color:var(--white);}
+  .apikey-save:hover{background:var(--green);}
+  .apikey-cancel{background:var(--g100);color:var(--g600);}
   .estr-img-placeholder{color:var(--g400);font-size:11px;text-align:center;line-height:1.6;}
   .estr-img-btn{padding:4px 10px;font-size:10px;font-weight:600;border:1.5px solid var(--g200);background:var(--white);border-radius:2px;cursor:pointer;font-family:"DM Sans",sans-serif;}
   .estr-img-btn:hover{border-color:var(--ga);color:var(--green);}
@@ -903,6 +917,17 @@
 </div>
 
 </div><!-- /editor-view -->
+<div class="apikey-modal" id="apikey-modal">
+  <div class="apikey-box">
+    <h3>🔑 Chave da API Gemini</h3>
+    <p>Necessária para gerar descrições com IA. Gratuita — crie em <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>.<br>Fica salva só no seu browser (localStorage).</p>
+    <input type="password" id="apikey-inp" placeholder="Cole sua API key aqui (AIza...)">
+    <div class="apikey-btns">
+      <button class="apikey-save" onclick="salvarApiKey()">Salvar e continuar</button>
+      <button class="apikey-cancel" onclick="fecharApiKeyModal()">Cancelar</button>
+    </div>
+  </div>
+</div>
 <datalist id="un-options">
   <option value="m²"></option>
   <option value="m"></option>
@@ -2673,38 +2698,68 @@ function renderEstr(){
 var estrDescricoes={};
 
 // ── GERAR DESCRIÇÃO VIA API CLAUDE ──
+var GEMINI_KEY_LS='ss_gemini_key';
+var _gerarPendingTbl=null,_gerarPendingDesc=null,_gerarPendingBtn=null;
+
+function getGeminiKey(){return localStorage.getItem(GEMINI_KEY_LS)||'';}
+function salvarApiKey(){
+  var v=document.getElementById('apikey-inp').value.trim();
+  if(!v)return;
+  localStorage.setItem(GEMINI_KEY_LS,v);
+  fecharApiKeyModal();
+  if(_gerarPendingTbl)gerarDescricao(_gerarPendingTbl,_gerarPendingDesc,_gerarPendingBtn);
+}
+function fecharApiKeyModal(){
+  document.getElementById('apikey-modal').classList.remove('open');
+  _gerarPendingTbl=null;_gerarPendingDesc=null;_gerarPendingBtn=null;
+}
+
 async function gerarDescricao(tbl,descEl,btn){
+  var key=getGeminiKey();
+  if(!key){
+    _gerarPendingTbl=tbl;_gerarPendingDesc=descEl;_gerarPendingBtn=btn;
+    document.getElementById('apikey-inp').value='';
+    document.getElementById('apikey-modal').classList.add('open');
+    return;
+  }
   btn.disabled=true;btn.textContent='⏳ Gerando...';
-  // Montar contexto dos componentes
   var comps=tbl.rows.map(function(row){
-    var q=parseFloat(row.qEl.value)||0,u=parseFloat(row.uEl.value)||0;
+    var q=parseFloat(row.qEl.value)||0;
     return row.descEl.value+(q>0?' ('+q.toFixed(2)+' '+row.unEl.value+')':'');
   }).filter(function(s){return s.trim();}).join(', ');
   var nomePeca=tbl.nameEl.value;
   var dim=tbl.dimEl?tbl.dimEl.value:'';
 
-  var prompt='Voce e especialista em comunicacao visual e cenografia. '
-    +'Escreva descricao tecnica de proposta (3-5 frases, tom profissional) para: '
+  var prompt='Você é especialista em comunicação visual e cenografia. '
+    +'Escreva uma descrição técnica de proposta (3 a 5 frases, tom profissional) para: '
     +'Nome: '+nomePeca+'. '
-    +(dim?'Dimensao: '+dim+'. ':'')
-    +'Componentes: '+comps+'. '
-    +'Explique o que e a peca, como e construida, materiais e acabamento. '
-    +'Nao mencione valores. Portugues brasileiro formal.'
+    +(dim?'Dimensão: '+dim+'. ':'')
+    +'Componentes/materiais: '+comps+'. '
+    +'Explique o que é a peça, como é construída, materiais e acabamento. '
+    +'Não mencione valores. Português brasileiro formal.';
 
   try{
-    var resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:1000,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
+    var resp=await fetch(
+      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key='+key,
+      {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
+      }
+    );
+    if(resp.status===400||resp.status===403){
+      localStorage.removeItem(GEMINI_KEY_LS);
+      descEl.textContent='';
+      btn.disabled=false;btn.innerHTML='✨ Gerar descrição';
+      _gerarPendingTbl=tbl;_gerarPendingDesc=descEl;_gerarPendingBtn=btn;
+      document.getElementById('apikey-inp').value='';
+      document.getElementById('apikey-modal').classList.add('open');
+      return;
+    }
     var data=await resp.json();
-    var texto=data.content&&data.content[0]?data.content[0].text:'Erro ao gerar descrição.';
-    descEl.textContent=texto;
-    estrDescricoes[tbl.id]=texto;
+    var texto=data.candidates&&data.candidates[0]&&data.candidates[0].content&&data.candidates[0].content.parts&&data.candidates[0].content.parts[0]?data.candidates[0].content.parts[0].text:'Erro ao gerar.';
+    descEl.textContent=texto.trim();
+    estrDescricoes[tbl.id]=texto.trim();
   }catch(e){
     descEl.textContent='Erro ao gerar: '+e.message;
   }
