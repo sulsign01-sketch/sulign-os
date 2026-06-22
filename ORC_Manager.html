@@ -2670,8 +2670,17 @@ function renderEstr(){
     descText.dataset.tblid=tbl.id;
     var savedDesc=estrDescricoes[tbl.id]||'';
     if(savedDesc){descText.textContent=savedDesc;}
-    else{descText.innerHTML='<span class="estr-desc-placeholder">Clique em ✨ Gerar para descrever este item automaticamente, ou escreva aqui...</span>';}
-    descText.oninput=function(){estrDescricoes[tbl.id]=descText.textContent;};
+    else{descText.innerHTML='<span class="estr-desc-placeholder">Clique aqui e escreva a descrição — ou use ✨ Gerar para sugerir automaticamente.</span>';}
+    descText.oninput=function(){
+      // limpar placeholder ao digitar
+      var ph=descText.querySelector('.estr-desc-placeholder');
+      if(ph)ph.remove();
+      estrDescricoes[tbl.id]=descText.textContent;
+    };
+    descText.onfocus=function(){
+      var ph=descText.querySelector('.estr-desc-placeholder');
+      if(ph){descText.innerHTML='';estrDescricoes[tbl.id]='';}
+    };
     var gerarBtn=document.createElement('button');gerarBtn.className='estr-gerar-btn';
     gerarBtn.innerHTML='✨ Gerar descrição';
     var redefKeyBtn=document.createElement('button');redefKeyBtn.className='estr-gerar-btn';redefKeyBtn.style.cssText='margin-left:6px;background:transparent;border:1px solid var(--g200);color:var(--g400);font-size:10px;';
