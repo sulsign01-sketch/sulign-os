@@ -41,6 +41,24 @@ tr:hover td{background:var(--g100)}
 .badge.sem{background:var(--g200);color:var(--g600)}
 .badge.and{background:var(--ylw);color:#8a6d00;border:1px solid var(--ylwb)}
 .badge.fec{background:#e8f5e9;color:var(--green)}
+  .todo-form{display:flex;gap:8px;margin-bottom:12px;}
+  .todo-inp{flex:1;border:1.5px solid var(--g200);border-radius:2px;padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12px;outline:none;}
+  .todo-inp:focus{border-color:var(--ga);}
+  .todo-pri{border:1.5px solid var(--g200);border-radius:2px;padding:7px;font-size:11px;outline:none;background:var(--white);}
+  .todo-add{padding:7px 14px;background:var(--ga);color:var(--white);border:none;border-radius:2px;cursor:pointer;font-size:11px;font-weight:600;}
+  .todo-add:hover{background:var(--green);}
+  .todo-item{display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-bottom:1px solid var(--g200);}
+  .todo-item:last-child{border-bottom:none;}
+  .todo-check{margin-top:2px;accent-color:var(--ga);cursor:pointer;width:14px;height:14px;flex-shrink:0;}
+  .todo-body{flex:1;}
+  .todo-txt{font-size:12px;line-height:1.4;}
+  .todo-txt.done{text-decoration:line-through;color:var(--g400);}
+  .todo-meta{font-size:10px;color:var(--g400);margin-top:2px;}
+  .todo-del{font-size:11px;color:var(--g400);cursor:pointer;flex-shrink:0;}
+  .todo-del:hover{color:var(--red);}
+  .pri-alta{border-left:3px solid var(--red);padding-left:6px;}
+  .pri-media{border-left:3px solid var(--ylwb);padding-left:6px;}
+  .pri-baixa{border-left:3px solid var(--g200);padding-left:6px;}
 .loading{text-align:center;padding:40px;color:var(--g400)}
 .err{text-align:center;padding:40px;color:var(--red)}
 .foot{padding:12px 24px;font-size:10px;color:var(--g400);border-top:1px solid var(--g200)}
@@ -86,6 +104,20 @@ tr:hover td{background:var(--g100)}
       <div class="kpi"><div class="kpi-l">Saldo</div><div class="kpi-v" id="kf-saldo">—</div></div>
     </div>
     <div id="fixas-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">Tarefas &amp; Pendências</div>
+    <div id="todo-count" style="font-size:10px;color:var(--g400);margin-bottom:10px;"></div>
+    <div class="todo-form">
+      <input class="todo-inp" id="todo-inp" type="text" placeholder="Nova tarefa...">
+      <select class="todo-pri" id="todo-pri">
+        <option value="alta">🔴 Alta</option>
+        <option value="media" selected>🟡 Média</option>
+        <option value="baixa">⚪ Baixa</option>
+      </select>
+      <button class="todo-add" onclick="adicionarTodo()">+ Adicionar</button>
+    </div>
+    <div id="todo-lista"></div>
   </div>
   <div class="foot">Custo orçado/venda vêm do orçamento (memorial × BDI). Custo realizado soma "Fechado" das compras + lançamentos avulsos vinculados ao número do orçamento. Margem realizada = Venda − Custo Realizado. Repasse por fornecedor soma compras + lançamentos por fornecedor, categoria e job — base para conferência e pagamento (ex: PDVEX). Despesas fixas são custos/receitas da empresa sem vínculo a um job específico (impostos, contador, aportes de sócio).</div>
 </div>
@@ -324,6 +356,61 @@ async function carregar(){
   }
 }
 carregar();
+
+// ── TO-DO (localStorage — roda no browser, nenhuma tabela nova no Supabase) ──
+var TODOS_KEY='ss_painel_todos';
+
+function loadTodos(){
+  try{return JSON.parse(localStorage.getItem(TODOS_KEY)||'[]');}
+  catch(e){return [];}
+}
+function saveTodos(todos){localStorage.setItem(TODOS_KEY,JSON.stringify(todos));}
+
+function renderTodos(){
+  var todos=loadTodos();
+  var lista=document.getElementById('todo-lista');
+  var count=document.getElementById('todo-count');
+  if(!lista)return;
+  var pending=todos.filter(function(t){return !t.done;}).length;
+  if(count)count.textContent=pending+' pendente'+(pending!==1?'s':'')+' · '+todos.length+' total';
+  lista.innerHTML='';
+  var order={alta:0,media:1,baixa:2};
+  todos.slice().sort(function(a,b){
+    if(a.done!==b.done)return a.done?1:-1;
+    return (order[a.pri]||1)-(order[b.pri]||1);
+  }).forEach(function(t){
+    var div=document.createElement('div');div.className='todo-item';
+    var priLabel={'alta':'🔴 Alta','media':'🟡 Média','baixa':'⚪ Baixa'};
+    var dt=t.createdAt?new Date(t.createdAt).toLocaleDateString('pt-BR'):'';
+    div.innerHTML='<input type="checkbox" class="todo-check" '+(t.done?'checked':'')+'>'      +'<div class="todo-body pri-'+t.pri+'">'      +'<div class="todo-txt'+(t.done?' done':'')+'">'+t.text+'</div>'      +'<div class="todo-meta">'+(priLabel[t.pri]||'')+(dt?' · '+dt:'')+'</div>'      +'</div>'      +'<span class="todo-del">×</span>';
+    div.querySelector('.todo-check').onchange=function(){
+      var todos2=loadTodos();
+      var item=todos2.find(function(x){return x.id===t.id;});
+      if(item)item.done=this.checked;
+      saveTodos(todos2);renderTodos();
+    };
+    div.querySelector('.todo-del').onclick=function(){
+      if(!confirm('Remover esta tarefa?'))return;
+      saveTodos(loadTodos().filter(function(x){return x.id!==t.id;}));
+      renderTodos();
+    };
+    lista.appendChild(div);
+  });
+}
+
+function adicionarTodo(){
+  var inp=document.getElementById('todo-inp');
+  var pri=document.getElementById('todo-pri');
+  var text=inp.value.trim();
+  if(!text)return;
+  var todos=loadTodos();
+  todos.unshift({id:Date.now().toString(),text:text,pri:pri?pri.value:'media',done:false,createdAt:new Date().toISOString()});
+  saveTodos(todos);
+  inp.value='';
+  renderTodos();
+}
+document.getElementById('todo-inp').addEventListener('keydown',function(e){if(e.key==='Enter')adicionarTodo();});
+renderTodos();
 </script>
 </body>
 </html>
