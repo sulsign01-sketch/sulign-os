@@ -1001,7 +1001,7 @@ function calcLogOp(f){
     pctVal=gl2*opPct/100;
   }
   var total=logOpTotal+pctVal;
-  return {total:total,hasGroups:logOpTotal>0,hasPct:pctVal>0};
+  return {total:total,hasGroups:logOpTotal>=0&&tables.some(function(t){if(t.opcional)return false;var nm=(t.nameEl?t.nameEl.value:'').toLowerCase();var st=(t.setorEl?t.setorEl.value:'').toLowerCase();return nm.indexOf('logi')>=0||nm.indexOf('logí')>=0||nm.indexOf('opera')>=0||st==='log';}),hasPct:pctVal>0};
 }
 
 function reindexar(){
@@ -1120,10 +1120,10 @@ function renderProposta(f){
     var dRow=tbody.insertRow();dRow.className='grand';dRow.insertCell().colSpan=4;dRow.cells[0].innerHTML='<strong>Subtotal Geral</strong>';dRow.insertCell();var dc=dRow.insertCell();dc.className='n';dc.textContent=fmt(gT);
     var discRow=tbody.insertRow();discRow.style.background='#1a1a1a';discRow.insertCell().colSpan=4;discRow.cells[0].innerHTML='<span style="color:#ff8a80;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Desconto ('+g('desc-pct')+'%)</span>';discRow.insertCell();var dc2=discRow.insertCell();dc2.className='n';dc2.style.color='#ff8a80';dc2.style.fontFamily='DM Mono,monospace';dc2.textContent='− '+fmt(dv);
   }
-  if(loRes.total>0){
-    var opRow=tbody.insertRow();opRow.style.background='#f0faf5';opRow.insertCell().colSpan=4;opRow.cells[0].innerHTML='<span style="font-weight:600;">Logística e Operacional</span>';opRow.insertCell();var opC=opRow.insertCell();opC.className='n';opC.style.color='var(--ga)';opC.style.fontWeight='600';opC.textContent=fmt(loRes.total);
+  if(loRes.hasGroups||loRes.hasPct){
+    var opRow=tbody.insertRow();opRow.style.background='#f0faf5';opRow.insertCell().colSpan=4;opRow.cells[0].innerHTML='<span style="font-weight:600;">Logística e Operacional</span>';opRow.insertCell();var opC=opRow.insertCell();opC.className='n';opC.style.color='var(--ga)';opC.style.fontWeight='600';opC.textContent=loRes.total>0?fmt(loRes.total):'—';
   }
-  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=4;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var ti=tRow.insertCell();ti.className='imp2';ti.textContent=gI>0?fmt(gI):'—';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt(loRes.total>0?totalGeral:(dp>0?gl:gT));
+  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=4;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var ti=tRow.insertCell();ti.className='imp2';ti.textContent=gI>0?fmt(gI):'—';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt((loRes.hasGroups||loRes.hasPct)?totalGeral:(dp>0?gl:gT));
   // Opcionais separados
   if(opcionais.length){
     var sepR=tbody.insertRow();sepR.insertCell().colSpan=6;sepR.cells[0].style.cssText='padding:12px 0 4px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);border-top:1px dashed var(--g200);';sepR.cells[0].textContent='Opcionais — não inclusos no total';
@@ -1196,10 +1196,10 @@ function renderBlocado(f){
     var dRow=tbody.insertRow();dRow.className='grand';dRow.insertCell().colSpan=2;dRow.cells[0].innerHTML='<strong>Subtotal Geral</strong>';var dc=dRow.insertCell();dc.className='n';dc.textContent=fmt(gT);
     var discRow=tbody.insertRow();discRow.style.background='#1a1a1a';discRow.insertCell().colSpan=2;discRow.cells[0].innerHTML='<span style="color:#ff8a80;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Desconto ('+g('desc-pct')+'%)</span>';var dc2=discRow.insertCell();dc2.className='n';dc2.style.color='#ff8a80';dc2.style.fontFamily='DM Mono,monospace';dc2.textContent='− '+fmt(dv);
   }
-  if(loRes.total>0){
-    var opRow=tbody.insertRow();opRow.style.background='#f0faf5';opRow.insertCell().colSpan=2;opRow.cells[0].innerHTML='<span style="font-weight:600;">Logística e Operacional</span>';var opC=opRow.insertCell();opC.className='n';opC.style.color='var(--ga)';opC.style.fontWeight='600';opC.textContent=fmt(loRes.total);
+  if(loRes.hasGroups||loRes.hasPct){
+    var opRow=tbody.insertRow();opRow.style.background='#f0faf5';opRow.insertCell().colSpan=2;opRow.cells[0].innerHTML='<span style="font-weight:600;">Logística e Operacional</span>';var opC=opRow.insertCell();opC.className='n';opC.style.color='var(--ga)';opC.style.fontWeight='600';opC.textContent=loRes.total>0?fmt(loRes.total):'—';
   }
-  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=2;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt(loRes.total>0?totalGeral:(dp>0?gl:gT));
+  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=2;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt((loRes.hasGroups||loRes.hasPct)?totalGeral:(dp>0?gl:gT));
   // Opcionais separados
   if(opcionais.length){
     var sepR=tbody.insertRow();sepR.insertCell().colSpan=3;sepR.cells[0].style.cssText='padding:12px 0 4px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);border-top:1px dashed var(--g200);';sepR.cells[0].textContent='Opcionais — não inclusos no total';
@@ -3082,15 +3082,15 @@ function renderListaOrcamentos(data){
   data.forEach(function(orc){
     var item=document.createElement('div');item.className='lv-item';
     var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
-    var stMap={'Em Orçamento':'cotacao','Cotação':'cotacao','Proposta Enviada':'enviado','Orçamento Aprovado':'aprovado','Orçamento Recusado':'cancelado','Orçamento Vencido':'vencido','Em Produção':'producao','Entregue':'entregue','Cancelado':'cancelado'};
+    var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Cancelado':'background:#ffebee;color:#c62828'};
     var statusEfetivo=checkVencido(orc);
-    var stCls=stMap[statusEfetivo]||'cotacao';
+    var stCls=stStyles[statusEfetivo]||'background:#e3f2fd;color:#1565c0';
     item.innerHTML='<div>'
       +'<div class="lv-item-num">'+(orc.numero||'—')+'</div>'
       +'<div class="lv-item-info">'+(orc.cliente||orc.cliente_nome||'—')+' · '+(orc.projeto||'—')+'</div>'
       +'</div>'
       +'<div style="display:flex;align-items:center;gap:10px;">'
-      +'<span class="lv-badge-st st-'+stCls+'">'+statusEfetivo+'</span>'
+      +'<span style="'+stCls+';font-size:9px;padding:1px 6px;border-radius:2px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:inline-block;">'+statusEfetivo+'</span>'
       +'<span class="lv-item-date">'+dt+'</span>'
       +'<span class="lv-item-del">× remover</span>'
       +'</div>';
