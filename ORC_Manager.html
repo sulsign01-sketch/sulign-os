@@ -2057,7 +2057,6 @@ async function carregarOrcamento(id){
       if(orc.estr.imagens)estrImagens=orc.estr.imagens;
     }
 
-    syncCliente();
     calcAll();
     setSaveStatus('✓ '+orc.numero+' carregado', true);
   }catch(e){
