@@ -3106,11 +3106,12 @@ async function carregarListaOrcamentos(){
   }
 }
 function checkVencido(orc){
-  // Se já tem status definitivo, não altera
-  var finais=['Orçamento Aprovado','Orçamento Recusado','Em Produção','Entregue','Cancelado'];
+  // Status definitivos: manter exatamente como estão
+  var finais=['Orçamento Aprovado','Orçamento Recusado','Em Produção','Entregue','Cancelado','Orçamento Vencido','Proposta Enviada'];
   if(finais.indexOf(orc.status)>=0) return orc.status;
-  // Se updated_at > 15 dias e ainda em orçamento, marca como vencido
-  if(orc.updated_at){
+  // Só auto-vence rascunhos (sem status, Em Orçamento ou Cotação)
+  var rascunhos=[null,undefined,'','Em Orçamento','Cotação'];
+  if(rascunhos.indexOf(orc.status)>=0 && orc.updated_at){
     var diff=(new Date()-new Date(orc.updated_at))/(1000*60*60*24);
     if(diff>15) return 'Orçamento Vencido';
   }
