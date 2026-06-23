@@ -3079,6 +3079,18 @@ function voltarLista(){
 }
 
 var lvCache=[];
+var _lvTabAtual='ativos';
+var ARQUIVO_STATUS=['Orçamento Aprovado','Orçamento Recusado','Orçamento Vencido','Entregue','Cancelado'];
+function setLvTab(tab){
+  _lvTabAtual=tab;
+  var tabs=document.querySelectorAll('.lv-tab');
+  tabs.forEach(function(t){t.classList.remove('active');});
+  var el=document.getElementById('lv-tab-'+tab);
+  if(el)el.classList.add('active');
+  var cache=window._lvOrcamentosCache||lvCache;
+  if(cache&&cache.length)renderListaOrcamentos(cache);
+  else carregarListaOrcamentos();
+}
 async function carregarListaOrcamentos(){
   var body=document.getElementById('lv-body');
   body.innerHTML='<div class="lv-loading">Carregando...</div>';
