@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0058)file:///C:/Users/Pdvex-Carlos/Downloads/ORC_Manager_1.html -->
+<!-- saved from url=(0058)file:///C:/Users/Pdvex-Carlos/Downloads/ORC_Manager_2.html -->
 <html lang="pt-BR"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -467,7 +467,7 @@
         <div class="doc-num-el" contenteditable="true">SS-2026_06-24</div>
       </div>
       <div class="hd-right">
-        <div class="mr">Data <span id="dt">22/06/2026</span></div>
+        <div class="mr">Data <span id="dt">23/06/2026</span></div>
         <div class="mr">Validade <span contenteditable="true">15 dias</span></div>
         <div class="mr">CNPJ <span contenteditable="true">03.952.317/0001-16</span></div>
       </div>
@@ -626,7 +626,7 @@
         <p contenteditable="true">Ao aprovar esta proposta por escrito (e-mail ou WhatsApp), o contratante confirma a leitura e aceite de todas as especificações técnicas, escopo, prazos e condições comerciais descritas neste documento. A aprovação implica início do processo produtivo mediante pagamento do sinal.</p>
         <div class="sign-line">
           <div class="sign-item"><span id="sign-cliente">Contratante</span><br><span style="color:var(--g400)">Data: _____ / _____ / _____</span></div>
-          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt2">22/06/2026</span></span></div>
+          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt2">23/06/2026</span></span></div>
         </div>
       </div>
     </div>
@@ -681,7 +681,7 @@
         <p contenteditable="true">Ao aprovar esta proposta por escrito (e-mail ou WhatsApp), o contratante confirma a leitura e aceite de todas as especificações técnicas, escopo, prazos e condições comerciais descritas neste documento. A aprovação implica início do processo produtivo mediante pagamento do sinal.</p>
         <div class="sign-line">
           <div class="sign-item"><span id="sign-cliente">Contratante</span><br><span style="color:var(--g400)">Data: _____ / _____ / _____</span></div>
-          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt3">22/06/2026</span></span></div>
+          <div class="sign-item">Sul Sign Group<br><span style="color:var(--g400)">Rio de Janeiro, <span id="dt3">23/06/2026</span></span></div>
         </div>
       </div>
     </div>
@@ -2798,7 +2798,8 @@ function renderEstr(){
       var q=parseFloat(row.qEl.value)||0,u=parseFloat(row.uEl.value)||0;
       var r=calcRow(q*u,f);tC+=q*u;tI+=r.imp;tT+=r.total;
     });
-    gT+=tT;gI+=tI;
+    // Opcionais ficam de fora do total geral (igual ao calcAll)
+    if(!tbl.opcional){gT+=tT;gI+=tI;}
     var div=document.createElement('div');div.className='estr-group';div.dataset.tblid=tbl.id;
 
     // Header
@@ -2871,7 +2872,7 @@ function renderEstr(){
     // Footer valor
     var footer=document.createElement('div');footer.className='estr-footer';
     var lbl=document.createElement('span');lbl.className='estr-total-label';lbl.textContent='Valor do item';
-    var val=document.createElement('span');val.className='estr-total-val';val.textContent=tT>0?fmt(tT*(1-dp)):'—';
+    var val=document.createElement('span');val.className='estr-total-val';val.textContent=tT>0?fmt(tT):'—';
     footer.appendChild(lbl);footer.appendChild(val);
 
     div.appendChild(hdr);div.appendChild(body);div.appendChild(footer);
@@ -2879,9 +2880,12 @@ function renderEstr(){
   });
 
   var desconto=gT*dp;
+  var gl=gT-desconto;
+  var loRes=calcLogOp(f);
+  var totalGeral=gl+loRes.total;
   document.getElementById('estr-r-custo').textContent=fmt(gT-gI);
   document.getElementById('estr-r-imp').textContent=gI>0?fmt(gI):'—';
-  document.getElementById('estr-r-total').textContent=fmt(gT-desconto);
+  document.getElementById('estr-r-total').textContent=fmt(loRes.total>0?totalGeral:gl);
 }
 
 var estrDescricoes={};
