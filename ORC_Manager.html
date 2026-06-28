@@ -424,6 +424,7 @@
   .st-producao{background:#f3e5f5;color:#7b1fa2;}
   .st-entregue{background:#e0e0e0;color:#424242;}
   .st-cancelado{background:#ffebee;color:var(--red);}
+  .st-faturado{background:#1b5e20;color:#fff;}
   .st-vencido{background:#f3e5f5;color:#6a1b9a;}
   .lv-empty{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
   .lv-loading{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
@@ -448,6 +449,7 @@
   <div class="lv-tabs">
     <div class="lv-tab active" id="lv-tab-ativos" onclick="setLvTab(&#39;ativos&#39;)">Ativos</div>
     <div class="lv-tab" id="lv-tab-arquivo" onclick="setLvTab(&#39;arquivo&#39;)">Arquivo</div>
+    <div class="lv-tab" id="lv-tab-faturados" onclick="setLvTab(&#39;faturados&#39;)" style="color:#00c853;">● Faturados</div>
   </div>
   <div class="lv-toolbar">
     <input class="lv-search" id="lv-search-inp" type="text" placeholder="Buscar por número, cliente ou projeto...">
@@ -488,6 +490,7 @@
           <option value="Orçamento Vencido">Orçamento Vencido</option>
           <option value="Em Produção">Em Produção</option>
           <option value="Entregue">Entregue</option>
+          <option value="Faturado">Faturado</option>
           <option value="Cancelado">Cancelado</option>
         </select>
       </div>
@@ -3081,6 +3084,7 @@ function voltarLista(){
 var lvCache=[];
 var _lvTabAtual='ativos';
 var ARQUIVO_STATUS=['Orçamento Aprovado','Orçamento Recusado','Orçamento Vencido','Entregue','Cancelado'];
+var FATURADO_STATUS=['Faturado'];
 function setLvTab(tab){
   _lvTabAtual=tab;
   var tabs=document.querySelectorAll('.lv-tab');
@@ -3107,7 +3111,7 @@ async function carregarListaOrcamentos(){
 }
 function checkVencido(orc){
   // Status definitivos: manter exatamente como estão
-  var finais=['Orçamento Aprovado','Orçamento Recusado','Em Produção','Entregue','Cancelado','Orçamento Vencido','Proposta Enviada'];
+  var finais=['Orçamento Aprovado','Orçamento Recusado','Em Produção','Entregue','Faturado','Cancelado','Orçamento Vencido','Proposta Enviada'];
   if(finais.indexOf(orc.status)>=0) return orc.status;
   // Só auto-vence rascunhos (sem status, Em Orçamento ou Cotação)
   var rascunhos=[null,undefined,'','Em Orçamento','Cotação'];
@@ -3122,19 +3126,22 @@ function renderListaOrcamentos(data){
   window._lvOrcamentosCache=data;
   // filtrar por aba ativa
   var isArquivo=_lvTabAtual==='arquivo';
+  var isFaturados=_lvTabAtual==='faturados';
   var filtrados=data.filter(function(orc){
     var st=checkVencido(orc);
-    return isArquivo?ARQUIVO_STATUS.indexOf(st)>=0:ARQUIVO_STATUS.indexOf(st)<0;
+    if(isFaturados) return FATURADO_STATUS.indexOf(st)>=0;
+    if(isArquivo) return ARQUIVO_STATUS.indexOf(st)>=0;
+    return ARQUIVO_STATUS.indexOf(st)<0 && FATURADO_STATUS.indexOf(st)<0;
   });
   var body=document.getElementById('lv-body');
   if(!filtrados.length){
-    body.innerHTML='<div class="lv-empty">'+(isArquivo?'Nenhum orçamento arquivado.':'Nenhum orçamento ativo.')+'</div>';return;
+    body.innerHTML='<div class="lv-empty">'+(isFaturados?'Nenhum orçamento faturado ainda.':(isArquivo?'Nenhum orçamento arquivado.':'Nenhum orçamento ativo.'))+'</div>';return;
   }
   body.innerHTML='';
   filtrados.forEach(function(orc){
     var item=document.createElement('div');item.className='lv-item';
     var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
-    var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Cancelado':'background:#ffebee;color:#c62828'};
+    var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Faturado':'background:#1b5e20;color:#fff','Cancelado':'background:#ffebee;color:#c62828'};
     var statusEfetivo=checkVencido(orc);
     var stCls=stStyles[statusEfetivo]||'background:#e3f2fd;color:#1565c0';
     item.innerHTML='<div>'
