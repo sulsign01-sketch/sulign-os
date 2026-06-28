@@ -68,6 +68,14 @@ tr:hover td{background:var(--g100)}
   .prazo-late{background:#ffebee;color:var(--red);}
   .todo-attach a{font-size:10px;color:var(--ga);text-decoration:none;}
   .todo-attach a:hover{text-decoration:underline;}
+
+.filter-bar{display:flex;gap:10px;align-items:center;padding:12px 24px;background:var(--white);border-bottom:1px solid var(--g200);flex-wrap:wrap;}
+.filter-bar select,.filter-bar input{border:1.5px solid var(--g200);border-radius:2px;padding:6px 10px;font-family:'DM Sans',sans-serif;font-size:12px;background:var(--white);color:var(--black);outline:none;}
+.filter-bar select:focus,.filter-bar input:focus{border-color:var(--ga);}
+.filter-bar input{min-width:200px;}
+.filter-count{font-size:10px;color:var(--g400);margin-left:auto;}
+.filter-clear{font-size:11px;color:var(--ga);cursor:pointer;padding:6px 10px;border:1.5px solid var(--ga);border-radius:2px;background:none;font-family:inherit;}
+.filter-clear:hover{background:var(--ga);color:var(--white);}
 .loading{text-align:center;padding:40px;color:var(--g400)}
 .err{text-align:center;padding:40px;color:var(--red)}
 .foot{padding:12px 24px;font-size:10px;color:var(--g400);border-top:1px solid var(--g200)}
@@ -90,6 +98,18 @@ tr:hover td{background:var(--g100)}
     </div>
   </div>
   <div class="ab"></div>
+  <div class="filter-bar" id="filter-bar">
+    <select id="f-status">
+      <option value="">Todos os status</option>
+      <option value="sem OS">Sem OS</option>
+      <option value="em andamento">Em andamento</option>
+      <option value="compras fechadas">Compras fechadas</option>
+    </select>
+    <select id="f-cliente"><option value="">Todos os clientes</option></select>
+    <input type="text" id="f-busca" placeholder="Buscar número ou projeto…">
+    <span class="filter-count" id="f-count"></span>
+    <button class="filter-clear" onclick="limparFiltros()">✕ Limpar</button>
+  </div>
   <div class="kpis" id="kpis">
     <div class="kpi"><div class="kpi-l">Orçamentos</div><div class="kpi-v" id="k-count">—</div></div>
     <div class="kpi"><div class="kpi-l">Venda Total (c/NF)</div><div class="kpi-v green" id="k-venda">—</div></div>
@@ -155,6 +175,7 @@ var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
 
 var valoresOcultos = localStorage.getItem('ss_painel_ocultar')==='1';
+var _allRows = [];
 
 function fmt(v){
   if(v===null||v===undefined||isNaN(v))return '—';
@@ -305,6 +326,58 @@ function renderFixas(rows){
   wrap.innerHTML=html;
 }
 
+function limparFiltros(){
+  document.getElementById('f-status').value='';
+  document.getElementById('f-cliente').value='';
+  document.getElementById('f-busca').value='';
+  renderTabela();
+}
+
+function getStatusKey(badge){
+  if(badge.indexOf('sem OS')>=0) return 'sem OS';
+  if(badge.indexOf('compras fechadas')>=0) return 'compras fechadas';
+  if(badge.indexOf('em andamento')>=0) return 'em andamento';
+  return '';
+}
+
+function renderTabela(){
+  var wrap=document.getElementById('tbl-wrap');
+  var fStatus=document.getElementById('f-status').value;
+  var fCliente=document.getElementById('f-cliente').value;
+  var fBusca=(document.getElementById('f-busca').value||'').trim().toLowerCase();
+
+  var rows=_allRows.filter(function(r){
+    if(fStatus && getStatusKey(r.statusBadge)!==fStatus) return false;
+    if(fCliente && r.cliente!==fCliente) return false;
+    if(fBusca && (r.numero.toLowerCase().indexOf(fBusca)<0 && r.projeto.toLowerCase().indexOf(fBusca)<0)) return false;
+    return true;
+  });
+
+  var countEl=document.getElementById('f-count');
+  if(countEl) countEl.textContent = rows.length + ' de ' + _allRows.length + ' orçamentos';
+
+  if(!rows.length){
+    wrap.innerHTML='<div class="loading">'+(fStatus||fCliente||fBusca?'Nenhum resultado para este filtro.':'Nenhum orçamento salvo ainda.')+'</div>';
+    return;
+  }
+
+  var html='<table><thead><tr><th>Número</th><th>Cliente / Projeto</th><th>Status</th><th class="n">Custo Orçado</th><th class="n">Venda (c/NF)</th><th class="n">Custo Realizado</th><th class="n">Margem</th><th class="n">Margem %</th></tr></thead><tbody>';
+  rows.forEach(function(r){
+    html+='<tr>'
+      +'<td class="num">'+r.numero+'</td>'
+      +'<td>'+r.cliente+'<div class="proj">'+r.projeto+'</div></td>'
+      +'<td>'+r.statusBadge+'</td>'
+      +'<td class="n">'+fmt(r.custoOrcado)+'</td>'
+      +'<td class="n">'+fmt(r.venda)+'</td>'
+      +'<td class="n">'+(r.custoReal===null?'<span class="muted">—</span>':fmt(r.custoReal))+'</td>'
+      +'<td class="n '+(r.margem>=0?'pos':'neg')+'">'+fmt(r.margem)+'</td>'
+      +'<td class="n '+(r.margemPct>=0?'pos':'neg')+'">'+(r.margemPct===null?'—':r.margemPct.toFixed(1)+'%')+'</td>'
+      +'</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
 async function carregar(){
   var wrap=document.getElementById('tbl-wrap');
   try{
@@ -359,31 +432,26 @@ async function carregar(){
     mEl.textContent=fmt(kMargemTotal);
     mEl.className='kpi-v '+(kMargemTotal>=0?'green':'red');
 
-    if(!rows.length){
-      wrap.innerHTML='<div class="loading">Nenhum orçamento salvo ainda.</div>';
-      return;
-    }
-
-    var html='<table><thead><tr><th>Número</th><th>Cliente / Projeto</th><th>Status</th><th class="n">Custo Orçado</th><th class="n">Venda (c/NF)</th><th class="n">Custo Realizado</th><th class="n">Margem</th><th class="n">Margem %</th></tr></thead><tbody>';
-    rows.forEach(function(r){
-      html+='<tr>'
-        +'<td class="num">'+r.numero+'</td>'
-        +'<td>'+r.cliente+'<div class="proj">'+r.projeto+'</div></td>'
-        +'<td>'+r.statusBadge+'</td>'
-        +'<td class="n">'+fmt(r.custoOrcado)+'</td>'
-        +'<td class="n">'+fmt(r.venda)+'</td>'
-        +'<td class="n">'+(r.custoReal===null?'<span class="muted">—</span>':fmt(r.custoReal))+'</td>'
-        +'<td class="n '+(r.margem>=0?'pos':'neg')+'">'+fmt(r.margem)+'</td>'
-        +'<td class="n '+(r.margemPct>=0?'pos':'neg')+'">'+(r.margemPct===null?'—':r.margemPct.toFixed(1)+'%')+'</td>'
-        +'</tr>';
+    // Store rows and populate client dropdown
+    _allRows = rows;
+    var sel = document.getElementById('f-cliente');
+    var existingClients = Array.from(sel.options).map(function(o){return o.value;});
+    var clientes = [...new Set(rows.map(function(r){return r.cliente;}))].filter(Boolean).sort();
+    clientes.forEach(function(c){
+      if(!existingClients.includes(c)){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);}
     });
-    html+='</tbody></table>';
-    wrap.innerHTML=html;
+    renderTabela();
   }catch(e){
     wrap.innerHTML='<div class="err">Erro ao carregar: '+e.message+'</div>';
   }
 }
 carregar();
+
+// ── FILTER LISTENERS ──
+['f-status','f-cliente','f-busca'].forEach(function(id){
+  var el=document.getElementById(id);
+  if(el) el.addEventListener('input',renderTabela);
+});
 
 // ── TO-DO EXPANDIDO ──
 var TODOS_KEY='ss_painel_todos';
