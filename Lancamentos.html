@@ -741,13 +741,13 @@ function renderImpostos(){
     var div=document.createElement('div');div.className='imp-card';
     var dtVenc=imp.vencimento?new Date(imp.vencimento+'T00:00:00').toLocaleDateString('pt-BR'):'—';
     var dtPgto=imp.data_pgto?new Date(imp.data_pgto+'T00:00:00').toLocaleDateString('pt-BR'):'—';
-    div.innerHTML='<div class="imp-card-hd" onclick="this.parentNode.classList.toggle('open')">'
+    div.innerHTML='<div class="imp-card-hd" onclick="this.parentNode.classList.toggle(\'open\')">'
       +'<span><strong>'+imp.tipo+'</strong>'+(imp.competencia?' · '+imp.competencia.replace('-','/'):'')
       +(imp.codigo?' <span style="color:#9e9e9e;font-weight:400;">('+imp.codigo+')</span>':'')+'</span>'
       +'<span style="display:flex;align-items:center;gap:10px;">'
       +'<span class="imp-val">'+(imp.multa&&parseFloat(imp.multa)?fmt(total)+' (c/multa)':fmt(imp.valor))+'</span>'
       +'<span class="imp-tag '+tagCls+'">'+tagTxt+'</span>'
-      +'<span class="li-del" onclick="event.stopPropagation();deletarImposto(''+imp.id+'')">×</span>'
+      +'<span class="li-del" onclick="event.stopPropagation();deletarImposto(\''+imp.id+'\')">×</span>'
       +'</span></div>'
       +'<div class="imp-card-body">'
       +'<div class="imp-meta">Vencimento: <strong>'+dtVenc+'</strong>'
