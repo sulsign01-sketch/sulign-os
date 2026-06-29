@@ -1471,8 +1471,11 @@ function makeTable(name,rows,dim,pecaId,pecaComps){
   var setorLbl=document.createElement('span');setorLbl.style.cssText='font-size:9px;color:var(--g400);letter-spacing:.8px;text-transform:uppercase;';setorLbl.textContent='Setor:';
   var SETORES=[
     {v:'FORR',l:'Forração'},{v:'SERR',l:'Serralheria'},{v:'MARC',l:'Marcenaria'},
-    {v:'PINT',l:'Pintura'},{v:'DETA',l:'Detalhamento'},{v:'ROUTER',l:'Router CNC'},
-    {v:'CV',l:'CV/Impressão'},{v:'ELET',l:'Elétrica'},{v:'MO',l:'Mão de Obra'},{v:'LOG',l:'Logística'}
+    {v:'PINT',l:'Pintura'},{v:'APLIC',l:'Aplicação'},{v:'ESTR',l:'Estruturas'},
+    {v:'DETA',l:'Detalhamento'},{v:'ROUTER',l:'Router CNC'},
+    {v:'CV',l:'CV/Impressão'},{v:'IMP3D',l:'Impressão 3D'},{v:'ELET',l:'Elétrica'},
+    {v:'MO',l:'Mão de Obra'},{v:'LOG',l:'Logística'},
+    {v:'ARTPL',l:'Artes Plásticas'},{v:'ARQ',l:'Arquitetura'},{v:'DESIGN',l:'Design'}
   ];
   var setorChksWrap=document.createElement('div');setorChksWrap.className='setor-chks';
   var setorCheckboxes={};
