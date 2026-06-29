@@ -1115,13 +1115,15 @@ function renderAportes(){
       +'<div style="font-family:DM Mono,monospace;font-size:14px;font-weight:700;'+sinalCor+'">'+sinal+'R$ '+val.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
       +'<div style="font-size:10px;color:#616161;margin-top:2px;">'+dt+'</div>'
       +'<div style="font-size:10px;'+stCor+'margin-top:2px;">'+ap.status+'</div>'
-      +'<span style="font-size:10px;color:#c62828;cursor:pointer;margin-top:6px;display:inline-block;" onclick="deletarAporte(''+ap.id+'',this.parentNode.parentNode)">× remover</span>'
+      +'<span style="font-size:10px;color:#c62828;cursor:pointer;margin-top:6px;display:inline-block;" onclick="deletarAporte(this)" data-id="'+ap.id+'">× remover</span>'
       +'</div>'
       +'</div>';
   }).join('');
 }
 
-async function deletarAporte(id, el){
+async function deletarAporte(btnEl){
+  var id = btnEl.getAttribute('data-id');
+  var el = btnEl.closest ? btnEl.closest('div[style]') : btnEl.parentNode.parentNode;
   if(!confirm('Remover este lançamento?')) return;
   await fetch(SUPA_URL+'/rest/v1/aportes?id=eq.'+id,{
     method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
