@@ -498,7 +498,8 @@
   </div>
   <div class="ab"></div>
   <div class="lv-tabs">
-    <div class="lv-tab active" id="lv-tab-ativos" onclick="setLvTab(&#39;ativos&#39;)">Ativos</div>
+    <div class="lv-tab" id="lv-tab-todos" onclick="setLvTab('todos')" style="letter-spacing:.3px;">Todos</div>
+<div class="lv-tab active" id="lv-tab-ativos" onclick="setLvTab('ativos')">Ativos</div>
     <div class="lv-tab" id="lv-tab-arquivo" onclick="setLvTab(&#39;arquivo&#39;)">Arquivo</div>
     <div class="lv-tab" id="lv-tab-faturados" onclick="setLvTab(&#39;faturados&#39;)" style="color:#00c853;">● Faturados</div>
   </div>
@@ -3388,7 +3389,7 @@ function renderListaOrcamentos(data){
   });
   var body=document.getElementById('lv-body');
   if(!filtrados.length){
-    body.innerHTML='<div class="lv-empty">'+(isFaturados?'Nenhum orçamento faturado ainda.':(isArquivo?'Nenhum orçamento arquivado.':'Nenhum orçamento ativo.'))+'</div>';return;
+    body.innerHTML='<div class="lv-empty">'+(isTodos?'Nenhum orçamento cadastrado.':isFaturados?'Nenhum orçamento faturado ainda.':isArquivo?'Nenhum orçamento arquivado.':'Nenhum orçamento ativo.')+'</div>';return;
   }
   body.innerHTML='';
   filtrados.forEach(function(orc){
