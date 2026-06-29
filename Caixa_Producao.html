@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Caixa de Produção — Sul Sign Group</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'DM Sans',system-ui,sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh;}
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  /* ── HEADER ── */
+  .hd{background:#111;border-bottom:2px solid #00ff88;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .hd-logo{display:flex;align-items:center;gap:10px;}
+  .hd-logo svg{width:32px;height:32px;}
+  .hd-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:.5px;}
+  .hd-sub{font-size:10px;color:#00ff88;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+  .hd-status{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;letter-spacing:.5px;}
+  .hd-status.ativo{background:#0d2b1a;color:#00ff88;border:1px solid #00ff88;}
+  .hd-status.encerrado{background:#1c0a0a;color:#ef9a9a;border:1px solid #c62828;}
+
+  /* ── HERO (saldo) ── */
+  .hero{background:linear-gradient(135deg,#111 0%,#0d1f14 100%);padding:24px 20px;border-bottom:1px solid #1a1a1a;}
+  .hero-job{font-size:11px;color:#00ff88;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;}
+  .hero-prod{font-size:18px;font-weight:700;color:#fff;margin-bottom:16px;}
+  .hero-cards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+  .hc{background:#0a0a0a;border-radius:6px;padding:12px;border:1px solid #1a1a1a;}
+  .hc-l{font-size:9px;color:#666;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+  .hc-v{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;}
+  .hc-v.verde{color:#00ff88;}
+  .hc-v.amarelo{color:#ffcc02;}
+  .hc-v.vermelho{color:#ef9a9a;}
+  .progress-wrap{background:#1a1a1a;border-radius:20px;height:6px;overflow:hidden;}
+  .progress-bar{height:6px;border-radius:20px;background:linear-gradient(90deg,#00ff88,#52b788);transition:width .4s ease;}
+  .progress-label{font-size:10px;color:#666;margin-top:5px;text-align:right;}
+
+  /* ── SOLICITAÇÃO VERBA ── */
+  .verba-btn{width:100%;margin-top:14px;padding:10px;background:transparent;border:1px dashed #2a2a2a;border-radius:6px;color:#666;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:.5px;transition:all .2s;}
+  .verba-btn:hover{border-color:#ffcc02;color:#ffcc02;}
+  .verba-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:flex-end;justify-content:center;}
+  .verba-modal.open{display:flex;}
+  .verba-sheet{background:#111;border-radius:16px 16px 0 0;width:100%;max-width:560px;padding:24px 20px;border-top:2px solid #ffcc02;}
+  .verba-title{font-size:14px;font-weight:700;color:#ffcc02;margin-bottom:16px;}
+
+  /* ── FORM NOVO GASTO ── */
+  .sec{background:#111;border-radius:10px;margin:16px;padding:18px;border:1px solid #1a1a1a;}
+  .sec-title{font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#00ff88;margin-bottom:14px;}
+  .fl{margin-bottom:12px;}
+  .fl label{display:block;font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#666;margin-bottom:5px;}
+  .fl input,.fl select,.fl textarea{width:100%;background:#0a0a0a;border:1.5px solid #222;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;transition:border .15s;}
+  .fl input:focus,.fl select:focus,.fl textarea:focus{border-color:#00ff88;}
+  .fl textarea{resize:vertical;min-height:70px;}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .btn-salvar{width:100%;padding:13px;background:#00ff88;border:none;border-radius:8px;color:#0a0a0a;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.5px;margin-top:4px;transition:opacity .15s;}
+  .btn-salvar:hover{opacity:.9;}
+  .btn-salvar:disabled{opacity:.4;cursor:not-allowed;}
+  .nota-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+  .nota-row input{width:auto;}
+  .nota-row label{font-size:12px;text-transform:none;letter-spacing:0;color:#aaa;margin:0;}
+
+  /* ── FOTO COMPROVANTE ── */
+  .foto-area{border:2px dashed #222;border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border .2s;margin-bottom:12px;}
+  .foto-area:hover,.foto-area.tem-foto{border-color:#00ff88;}
+  .foto-area input{display:none;}
+  .foto-preview{max-width:100%;max-height:180px;border-radius:6px;margin-top:8px;display:none;}
+  .foto-label{font-size:11px;color:#555;pointer-events:none;}
+  .foto-icon{font-size:24px;margin-bottom:4px;}
+
+  /* ── STATUS ── */
+  .st{font-size:12px;padding:8px 12px;border-radius:6px;margin-top:10px;display:none;}
+  .st.ok{background:#0d2b1a;color:#00ff88;border:1px solid #00ff88;display:block;}
+  .st.err{background:#1c0a0a;color:#ef9a9a;border:1px solid #c62828;display:block;}
+  .st.info{background:#0a1929;color:#90caf9;border:1px solid #1565c0;display:block;}
+
+  /* ── LISTA LANÇAMENTOS ── */
+  .lanc-item{background:#0a0a0a;border-radius:8px;padding:12px;margin-bottom:8px;border:1px solid #1a1a1a;border-left:3px solid #2a2a2a;}
+  .lanc-item.sem-nota{border-left-color:#e65100;}
+  .lanc-item.com-nota{border-left-color:#00ff88;}
+  .lanc-topo{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .lanc-desc{font-size:13px;font-weight:600;color:#e0e0e0;flex:1;}
+  .lanc-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#ef9a9a;white-space:nowrap;}
+  .lanc-meta{font-size:10px;color:#555;margin-top:4px;}
+  .lanc-badge{font-size:9px;padding:1px 6px;border-radius:2px;font-weight:700;margin-left:4px;display:inline-block;}
+  .badge-nota{background:#0d2b1a;color:#00ff88;border:1px solid #00ff88;}
+  .badge-sem{background:#1c0a0a;color:#e65100;border:1px solid #e65100;}
+  .badge-cat{background:#0a1929;color:#90caf9;border:1px solid #1565c0;}
+  .lanc-foto{margin-top:8px;}
+  .lanc-foto img{max-width:100%;max-height:120px;border-radius:4px;border:1px solid #222;}
+  .lanc-edit-btn{font-size:10px;color:#555;cursor:pointer;padding:2px 6px;border:1px solid #2a2a2a;border-radius:3px;background:transparent;margin-top:6px;display:inline-block;}
+  .lanc-edit-btn:hover{color:#ffcc02;border-color:#ffcc02;}
+  .edit-form{display:none;margin-top:10px;padding-top:10px;border-top:1px solid #1a1a1a;}
+  .edit-form.open{display:block;}
+  .btn-edit-save{font-size:11px;padding:5px 12px;background:#00ff88;border:none;border-radius:4px;color:#0a0a0a;font-weight:700;cursor:pointer;margin-right:6px;}
+  .btn-edit-cancel{font-size:11px;padding:5px 12px;background:transparent;border:1px solid #333;border-radius:4px;color:#666;cursor:pointer;}
+  .audit-badge{font-size:9px;color:#555;margin-top:4px;display:inline-block;}
+  .audit-badge:before{content:'✎ ';color:#ffcc02;}
+
+  /* ── ENCERRADO ── */
+  .encerrado-banner{background:#1c0a0a;border:1px solid #c62828;border-radius:8px;padding:14px;margin:16px;text-align:center;}
+  .encerrado-banner p{font-size:13px;color:#ef9a9a;margin-bottom:4px;}
+  .encerrado-banner small{font-size:11px;color:#666;}
+
+  /* ── SOLICITAÇÕES PENDENTES (badge) ── */
+  .solic-badge{background:#ffcc02;color:#0a0a0a;font-size:9px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:4px;}
+
+  /* ── EMPTY ── */
+  .empty{text-align:center;color:#333;font-size:12px;padding:30px 0;}
+  .loading{text-align:center;padding:40px;color:#333;}
+  .dot-anim:after{content:'...';animation:dots 1.2s infinite;}
+  @keyframes dots{0%{content:'.';}50%{content:'..';}100%{content:'...'}}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-logo">
+    <svg viewBox="0 0 40 40" fill="none">
+      <rect width="40" height="40" rx="4" fill="#00ff88"/>
+      <path d="M8 20 L20 8 L32 20 L20 32 Z" fill="#0a0a0a"/>
+      <path d="M14 20 L20 14 L26 20 L20 26 Z" fill="#00ff88"/>
+    </svg>
+    <div>
+      <div class="hd-title">Sul Sign Group</div>
+      <div class="hd-sub">Caixa de Produção</div>
+    </div>
+  </div>
+  <div class="hd-status ativo" id="hd-status">● Ativo</div>
+</div>
+
+<div id="root">
+  <div class="loading"><span class="dot-anim">Carregando</span></div>
+</div>
+
+<!-- MODAL SOLICITAÇÃO DE VERBA -->
+<div class="verba-modal" id="verba-modal">
+  <div class="verba-sheet">
+    <div class="verba-title">💰 Solicitar Verba Adicional</div>
+    <div class="fl"><label>Valor necessário (R$)</label><input type="number" id="vm-valor" step="0.01" placeholder="0,00"></div>
+    <div class="fl"><label>Justificativa (obrigatório)</label><textarea id="vm-just" placeholder="Explique por que precisa de mais verba..."></textarea></div>
+    <button class="btn-salvar" onclick="enviarSolicitacao()">Enviar Solicitação</button>
+    <div class="st" id="vm-st"></div>
+    <button onclick="fecharVerbaModal()" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:none;color:#555;font-size:12px;cursor:pointer;">Cancelar</button>
+  </div>
+</div>
+
+<script>
+var SUPA_URL = 'https://obeamqkcuytctfczhook.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+var H = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+
+var TOKEN = new URLSearchParams(window.location.search).get('token');
+var CONTA = null;
+var LANCAMENTOS = [];
+
+// ── INIT ──
+async function init(){
+  if(!TOKEN){
+    document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;color:#ef9a9a;"><div style="font-size:32px;margin-bottom:12px;">🔒</div><div style="font-size:14px;">Link inválido ou expirado.</div><div style="font-size:11px;color:#555;margin-top:8px;">Solicite um novo link ao responsável.</div></div>';
+    return;
+  }
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/contas_producao?token=eq.'+TOKEN+'&select=*',{headers:H});
+    var data = await r.json();
+    if(!data||!data.length){
+      document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;color:#ef9a9a;"><div style="font-size:32px;margin-bottom:12px;">❌</div><div style="font-size:14px;">Caixa não encontrado.</div></div>';
+      return;
+    }
+    CONTA = data[0];
+    await carregarLancamentos();
+    renderPage();
+  }catch(e){
+    document.getElementById('root').innerHTML = '<div style="padding:40px;text-align:center;color:#ef9a9a;">Erro ao carregar: '+e.message+'</div>';
+  }
+}
+
+async function carregarLancamentos(){
+  var r = await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa?conta_id=eq.'+CONTA.id+'&order=criado_em.desc',{headers:H});
+  var data = await r.json();
+  LANCAMENTOS = Array.isArray(data)?data:[];
+}
+
+function calcSaldo(){
+  var gasto = LANCAMENTOS.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
+  return {gasto:gasto, saldo:CONTA.verba_total-gasto, pct:CONTA.verba_total>0?Math.min(100,(gasto/CONTA.verba_total)*100):0};
+}
+
+function fmt(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+// ── RENDER PÁGINA ──
+function renderPage(){
+  var enc = CONTA.status === 'encerrado';
+  var s = calcSaldo();
+  var pctCor = s.pct>=90?'vermelho':s.pct>=70?'amarelo':'verde';
+
+  // Atualizar status header
+  var hds = document.getElementById('hd-status');
+  if(enc){hds.textContent='● Encerrado';hds.className='hd-status encerrado';}
+
+  var html = '';
+
+  // Hero
+  html += '<div class="hero">';
+  html += '<div class="hero-job">'+escHTML(CONTA.job_numero)+' — '+escHTML(CONTA.job_nome||'')+'</div>';
+  html += '<div class="hero-prod">'+escHTML(CONTA.produtor_nome)+'</div>';
+  html += '<div class="hero-cards">';
+  html += '<div class="hc"><div class="hc-l">Verba Total</div><div class="hc-v verde">'+fmt(CONTA.verba_total)+'</div></div>';
+  html += '<div class="hc"><div class="hc-l">Gasto</div><div class="hc-v '+pctCor+'">'+fmt(s.gasto)+'</div></div>';
+  html += '<div class="hc"><div class="hc-l">Saldo</div><div class="hc-v '+(s.saldo<0?'vermelho':s.saldo<200?'amarelo':'verde')+'">'+fmt(s.saldo)+'</div></div>';
+  html += '</div>';
+  html += '<div class="progress-wrap"><div class="progress-bar" style="width:'+s.pct+'%;background:'+(s.pct>=90?'#ef5350':s.pct>=70?'#ffcc02':'#00ff88')+'"></div></div>';
+  html += '<div class="progress-label">'+s.pct.toFixed(1)+'% utilizado</div>';
+  if(!enc) html += '<button class="verba-btn" onclick="abrirVerbaModal()">+ Solicitar Verba Adicional</button>';
+  html += '</div>';
+
+  if(enc){
+    html += '<div class="encerrado-banner"><p>🔒 Este caixa foi encerrado</p><small>Os lançamentos foram consolidados no job. Obrigado!</small></div>';
+  } else {
+    // Form novo gasto
+    html += '<div class="sec"><div class="sec-title">+ Novo Gasto</div>';
+    html += '<div class="row2">';
+    html += '<div class="fl"><label>Categoria</label><select id="g-cat"><option>Material</option><option>Mão de Obra</option><option>Logística</option><option>Alimentação</option><option>Transporte</option><option>Ferramenta</option><option>Imprevisto</option><option>Outros</option></select></div>';
+    html += '<div class="fl"><label>Data</label><input type="date" id="g-data"></div>';
+    html += '</div>';
+    html += '<div class="fl"><label>Descrição</label><input type="text" id="g-desc" placeholder="O que foi comprado ou pago..."></div>';
+    html += '<div class="row2">';
+    html += '<div class="fl"><label>Valor (R$)</label><input type="number" id="g-valor" step="0.01" placeholder="0,00" inputmode="decimal"></div>';
+    html += '<div class="fl"><label>Fornecedor</label><input type="text" id="g-forn" placeholder="Ex: Leroy Merlin"></div>';
+    html += '</div>';
+    html += '<div class="fl"><label>Observação</label><input type="text" id="g-obs" placeholder="Opcional..."></div>';
+    html += '<div class="nota-row"><input type="checkbox" id="g-nota" checked><label for="g-nota">Possui nota fiscal / comprovante</label></div>';
+    html += '<div class="foto-area" onclick="document.getElementById(\'g-foto-input\').click()" id="foto-area">';
+    html += '<div class="foto-icon">📷</div><div class="foto-label">Toque para tirar foto ou anexar comprovante</div>';
+    html += '<input type="file" id="g-foto-input" accept="image/*" capture="environment" onchange="previewFoto(this)">';
+    html += '<img id="g-foto-preview" class="foto-preview">';
+    html += '</div>';
+    html += '<button class="btn-salvar" onclick="salvarGasto()" id="btn-sg">Registrar Gasto</button>';
+    html += '<div class="st" id="st-g"></div>';
+    html += '</div>';
+  }
+
+  // Lista lançamentos
+  html += '<div class="sec"><div class="sec-title">Lançamentos ('+(LANCAMENTOS.length)+')</div>';
+  html += '<div id="lanc-lista">';
+  if(!LANCAMENTOS.length){
+    html += '<div class="empty">Nenhum gasto registrado ainda.</div>';
+  } else {
+    LANCAMENTOS.forEach(function(l,i){
+      html += renderLancItem(l, i, enc);
+    });
+  }
+  html += '</div></div>';
+
+  document.getElementById('root').innerHTML = html;
+
+  // Setar data atual
+  var di = document.getElementById('g-data');
+  if(di) di.valueAsDate = new Date();
+}
+
+function renderLancItem(l, i, enc){
+  var temNota = l.tem_nota !== false;
+  var dt = l.data ? new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  var foiEditado = !!l.editado_em;
+  var html = '<div class="lanc-item '+(temNota?'com-nota':'sem-nota')+'" id="li-'+l.id+'">';
+  html += '<div class="lanc-topo">';
+  html += '<div class="lanc-desc">'+escHTML(l.descricao||'—')+'<span class="lanc-badge badge-cat">'+escHTML(l.categoria)+'</span>'+(temNota?'<span class="lanc-badge badge-nota">NF ✓</span>':'<span class="lanc-badge badge-sem">SEM NOTA</span>')+'</div>';
+  html += '<div class="lanc-val">−'+fmt(l.valor)+'</div>';
+  html += '</div>';
+  html += '<div class="lanc-meta">'+dt+(l.fornecedor?' · '+escHTML(l.fornecedor):'')+(l.obs?' · '+escHTML(l.obs):'')+'</div>';
+  if(foiEditado) html += '<div class="audit-badge">Editado em '+new Date(l.editado_em).toLocaleString('pt-BR')+'</div>';
+  if(l.comprovante) html += '<div class="lanc-foto"><img src="'+l.comprovante+'" alt="comprovante"></div>';
+  if(!enc){
+    html += '<button class="lanc-edit-btn" onclick="toggleEdit(\''+l.id+'\')">✎ Editar</button>';
+    html += '<div class="edit-form" id="ef-'+l.id+'">';
+    html += '<div class="row2"><div class="fl"><label>Descrição</label><input type="text" id="ed-desc-'+l.id+'" value="'+escAttr(l.descricao||'')+'"></div>';
+    html += '<div class="fl"><label>Valor</label><input type="number" id="ed-val-'+l.id+'" step="0.01" value="'+l.valor+'"></div></div>';
+    html += '<div class="row2"><div class="fl"><label>Categoria</label><select id="ed-cat-'+l.id+'">';
+    ['Material','Mão de Obra','Logística','Alimentação','Transporte','Ferramenta','Imprevisto','Outros'].forEach(function(c){
+      html += '<option'+(c===l.categoria?' selected':'')+'>'+c+'</option>';
+    });
+    html += '</select></div><div class="fl"><label>Fornecedor</label><input type="text" id="ed-forn-'+l.id+'" value="'+escAttr(l.fornecedor||'')+'"></div></div>';
+    html += '<div style="margin-top:8px;"><button class="btn-edit-save" onclick="salvarEdicao(\''+l.id+'\','+i+')">Salvar</button>';
+    html += '<button class="btn-edit-cancel" onclick="toggleEdit(\''+l.id+'\')">Cancelar</button></div>';
+    html += '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function toggleEdit(id){
+  var ef = document.getElementById('ef-'+id);
+  ef.classList.toggle('open');
+}
+
+// ── SALVAR GASTO ──
+var fotoB64 = null;
+function previewFoto(input){
+  var file = input.files[0];
+  if(!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    fotoB64 = e.target.result;
+    var prev = document.getElementById('g-foto-preview');
+    prev.src = fotoB64; prev.style.display='block';
+    document.getElementById('foto-area').classList.add('tem-foto');
+  };
+  reader.readAsDataURL(file);
+}
+
+async function salvarGasto(){
+  var btn = document.getElementById('btn-sg');
+  var st = document.getElementById('st-g');
+  var desc = document.getElementById('g-desc').value.trim();
+  var valor = parseFloat(document.getElementById('g-valor').value)||0;
+  var cat = document.getElementById('g-cat').value;
+  var data = document.getElementById('g-data').value;
+  var forn = document.getElementById('g-forn').value.trim();
+  var obs = document.getElementById('g-obs').value.trim();
+  var nota = document.getElementById('g-nota').checked;
+
+  if(!desc){setStG('✗ Informe a descrição','err');return;}
+  if(!valor){setStG('✗ Informe o valor','err');return;}
+
+  // Verificar saldo
+  var s = calcSaldo();
+  if(valor > s.saldo+0.01){
+    setStG('⚠ Valor ultrapassa o saldo disponível ('+fmt(s.saldo)+'). Solicite mais verba.','err');return;
+  }
+
+  btn.disabled=true; setStG('Salvando...','info');
+  try{
+    var ip = '';
+    try{var ir=await fetch('https://api.ipify.org?format=json');var id=await ir.json();ip=id.ip||'';}catch(e){}
+    var payload = {conta_id:CONTA.id,descricao:desc,categoria:cat,valor:valor,data:data,fornecedor:forn,obs:obs,tem_nota:nota,comprovante:fotoB64||null,ip_criacao:ip};
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa',{method:'POST',headers:H,body:JSON.stringify(payload)});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    setStG('✓ Gasto registrado!','ok');
+    fotoB64=null;
+    await carregarLancamentos();
+    renderPage();
+    // scroll topo da lista
+    setTimeout(function(){var el=document.querySelector('.lanc-item');if(el)el.scrollIntoView({behavior:'smooth'});},200);
+  }catch(e){setStG('✗ Erro: '+e.message,'err');}
+  btn.disabled=false;
+}
+
+// ── EDITAR LANÇAMENTO ──
+async function salvarEdicao(id, idx){
+  var snap = LANCAMENTOS.find(function(l){return l.id===id;});
+  var novoDesc = document.getElementById('ed-desc-'+id).value.trim();
+  var novoVal = parseFloat(document.getElementById('ed-val-'+id).value)||0;
+  var novoCat = document.getElementById('ed-cat-'+id).value;
+  var novoForn = document.getElementById('ed-forn-'+id).value.trim();
+  if(!novoDesc||!novoVal){alert('Preencha descrição e valor.');return;}
+  var ip='';try{var ir=await fetch('https://api.ipify.org?format=json');var id2=await ir.json();ip=id2.ip||'';}catch(e){}
+  var editadoDe = {descricao:snap.descricao,valor:snap.valor,categoria:snap.categoria,fornecedor:snap.fornecedor};
+  var r = await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa?id=eq.'+id,{
+    method:'PATCH',headers:H,
+    body:JSON.stringify({descricao:novoDesc,valor:novoVal,categoria:novoCat,fornecedor:novoForn,editado_em:new Date().toISOString(),editado_de:editadoDe,ip_edicao:ip})
+  });
+  if(!r.ok){alert('Erro ao salvar edição.');return;}
+  await carregarLancamentos();
+  renderPage();
+}
+
+// ── VERBA MODAL ──
+function abrirVerbaModal(){document.getElementById('verba-modal').classList.add('open');}
+function fecharVerbaModal(){document.getElementById('verba-modal').classList.remove('open');}
+
+async function enviarSolicitacao(){
+  var valor = parseFloat(document.getElementById('vm-valor').value)||0;
+  var just = document.getElementById('vm-just').value.trim();
+  var st = document.getElementById('vm-st');
+  if(!valor){st.textContent='✗ Informe o valor.';st.className='st err';return;}
+  if(!just){st.textContent='✗ Justificativa obrigatória.';st.className='st err';return;}
+  try{
+    // Atualizar status da conta para aguardando_verba
+    await fetch(SUPA_URL+'/rest/v1/contas_producao?id=eq.'+CONTA.id,{method:'PATCH',headers:H,body:JSON.stringify({status:'aguardando_verba'})});
+    // Inserir solicitação
+    var r = await fetch(SUPA_URL+'/rest/v1/caixa_solicitacoes',{method:'POST',headers:H,body:JSON.stringify({conta_id:CONTA.id,valor_solicitado:valor,justificativa:just})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    st.textContent='✓ Solicitação enviada! Aguarde aprovação do responsável.';st.className='st ok';
+    document.getElementById('vm-valor').value='';
+    document.getElementById('vm-just').value='';
+    setTimeout(fecharVerbaModal, 2000);
+  }catch(e){st.textContent='✗ '+e.message;st.className='st err';}
+}
+
+// ── UTILS ──
+function setStG(msg,cls){var el=document.getElementById('st-g');if(!el)return;el.textContent=msg;el.className='st '+cls;}
+function escHTML(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function escAttr(s){return String(s||'').replace(/"/g,'&quot;');}
+
+init();
+</script>
+</body>
+</html>
