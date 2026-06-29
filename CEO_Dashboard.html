@@ -442,7 +442,7 @@ function renderGrafico(orcs,todosLanc,todasFixas){
 // ALERTAS CEO
 // ══════════════════════════════════
 function renderAlertasInv(orcs,todosLanc,todasFixas,ebitda,margemPct){
-  var wrap=document.getElementById('alertas-inv-wrap');
+  var wrap=document.getElementById('alertas-ceo-wrap');
   var alertas=[];
   var hoje=new Date().toISOString().split('T')[0];
 
@@ -549,7 +549,7 @@ function renderSaude(receita,impostos,cmv,lucroBruto,despFixed,ebitda,pipeline){
 // PIPELINE CEO
 // ══════════════════════════════════
 function renderPipelineInv(orcs){
-  var wrap=document.getElementById('pipeline-inv-wrap');
+  var wrap=document.getElementById('pipeline-ceo-wrap');
   var etapas=[
     {lbl:'Cotação / Rascunho',statuses:['Cotação','Em Orçamento'],cor:'#1565c0'},
     {lbl:'Proposta Enviada',  statuses:['Proposta Enviada'],       cor:'#f9a825'},
