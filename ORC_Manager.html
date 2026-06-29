@@ -2235,6 +2235,7 @@ function removerFoto(idx){
 // ══════════════════════════════════════
 var _revHistorico = [];
 var _revAtual = 'Rev.01';
+var _numeroSalvoAtual = null; // número com que o orçamento foi salvo/carregado — usado no DELETE do upsert
 
 function revInit(hist, revAtualSalva){
   // hist = array de revisões ANTERIORES (substituídas)
@@ -2398,8 +2399,9 @@ async function salvarOrcamento(){
     updated_at:new Date().toISOString()
   };
   try{
-    // Upsert por número
-    var del=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numero),{
+    // Upsert: deleta pelo número ORIGINAL (antes de eventual renomeação), insere com número novo
+    var numeroParaDeletar = _numeroSalvoAtual || numero;
+    var del=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numeroParaDeletar),{
       method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos',{
@@ -2408,6 +2410,7 @@ async function salvarOrcamento(){
       body:JSON.stringify(payload)
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
+    _numeroSalvoAtual = numero; // atualiza referência após salvar com sucesso
     setSaveStatus('✓ Salvo — '+new Date().toLocaleTimeString('pt-BR'), true);
   }catch(e){
     setSaveStatus('✗ Erro: '+e.message, false);
@@ -2533,6 +2536,7 @@ async function carregarOrcamento(id){
 
     calcAll();
     setSaveStatus('✓ '+orc.numero+' carregado', true);
+    _numeroSalvoAtual = orc.numero;
   }catch(e){
     setSaveStatus('✗ Erro: '+e.message, false);
   }
@@ -3790,6 +3794,7 @@ async function gerarProximoNumeroSS(){
 async function novoOrcamento(){
   revInit([]);
   _cronRows=[];
+  _numeroSalvoAtual = null;
   // Resetar grupos/tabelas
   var cont=document.getElementById('tables-container');
   cont.innerHTML='';tables=[];tableCounter=0;
