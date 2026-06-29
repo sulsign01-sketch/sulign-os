@@ -521,7 +521,7 @@
         <div class="doc-num-el" contenteditable="true">SS-2026_06-24</div>
       </div>
       <div class="hd-right">
-        <div class="mr">Data <span id="dt">23/06/2026</span></div>
+        <div class="mr">Data <input type="date" id="dt-input" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:inherit;font-family:inherit;outline:none;cursor:pointer;width:120px;" onchange="sincronizarData()"><span id="dt" style="display:none;"></span></div>
         <div class="mr">Validade <span contenteditable="true">15 dias</span></div>
         <div class="mr">CNPJ <span contenteditable="true">03.952.317/0001-16</span></div>
       </div>
@@ -1732,7 +1732,8 @@ async function confirmarGerarOS(){
       observacoes:nomesPecas.join(' · '),
       dimensoes:dimsPecas.join(' | ')||null,
       logistica:'A combinar',
-      updated_at:new Date().toISOString()
+      data_proposta:(document.getElementById('dt').textContent||''),
+    updated_at:new Date().toISOString()
     };
 
     try{
@@ -2100,6 +2101,34 @@ function verificarSinalParaOS(){
   }
   return true;
 }
+
+// ══════════════════════════════════════
+// DATA EDITÁVEL DA PROPOSTA
+// ══════════════════════════════════════
+function sincronizarData(){
+  var dtInput=document.getElementById('dt-input');
+  if(!dtInput||!dtInput.value)return;
+  var partes=dtInput.value.split('-');
+  var dataBR=partes[2]+'/'+partes[1]+'/'+partes[0];
+  document.getElementById('dt').textContent=dataBR;
+  ['dt2','dt3'].forEach(function(id){
+    var e=document.getElementById(id);if(e)e.textContent=dataBR;
+  });
+}
+// Restaurar data ao carregar orçamento salvo
+function restaurarData(dataStr){
+  // dataStr no formato dd/mm/yyyy ou yyyy-mm-dd
+  if(!dataStr)return;
+  var dtInput=document.getElementById('dt-input');
+  if(!dtInput)return;
+  if(dataStr.includes('-')){
+    dtInput.value=dataStr;
+  } else {
+    var p=dataStr.split('/');
+    if(p.length===3)dtInput.value=p[2]+'-'+p[1]+'-'+p[0];
+  }
+  sincronizarData();
+}
 function setSaveStatus(msg,ok){
   var el=document.getElementById('save-status');
   if(el){el.textContent=msg;el.style.color=ok?'var(--green)':'var(--g400)';}
@@ -2273,6 +2302,7 @@ async function carregarOrcamento(id){
     var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl&&orc.validade)valEl.textContent=orc.validade;
     var _stElR=document.getElementById('orc-status');if(_stElR)_stElR.value=orc.status||'Em Orçamento';
     _cronRows=Array.isArray(orc.cronograma)?orc.cronograma:[];cronInit();
+    if(orc.data_proposta)restaurarData(orc.data_proposta);
     fatRestaurar(orc);
     var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';
 
@@ -3261,6 +3291,10 @@ function setModo(m,e){
 
 carregarBase();
 var hoje=new Date().toLocaleDateString('pt-BR');
+// Campo de data editável
+var hojeISO=new Date().toISOString().split('T')[0];
+var dtInput=document.getElementById('dt-input');
+if(dtInput){dtInput.value=hojeISO;}
 document.getElementById('dt').textContent=hoje;
 ['dt2','dt3'].forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=hoje;});
 
