@@ -364,7 +364,7 @@ function renderDash(orcs,todasOs,todosLanc,todasFixas){
   kE.className='kpi-v '+(ebitda>=0?'green':'red');
   document.getElementById('k-ebitda-sub').textContent=ebitdaPct.toFixed(1)+'% sobre receita';
 
-  document.getElementById('k-receita').textContent=fmtK(receitaTotal);
+  document.getElementById('k-receita').textContent='R$ '+receitaTotal.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   var rSub=document.getElementById('k-receita-sub');
   rSub.textContent=orcs.filter(function(o){return STATUS_FAT.indexOf(o.status||'')>=0;}).length+' jobs faturados';
 
