@@ -318,7 +318,7 @@ function renderJobView(){
     }).join('');
 
     return '<div class="job-card" id="jc-'+job.numero+'">'
-      +'<div class="job-card-hd" onclick="this.parentNode.classList.toggle('open')">'
+      +'<div class="job-card-hd" onclick="this.parentNode.classList.toggle(\'open\')">'
       +'<span class="job-card-num">'+(job.numero==='__sem_orc__'?'Sem orçamento':job.numero)+'</span>'
       +'<span class="job-card-nome">'+job.cliente+'</span>'
       +(osMf?osMf:'')
@@ -1252,7 +1252,7 @@ function renderJobView(){
     }).join('');
 
     return '<div class="job-card" id="jc-'+job.numero+'">'
-      +'<div class="job-card-hd" onclick="this.parentNode.classList.toggle('open')">'
+      +'<div class="job-card-hd" onclick="this.parentNode.classList.toggle(\'open\')">'
       +'<span class="job-card-num">'+(job.numero==='__sem_orc__'?'Sem orçamento':job.numero)+'</span>'
       +'<span class="job-card-nome">'+job.cliente+'</span>'
       +(osMf?osMf:'')
