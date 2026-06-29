@@ -331,14 +331,6 @@ function renderJobView(){
   }).join('');
 }
 
-// Atualizar setView para incluir 'job'
-var _origSetView = setView;
-setView = function(v){
-  _origSetView(v);
-  var jv = document.getElementById('view-job');
-  if(jv) jv.style.display = v==='job'?'block':'none';
-  if(v==='job') renderJobView();
-};
 
 </script>
 <script>
@@ -1268,14 +1260,7 @@ function renderJobView(){
   }).join('');
 }
 
-// Atualizar setView para incluir 'job'
-var _origSetView = setView;
-setView = function(v){
-  _origSetView(v);
-  var jv = document.getElementById('view-job');
-  if(jv) jv.style.display = v==='job'?'block':'none';
-  if(v==='job') renderJobView();
-};
+// setView já integrado no bloco original
 
 </script>
 
