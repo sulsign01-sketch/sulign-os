@@ -754,7 +754,7 @@ function renderImpostos(){
       +(imp.status==='Pago'?' · Pago em: <strong>'+dtPgto+'</strong>':'')+'</div>'
       +(imp.multa&&parseFloat(imp.multa)?'<div class="imp-meta">Principal: '+fmt(imp.valor)+' · Multa/Juros: '+fmt(imp.multa)+'</div>':'')
       +(imp.obs?'<div class="imp-meta" style="margin-top:4px;">Obs: '+imp.obs+'</div>':'')
-      +(imp.status==='Pendente'?'<button onclick="marcarPago(''+imp.id+'')" style="margin-top:8px;padding:5px 12px;background:#2d6a4f;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px;">✓ Marcar como Pago</button>':'')
+      +(imp.status==='Pendente'?'<button onclick="marcarPago(\''+imp.id+'\'" style="margin-top:8px;padding:5px 12px;background:#2d6a4f;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px;">✓ Marcar como Pago</button>':'')
       +'</div>';
     body.appendChild(div);
   });
