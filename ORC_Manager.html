@@ -481,6 +481,18 @@
 .fat-sinal-warn{color:var(--ylwb);font-size:11px;margin-top:4px;}
   .fat-divider{grid-column:1/-1;height:1px;background:#1e1e1e;margin:6px 0;}
   .fat-total{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--ga);}
+
+/* Fotos de layout na proposta */
+.prop-fotos-sec{margin-top:16px;}
+.prop-fotos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:10px;}
+.prop-foto-item{position:relative;border:1px solid var(--g200);border-radius:3px;overflow:hidden;background:var(--g100);}
+.prop-foto-item img{width:100%;height:160px;object-fit:cover;display:block;}
+.prop-foto-del{position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);color:#fff;border:none;border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;display:flex;align-items:center;justify-content:center;}
+.prop-foto-del:hover{background:var(--red);}
+.prop-foto-caption{padding:5px 8px;font-size:10px;color:var(--g600);text-align:center;}
+.prop-foto-add{border:1.5px dashed var(--g200);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:185px;cursor:pointer;color:var(--g400);font-size:12px;transition:.15s;}
+.prop-foto-add:hover{border-color:var(--ga);color:var(--ga);}
+@media print{.prop-foto-del{display:none!important;}.prop-foto-add{display:none!important;}}
 </style>
 </head>
 <body class="">
@@ -637,6 +649,7 @@
       <button class="save-btn" onclick="exportarHTML()" style="background:#5c6bc0;" title="Baixar HTML com estado atual para salvar no Drive">⬇ HTML</button>
       <button class="save-btn" onclick="abrirGerarOS()" style="background:#00695c;" title="Gerar Ordens de Serviço a partir deste orçamento">⚙ Gerar OS CV</button>
       <button class="save-btn" onclick="abrirGerarOSSetorial()" style="background:#4a148c;" title="Gerar OS por setor: Forração, Serralheria, Marcenaria, Pintura...">🏭 OS Setorial</button>
+      <button id="btn-add-fotos" onclick="toggleFotosSec()" style="display:none;align-items:center;gap:4px;background:#1565c0;color:#fff;border:none;border-radius:2px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:inherit;">🖼 Fotos de layout</button>
       <span class="save-status" id="save-status">—</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
@@ -647,7 +660,7 @@
         <button class="mbtn" onclick="setModo(&#39;blocado&#39;,event)">Blocado</button>
         <button class="mbtn" onclick="setModo(&#39;estr&#39;,event)">✦ Estratificado</button>
       </div>
-      <div style="display:flex;gap:4px;border-left:1px solid var(--g200);padding-left:8px;">
+      <div id="memorial-extra-btns" style="display:flex;gap:4px;border-left:1px solid var(--g200);padding-left:8px;">
         <button class="tbtn" onclick="setModo(&#39;pecas&#39;,event)" style="font-size:10px;padding:5px 10px;">🧩 Peças</button>
         <button class="tbtn" onclick="setModo(&#39;base&#39;,event)" style="font-size:10px;padding:5px 10px;">📋 Base</button>
       </div>
@@ -703,6 +716,20 @@
       <div class="sec-title">Escopo do Projeto</div>
       <p style="font-size:12px;color:var(--g600);margin-bottom:14px;" contenteditable="true">Fornecimento e produção de letreiro em PVC 20mm pintado branco para fachada da Igreja Batista Nova Filadélfia, conforme faca aprovada 410×160cm.</p>
       <div id="prop-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th style="width: 8%;">Qtd</th><th style="width: 6%; text-align: center;">Un.</th><th class="n">Valor Venda</th><th class="n" style="color: rgb(255, 138, 128);">Imposto</th><th class="n">Total</th></tr></thead><tbody><tr class="grand"><td colspan="4"><strong>Total Geral</strong></td><td class="imp2">—</td><td class="n" style="color: rgb(82, 183, 136); font-size: 14px;">R$ 0,00</td></tr></tbody></table></div>
+    </div>
+    <!-- FOTOS DE LAYOUT (opcional) -->
+    <div class="sec prop-fotos-sec" id="prop-fotos-sec" style="display:none;">
+      <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Referências Visuais / Layout</span>
+        <button onclick="toggleFotosSec()" style="font-size:10px;color:var(--g400);background:none;border:1px solid var(--g200);padding:2px 8px;border-radius:2px;cursor:pointer;">✕ Remover seção</button>
+      </div>
+      <div class="prop-fotos-grid" id="prop-fotos-grid">
+        <label class="prop-foto-add" for="prop-foto-input" title="Adicionar imagem">
+          <span style="font-size:24px;">🖼</span>
+          <span>Adicionar imagem</span>
+        </label>
+        <input type="file" id="prop-foto-input" accept="image/*" multiple style="display:none;" onchange="adicionarFotos(this)">
+      </div>
     </div>
     <div class="sec">
       <div class="sec-title">Condições Comerciais</div>
@@ -2131,6 +2158,60 @@ function restaurarData(dataStr){
   }
   sincronizarData();
 }
+
+// ══════════════════════════════════════
+// FOTOS DE LAYOUT NA PROPOSTA
+// ══════════════════════════════════════
+var _propFotos = []; // [{data: base64, caption:''}]
+
+function toggleFotosSec(){
+  var sec=document.getElementById('prop-fotos-sec');
+  if(!sec)return;
+  sec.style.display=sec.style.display==='none'?'block':'none';
+}
+
+function adicionarFotos(input){
+  var files=Array.from(input.files);
+  files.forEach(function(file){
+    var reader=new FileReader();
+    reader.onload=function(e){
+      _propFotos.push({data:e.target.result,caption:file.name.replace(/\.[^.]+$/,'')});
+      renderFotos();
+    };
+    reader.readAsDataURL(file);
+  });
+  input.value='';
+}
+
+function renderFotos(){
+  var grid=document.getElementById('prop-fotos-grid');
+  if(!grid)return;
+  grid.innerHTML='';
+  _propFotos.forEach(function(f,idx){
+    var div=document.createElement('div');
+    div.className='prop-foto-item';
+    div.innerHTML='<img src="'+f.data+'" alt="layout">'
+      +'<button class="prop-foto-del" onclick="removerFoto('+idx+')" title="Remover">×</button>'
+      +'<div class="prop-foto-caption"><input style="border:none;background:transparent;font-size:10px;color:var(--g600);text-align:center;width:100%;outline:none;" value="'+f.caption+'" onchange="_propFotos['+idx+'].caption=this.value"  placeholder="Legenda..."></div>';
+    grid.appendChild(div);
+  });
+  // Re-adicionar o botão de adicionar
+  var lbl=document.createElement('label');
+  lbl.className='prop-foto-add';
+  lbl.htmlFor='prop-foto-input';
+  lbl.title='Adicionar imagem';
+  lbl.innerHTML='<span style="font-size:24px;">🖼</span><span>Adicionar imagem</span>';
+  grid.appendChild(lbl);
+  var inp=document.createElement('input');
+  inp.type='file';inp.id='prop-foto-input';inp.accept='image/*';inp.multiple=true;
+  inp.style.display='none';inp.onchange=function(){adicionarFotos(this);};
+  grid.appendChild(inp);
+}
+
+function removerFoto(idx){
+  _propFotos.splice(idx,1);
+  renderFotos();
+}
 function setSaveStatus(msg,ok){
   var el=document.getElementById('save-status');
   if(el){el.textContent=msg;el.style.color=ok?'var(--green)':'var(--g400)';}
@@ -3276,7 +3357,11 @@ function setModo(m,e){
   e.target.classList.add((m==='descritivo'||m==='blocado')?'alt-active':(m==='base'?'alt-active':'active'));
   document.body.className='';
   var dt=document.querySelector('.doc-tipo-el');
-  if(m==='proposta'){document.body.classList.add('prop');if(dt)dt.textContent='PROPOSTA COMERCIAL';}
+  if(m==='proposta'){document.body.classList.add('prop');if(dt)dt.textContent='PROPOSTA COMERCIAL';
+    // Mostrar botão de fotos na toolbar
+    var fb=document.getElementById('btn-add-fotos');
+    if(fb)fb.style.display='inline-flex';
+  }
   else if(m==='descritivo'){document.body.classList.add('desc');if(dt)dt.textContent='MEMORIAL DESCRITIVO';}
   else if(m==='blocado'){document.body.classList.add('bloc');if(dt)dt.textContent='ORÇAMENTO BLOCADO';setTimeout(sincronizarListasBlocado,50);}
   else if(m==='base'){document.body.classList.add('base');if(dt)dt.textContent='BASE DE CUSTO';}
@@ -3288,6 +3373,12 @@ function setModo(m,e){
   if(fp)fp.style.display=(m==='memorial'||m===''||(!m))?'block':'none';
   var cs=document.getElementById('cron-section');
   if(cs)cs.style.display=(m==='memorial'||m===''||(!m))?'block':'none';
+  // Botões Peças/Base: só no memorial
+  var eb=document.getElementById('memorial-extra-btns');
+  if(eb)eb.style.display=(m==='memorial'||m===''||(!m)||m==='pecas'||m==='base')?'flex':'none';
+  // Botão adicionar fotos: só na proposta
+  var fb=document.getElementById('btn-add-fotos');
+  if(fb)fb.style.display=m==='proposta'?'inline-flex':'none';
   calcAll();
 }
 
