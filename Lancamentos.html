@@ -51,6 +51,63 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 .empty{text-align:center;padding:40px 20px;color:var(--g400);font-size:12px}
 .totbar{padding:10px 20px;background:var(--black);color:var(--white);display:flex;justify-content:space-between;font-size:12px}
 .totbar b{color:var(--ga);font-family:'DM Mono',monospace}
+
+/* Filtros lista */
+.filt{display:flex;gap:8px;padding:12px 20px;background:#f5f5f5;flex-wrap:wrap;align-items:center;}
+.filt select,.filt input{border:1.5px solid #e8e8e8;border-radius:2px;padding:5px 8px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff;outline:none;}
+.filt select:focus,.filt input:focus{border-color:#52b788;}
+/* Impostos */
+.imp-card{border:1.5px solid #e8e8e8;border-radius:3px;margin-bottom:8px;overflow:hidden;}
+.imp-card-hd{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:#f5f5f5;cursor:pointer;font-size:12px;font-weight:600;}
+.imp-card-hd:hover{background:#ebebeb;}
+.imp-card-body{padding:12px 14px;display:none;}
+.imp-card.open .imp-card-body{display:block;}
+.imp-tag{font-size:9px;padding:1px 7px;border-radius:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.imp-tag.pago{background:#e8f5e9;color:#2d6a4f;}
+.imp-tag.pend{background:#fff8e1;color:#8a6d00;border:1px solid #ffc107;}
+.imp-tag.venc{background:#ffebee;color:#c62828;}
+.imp-meta{font-size:10px;color:#9e9e9e;margin-top:3px;}
+.imp-val{font-family:'DM Mono',monospace;font-weight:600;font-size:13px;}
+.imp-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e8;margin-bottom:14px;}
+.imp-kpi{background:#fff;padding:12px 14px;}
+.imp-kpi-l{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#5a5a5a;margin-bottom:4px;}
+.imp-kpi-v{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;}
+.imp-kpi-v.ok{color:#2d6a4f;} .imp-kpi-v.warn{color:#c62828;}
+/* Tags sem nota */
+.tag-sn{color:#c62828;font-weight:600;font-size:9px;border:1px solid #c62828;border-radius:2px;padding:1px 4px;margin-left:4px;}
+.tag-pend{color:#8a6d00;font-weight:600;font-size:9px;border:1px solid #ffc107;border-radius:2px;padding:1px 4px;margin-left:4px;}
+/* Edit btn */
+.li-edit{font-size:11px;color:#52b788;cursor:pointer;margin-right:6px;}
+.li-edit:hover{color:#2d6a4f;}
+
+/* NF Emitidas */
+.nf-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e8e8e8;margin-bottom:16px;}
+.nf-kpi{background:#fff;padding:12px 14px;}
+.nf-kpi-l{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#9e9e9e;margin-bottom:4px;}
+.nf-kpi-v{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;}
+.nf-kpi-v.verde{color:#2d6a4f;}
+.nf-kpi-v.warn{color:#c62828;}
+.nf-kpi-v.blue{color:#1565c0;}
+.nf-row{display:flex;align-items:stretch;border-bottom:1.5px solid #f0f0f0;font-size:11px;transition:.15s;}
+.nf-row:hover{background:#f9f9f9;}
+.nf-row.header{background:#0f0f0f;color:#fff;font-size:9px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;}
+.nf-cell{padding:9px 10px;display:flex;align-items:center;}
+.nf-cell.n{text-align:right;justify-content:flex-end;font-family:'DM Mono',monospace;}
+.nf-num{width:90px;flex-shrink:0;}
+.nf-ss{width:120px;flex-shrink:0;font-family:'DM Mono',monospace;color:#52b788;}
+.nf-cli{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nf-val{width:110px;flex-shrink:0;}
+.nf-data{width:90px;flex-shrink:0;}
+.nf-status{width:160px;flex-shrink:0;}
+.nf-receb{width:110px;flex-shrink:0;}
+.nf-rest{width:100px;flex-shrink:0;}
+.nf-badge{font-size:9px;padding:1px 6px;border-radius:2px;font-weight:600;margin-right:3px;display:inline-block;}
+.nf-badge.pago{background:#e8f5e9;color:#2d6a4f;}
+.nf-badge.pend{background:#fff8e1;color:#8a6d00;}
+.nf-badge.parc{background:#e3f2fd;color:#1565c0;}
+.nf-filt{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;}
+.nf-filt select,.nf-filt input{border:1.5px solid #e8e8e8;border-radius:2px;padding:5px 8px;font-size:12px;font-family:inherit;outline:none;background:#fff;}
+.nf-filt select:focus,.nf-filt input:focus{border-color:var(--ga);}
 </style>
 </head>
 <body>
@@ -63,6 +120,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="tab active" id="tab-novo" onclick="setTab('novo')">+ Novo</div>
     <div class="tab" id="tab-lista" onclick="setTab('lista')">Lançamentos</div>
     <div class="tab" id="tab-fixas" onclick="setTab('fixas')">Despesas Fixas</div>
+    <div class="tab" id="tab-impostos" onclick="setTab('impostos')" style="color:#c62828;">Impostos</div>
+    <div class="tab" id="tab-nf" onclick="setTab('nf')" style="color:var(--ga);">NF Emitidas</div>
   </div>
 
   <div id="view-novo" class="sec">
@@ -128,6 +187,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   <div id="view-lista" style="display:none;">
     <div class="filt">
       <select id="filt-job" onchange="renderLista()"></select>
+      <select id="filt-cat" onchange="renderLista()">
+        <option value="">Todas as categorias</option>
+        <option>Material</option><option>Insumo</option>
+        <option>Mão de Obra</option><option>Logística</option><option>Imprevisto</option>
+      </select>
+      <input type="month" id="filt-mes" onchange="renderLista()" style="max-width:140px;">
     </div>
     <div class="totbar"><span>Total filtrado</span><b id="filt-total">R$ 0,00</b></div>
     <div id="lista-body"><div class="empty">Carregando...</div></div>
@@ -205,6 +270,118 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div id="fixas-lista-body"><div class="empty">Carregando...</div></div>
     </div>
   </div>
+
+  <div id="view-impostos" class="sec" style="display:none;">
+    <div class="imp-kpis" id="imp-kpis">
+      <div class="imp-kpi"><div class="imp-kpi-l">Pago (ano)</div><div class="imp-kpi-v ok" id="ik-pago">—</div></div>
+      <div class="imp-kpi"><div class="imp-kpi-l">Pendente</div><div class="imp-kpi-v warn" id="ik-pend">—</div></div>
+      <div class="imp-kpi"><div class="imp-kpi-l">Total Ano</div><div class="imp-kpi-v" id="ik-total">—</div></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+      <select id="imp-filt-tipo" onchange="renderImpostos()" style="border:1.5px solid #e8e8e8;border-radius:2px;padding:5px 8px;font-size:12px;font-family:inherit;outline:none;">
+        <option value="">Todos os impostos</option>
+        <option>Simples Nacional</option><option>DARF</option>
+        <option>ISS</option><option>INSS</option><option>FGTS</option><option>Outros</option>
+      </select>
+      <select id="imp-filt-status" onchange="renderImpostos()" style="border:1.5px solid #e8e8e8;border-radius:2px;padding:5px 8px;font-size:12px;font-family:inherit;outline:none;">
+        <option value="">Todos os status</option>
+        <option>Pago</option><option>Pendente</option>
+      </select>
+      <input type="text" id="imp-filt-ano" placeholder="Ano ex: 2026" maxlength="4"
+        oninput="renderImpostos()"
+        style="border:1.5px solid #e8e8e8;border-radius:2px;padding:5px 8px;font-size:12px;font-family:inherit;width:90px;outline:none;">
+    </div>
+
+    <div id="imp-lista-body"><div class="empty">Nenhum imposto lançado ainda.</div></div>
+
+    <div style="margin-top:18px;border-top:1px solid #e8e8e8;padding-top:16px;">
+      <div style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:#5a5a5a;margin-bottom:12px;">Novo Lançamento de Imposto</div>
+      <div class="row2">
+        <div class="fl">
+          <label>Tipo</label>
+          <select id="imp-tipo">
+            <option>Simples Nacional</option><option>DARF</option>
+            <option>ISS</option><option>INSS</option><option>FGTS</option><option>Outros</option>
+          </select>
+        </div>
+        <div class="fl">
+          <label>Competência (mês/ano)</label>
+          <input type="month" id="imp-competencia">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fl">
+          <label>Vencimento</label>
+          <input type="date" id="imp-vencimento">
+        </div>
+        <div class="fl">
+          <label>Data Pagamento</label>
+          <input type="date" id="imp-data-pgto">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fl">
+          <label>Valor Principal (R$)</label>
+          <input type="number" id="imp-valor" step="0.01" placeholder="0,00">
+        </div>
+        <div class="fl">
+          <label>Multa/Juros (R$)</label>
+          <input type="number" id="imp-multa" step="0.01" placeholder="0,00">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fl">
+          <label>Código Receita / Ref.</label>
+          <input type="text" id="imp-codigo" placeholder="Ex: 6015 / GPS 2026-06">
+        </div>
+        <div class="fl">
+          <label>Status</label>
+          <select id="imp-status">
+            <option>Pago</option><option>Pendente</option>
+          </select>
+        </div>
+      </div>
+      <div class="fl">
+        <label>Observação</label>
+        <input type="text" id="imp-obs" placeholder="Ex: Parcelamento PERT, competência Jun">
+      </div>
+      <button class="btn" id="btn-salvar-imp" onclick="salvarImposto()">Salvar Imposto</button>
+      <div class="status" id="status-imp">—</div>
+    </div>
+  </div>
+  <!-- NF EMITIDAS -->
+  <div id="view-nf" class="sec" style="display:none;">
+    <div class="nf-kpis" id="nf-kpis">
+      <div class="nf-kpi"><div class="nf-kpi-l">Total Emitido</div><div class="nf-kpi-v blue" id="nk-total">—</div></div>
+      <div class="nf-kpi"><div class="nf-kpi-l">Total Recebido</div><div class="nf-kpi-v verde" id="nk-recebido">—</div></div>
+      <div class="nf-kpi"><div class="nf-kpi-l">A Receber</div><div class="nf-kpi-v warn" id="nk-receber">—</div></div>
+      <div class="nf-kpi"><div class="nf-kpi-l">NFs Emitidas</div><div class="nf-kpi-v" id="nk-count">—</div></div>
+    </div>
+    <div class="nf-filt">
+      <select id="nf-filt-status" onchange="renderNF()">
+        <option value="">Todos os status</option>
+        <option value="pago">Quitado</option>
+        <option value="parc">Parcialmente recebido</option>
+        <option value="pend">Pendente</option>
+      </select>
+      <input type="month" id="nf-filt-mes" onchange="renderNF()" placeholder="Mês/Ano">
+      <input type="text" id="nf-filt-busca" oninput="renderNF()" placeholder="Buscar SS-## ou cliente..." style="flex:1;max-width:260px;">
+    </div>
+
+    <div class="nf-row header">
+      <div class="nf-cell nf-num">NF</div>
+      <div class="nf-cell nf-ss">SS-Número</div>
+      <div class="nf-cell nf-cli">Cliente / Projeto</div>
+      <div class="nf-cell nf-val n">Valor NF</div>
+      <div class="nf-cell nf-data">Data NF</div>
+      <div class="nf-cell nf-status">Status Pagamento</div>
+      <div class="nf-cell nf-receb n">Recebido</div>
+      <div class="nf-cell nf-rest n">A Receber</div>
+    </div>
+    <div id="nf-body"><div class="empty">Carregando...</div></div>
+  </div>
+
 </div>
 
 <script>
@@ -218,14 +395,14 @@ var jobSelecionado=null;
 function fmt(v){return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 function setTab(t){
-  document.getElementById('tab-novo').classList.toggle('active',t==='novo');
-  document.getElementById('tab-lista').classList.toggle('active',t==='lista');
-  document.getElementById('tab-fixas').classList.toggle('active',t==='fixas');
-  document.getElementById('view-novo').style.display=t==='novo'?'block':'none';
-  document.getElementById('view-lista').style.display=t==='lista'?'block':'none';
-  document.getElementById('view-fixas').style.display=t==='fixas'?'block':'none';
+  ['novo','lista','fixas','impostos','nf'].forEach(function(n){
+    document.getElementById('tab-'+n).classList.toggle('active',t===n);
+    document.getElementById('view-'+n).style.display=t===n?'block':'none';
+  });
   if(t==='lista')carregarLancamentos();
   if(t==='fixas')carregarDespesasFixas();
+  if(t==='impostos')carregarImpostos();
+  if(t==='nf')carregarNF();
 }
 
 // localStorage autocomplete helpers (últimos 8)
@@ -377,21 +554,30 @@ async function carregarLancamentos(){
 function renderLista(){
   var body=document.getElementById('lista-body');
   var filtJob=document.getElementById('filt-job').value;
-  var filtrados=lancamentosCache.filter(function(l){return !filtJob||l.orcamento_numero===filtJob;});
+  var filtCat=document.getElementById('filt-cat')?document.getElementById('filt-cat').value:'';
+  var filtMes=document.getElementById('filt-mes')?document.getElementById('filt-mes').value:'';
+  var filtrados=lancamentosCache.filter(function(l){
+    if(filtJob && l.orcamento_numero!==filtJob) return false;
+    if(filtCat && l.categoria!==filtCat) return false;
+    if(filtMes && l.data && l.data.substring(0,7)!==filtMes) return false;
+    return true;
+  });
   var total=filtrados.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
-  document.getElementById('filt-total').textContent=fmt(total);
+  document.getElementById('filt-total').textContent=fmt(total)+' ('+filtrados.length+' lançamentos)';
 
-  if(!filtrados.length){body.innerHTML='<div class="empty">Nenhum lançamento ainda.</div>';return;}
+  if(!filtrados.length){body.innerHTML='<div class="empty">Nenhum lançamento para este filtro.</div>';return;}
   body.innerHTML='';
   filtrados.forEach(function(l){
     var div=document.createElement('div');div.className='list-item';
     var dt=l.data?new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR'):'—';
-    var semNota = (l.tem_nota===false);
+    var semNota=(l.tem_nota===false);
     div.innerHTML='<div>'
-      +'<div class="li-desc"><strong>'+l.orcamento_numero+'</strong> · '+(l.categoria||'—')+' · '+l.descricao+(semNota?' <span style="color:#c62828;font-weight:600;font-size:10px;border:1px solid #c62828;border-radius:2px;padding:1px 5px;">SEM NOTA</span>':'')+'</div>'
-      +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · forn: '+l.fornecedor:'')+'</div>'
+      +'<div class="li-desc"><strong>'+(l.orcamento_numero||'—')+'</strong> · '+(l.categoria||'—')+' · '+l.descricao
+      +(semNota?'<span class="tag-sn">SEM NOTA</span>':'')+'</div>'
+      +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · '+l.fornecedor:'')+'</div>'
       +'</div>'
-      +'<div style="text-align:right;"><span class="li-val">'+fmt(l.valor)+'</span><br><span class="li-del" data-id="'+l.id+'">remover</span></div>';
+      +'<div style="text-align:right;"><span class="li-val">'+fmt(l.valor)+'</span><br>'
+      +'<span class="li-del" data-id="'+l.id+'">remover</span></div>';
     div.querySelector('.li-del').onclick=function(){deletarLancamento(l.id,div);};
     body.appendChild(div);
   });
@@ -494,6 +680,233 @@ async function deletarDespesaFixa(id){
   despesasFixasCache=despesasFixasCache.filter(function(d){return d.id!==id;});
   renderDespesasFixas();
 }
+
+// ══════════════════════════════════════
+// IMPOSTOS (Supabase)
+// ══════════════════════════════════════
+var impostosCache=[];
+
+function setStatusImp(msg,cls){
+  var el=document.getElementById('status-imp');
+  if(el){el.textContent=msg;el.className='status'+(cls?' '+cls:'');}
+}
+
+async function carregarImpostos(){
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/impostos?order=criado_em.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    impostosCache=await r.json();
+    renderImpostos();
+  }catch(e){
+    setStatusImp('✗ Erro ao carregar: '+e.message,'err');
+  }
+}
+
+function renderImpostos(){
+  var body=document.getElementById('imp-lista-body');
+  var filtTipo=(document.getElementById('imp-filt-tipo')||{}).value||'';
+  var filtSt=(document.getElementById('imp-filt-status')||{}).value||'';
+  var filtAno=(document.getElementById('imp-filt-ano')||{}).value||'';
+  var hoje=new Date().toISOString().split('T')[0];
+
+  var lista=impostosCache.filter(function(i){
+    if(filtTipo && i.tipo!==filtTipo) return false;
+    if(filtSt && i.status!==filtSt) return false;
+    if(filtAno && i.competencia && i.competencia.substring(0,4)!==filtAno) return false;
+    return true;
+  }).sort(function(a,b){
+    // pendentes primeiro, depois por vencimento
+    if(a.status!==b.status) return a.status==='Pendente'?-1:1;
+    return (a.vencimento||'')>(b.vencimento||'')?1:-1;
+  });
+
+  // KPIs — calcula sobre todos (sem filtro)
+  var anoAtual=new Date().getFullYear().toString();
+  var anoLista=impostosCache.filter(function(i){return !i.competencia||i.competencia.startsWith(anoAtual);});
+  var totPago=anoLista.filter(function(i){return i.status==='Pago';}).reduce(function(a,i){return a+(parseFloat(i.valor)||0)+(parseFloat(i.multa)||0);},0);
+  var totPend=anoLista.filter(function(i){return i.status==='Pendente';}).reduce(function(a,i){return a+(parseFloat(i.valor)||0)+(parseFloat(i.multa)||0);},0);
+  var el=document.getElementById('ik-pago');if(el)el.textContent=fmt(totPago);
+  el=document.getElementById('ik-pend');if(el)el.textContent=fmt(totPend);
+  el=document.getElementById('ik-total');if(el)el.textContent=fmt(totPago+totPend);
+
+  if(!lista.length){body.innerHTML='<div class="empty">Nenhum registro para este filtro.</div>';return;}
+  body.innerHTML='';
+  lista.forEach(function(imp){
+    var vencido=imp.status==='Pendente'&&imp.vencimento&&imp.vencimento<hoje;
+    var tagCls=imp.status==='Pago'?'pago':(vencido?'venc':'pend');
+    var tagTxt=imp.status==='Pago'?'Pago':(vencido?'VENCIDO':'Pendente');
+    var total=(parseFloat(imp.valor)||0)+(parseFloat(imp.multa)||0);
+    var div=document.createElement('div');div.className='imp-card';
+    var dtVenc=imp.vencimento?new Date(imp.vencimento+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+    var dtPgto=imp.data_pgto?new Date(imp.data_pgto+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+    div.innerHTML='<div class="imp-card-hd" onclick="this.parentNode.classList.toggle('open')">'
+      +'<span><strong>'+imp.tipo+'</strong>'+(imp.competencia?' · '+imp.competencia.replace('-','/'):'')
+      +(imp.codigo?' <span style="color:#9e9e9e;font-weight:400;">('+imp.codigo+')</span>':'')+'</span>'
+      +'<span style="display:flex;align-items:center;gap:10px;">'
+      +'<span class="imp-val">'+(imp.multa&&parseFloat(imp.multa)?fmt(total)+' (c/multa)':fmt(imp.valor))+'</span>'
+      +'<span class="imp-tag '+tagCls+'">'+tagTxt+'</span>'
+      +'<span class="li-del" onclick="event.stopPropagation();deletarImposto(''+imp.id+'')">×</span>'
+      +'</span></div>'
+      +'<div class="imp-card-body">'
+      +'<div class="imp-meta">Vencimento: <strong>'+dtVenc+'</strong>'
+      +(imp.status==='Pago'?' · Pago em: <strong>'+dtPgto+'</strong>':'')+'</div>'
+      +(imp.multa&&parseFloat(imp.multa)?'<div class="imp-meta">Principal: '+fmt(imp.valor)+' · Multa/Juros: '+fmt(imp.multa)+'</div>':'')
+      +(imp.obs?'<div class="imp-meta" style="margin-top:4px;">Obs: '+imp.obs+'</div>':'')
+      +(imp.status==='Pendente'?'<button onclick="marcarPago(''+imp.id+'')" style="margin-top:8px;padding:5px 12px;background:#2d6a4f;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px;">✓ Marcar como Pago</button>':'')
+      +'</div>';
+    body.appendChild(div);
+  });
+}
+
+async function salvarImposto(){
+  var tipo=document.getElementById('imp-tipo').value;
+  var competencia=document.getElementById('imp-competencia').value;
+  var vencimento=document.getElementById('imp-vencimento').value||null;
+  var data_pgto=document.getElementById('imp-data-pgto').value||null;
+  var valor=parseFloat(document.getElementById('imp-valor').value)||0;
+  var multa=parseFloat(document.getElementById('imp-multa').value)||0;
+  var codigo=document.getElementById('imp-codigo').value.trim();
+  var status=document.getElementById('imp-status').value;
+  var obs=document.getElementById('imp-obs').value.trim();
+  if(!valor){setStatusImp('✗ Informe o valor','err');return;}
+  if(!competencia&&!vencimento){setStatusImp('✗ Informe competência ou vencimento','err');return;}
+  setStatusImp('💾 Salvando...','');
+  var payload={tipo:tipo,competencia:competencia||null,vencimento:vencimento,
+    data_pgto:data_pgto,valor:valor,multa:multa,codigo:codigo||null,status:status,obs:obs||null};
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/impostos',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,
+               'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var novo=await r.json();
+    impostosCache.unshift(Array.isArray(novo)?novo[0]:novo);
+    ['imp-competencia','imp-vencimento','imp-data-pgto','imp-valor','imp-multa','imp-codigo','imp-obs'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.value='';
+    });
+    document.getElementById('imp-status').value='Pago';
+    setStatusImp('✓ Imposto salvo','ok');
+    renderImpostos();
+  }catch(e){setStatusImp('✗ Erro: '+e.message,'err');}
+}
+
+async function marcarPago(id){
+  var hoje=new Date().toISOString().split('T')[0];
+  try{
+    await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+id,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({status:'Pago',data_pgto:hoje})
+    });
+    var item=impostosCache.find(function(i){return i.id===id;});
+    if(item){item.status='Pago';item.data_pgto=hoje;}
+    renderImpostos();
+  }catch(e){alert('Erro ao salvar: '+e.message);}
+}
+
+async function deletarImposto(id){
+  if(!confirm('Remover este registro de imposto?'))return;
+  try{
+    await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+id,{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    impostosCache=impostosCache.filter(function(i){return i.id!==id;});
+    renderImpostos();
+  }catch(e){alert('Erro ao remover: '+e.message);}
+}
+
+
+// ══════════════════════════════════════
+// NF EMITIDAS / RECEITAS
+// ══════════════════════════════════════
+var nfCache = [];
+
+function fmtNF(v){
+  if(!v&&v!==0)return'—';
+  return'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+async function carregarNF(){
+  try{
+    // Buscar orçamentos com valor_nf preenchido OU status Faturado/Entregue
+    var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,cliente,projeto,status,valor_nf,data_nf,nf_numero,sinal_recebido,sinal_valor,saldo_recebido,saldo_valor,updated_at&or=(valor_nf.not.is.null,status.in.(Faturado,Entregue))&order=data_nf.desc.nullslast,updated_at.desc',{
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    nfCache = (await r.json()).filter(function(o){
+      return o.valor_nf || o.status==='Faturado' || o.status==='Entregue';
+    });
+    renderNF();
+  }catch(e){
+    document.getElementById('nf-body').innerHTML='<div class="empty">Erro ao carregar: '+e.message+'</div>';
+  }
+}
+
+function nfStatusInfo(orc){
+  var vn  = parseFloat(orc.valor_nf)||0;
+  var sv  = parseFloat(orc.sinal_valor)||0;
+  var lv  = parseFloat(orc.saldo_valor)||0;
+  var sc  = orc.sinal_recebido||false;
+  var lc  = orc.saldo_recebido||false;
+  var rec = (sc?sv:0) + (lc?lv:0);
+  var rest= vn>0 ? Math.max(0, vn-rec) : 0;
+  var key = rest<=0&&vn>0 ? 'pago' : rec>0 ? 'parc' : 'pend';
+  var lbl = key==='pago'?'Quitado':key==='parc'?'Parcial':'Pendente';
+  return {key:key, lbl:lbl, recebido:rec, restante:rest, vn:vn};
+}
+
+function renderNF(){
+  var body   = document.getElementById('nf-body');
+  var fStatus= (document.getElementById('nf-filt-status')||{}).value||'';
+  var fMes   = (document.getElementById('nf-filt-mes')||{}).value||'';
+  var fBusca = ((document.getElementById('nf-filt-busca')||{}).value||'').toLowerCase();
+
+  var lista = nfCache.filter(function(o){
+    var st = nfStatusInfo(o);
+    if(fStatus && st.key !== fStatus) return false;
+    if(fMes && o.data_nf && o.data_nf.substring(0,7) !== fMes) return false;
+    if(fBusca && (o.numero||'').toLowerCase().indexOf(fBusca)<0 && (o.cliente||'').toLowerCase().indexOf(fBusca)<0) return false;
+    return true;
+  });
+
+  // KPIs
+  var totEmit  = lista.reduce(function(a,o){return a+(parseFloat(o.valor_nf)||0);},0);
+  var totRec   = lista.reduce(function(a,o){return a+nfStatusInfo(o).recebido;},0);
+  var totRest  = lista.reduce(function(a,o){return a+nfStatusInfo(o).restante;},0);
+  document.getElementById('nk-total').textContent   = fmtNF(totEmit);
+  document.getElementById('nk-recebido').textContent= fmtNF(totRec);
+  document.getElementById('nk-receber').textContent = fmtNF(totRest);
+  document.getElementById('nk-count').textContent   = lista.length+' NF'+(lista.length!==1?'s':'');
+
+  if(!lista.length){
+    body.innerHTML='<div class="empty">'+(fStatus||fMes||fBusca?'Nenhuma NF para este filtro.':'Nenhuma NF emitida ainda. Preencha o campo Valor NF no painel de Faturamento dos orçamentos.')+'</div>';
+    return;
+  }
+
+  body.innerHTML = lista.map(function(o){
+    var st  = nfStatusInfo(o);
+    var dt  = o.data_nf ? new Date(o.data_nf+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}) : '—';
+    var cls = st.key==='pago'?'pago':st.key==='parc'?'parc':'pend';
+    var badgeSinal = o.sinal_recebido ? '<span class="nf-badge pago">Sinal ✓</span>' : '<span class="nf-badge pend">Sinal ⏳</span>';
+    var badgeSaldo = o.saldo_recebido ? '<span class="nf-badge pago">Saldo ✓</span>' : '<span class="nf-badge pend">Saldo ⏳</span>';
+    return '<div class="nf-row">'
+      +'<div class="nf-cell nf-num" style="font-family:DM Mono,monospace;color:#9e9e9e;">'+(o.nf_numero?'NF-'+o.nf_numero:'—')+'</div>'
+      +'<div class="nf-cell nf-ss">'+(o.numero||'—')+'</div>'
+      +'<div class="nf-cell nf-cli" title="'+(o.cliente||'')+'"><div><div style="font-weight:600;">'+(o.cliente||'—')+'</div><div style="font-size:10px;color:#9e9e9e;">'+(o.projeto||'')+'</div></div></div>'
+      +'<div class="nf-cell nf-val n" style="font-weight:600;">'+(o.valor_nf?fmtNF(o.valor_nf):'<span style="color:#9e9e9e;">est. do ORC</span>')+'</div>'
+      +'<div class="nf-cell nf-data">'+dt+'</div>'
+      +'<div class="nf-cell nf-status">'+badgeSinal+' '+badgeSaldo+'</div>'
+      +'<div class="nf-cell nf-receb n" style="color:'+(st.recebido>0?'#2d6a4f':'#9e9e9e')+';">'+(st.recebido>0?fmtNF(st.recebido):'—')+'</div>'
+      +'<div class="nf-cell nf-rest n" style="color:'+(st.restante>0?'#c62828':st.restante===0&&st.vn>0?'#2d6a4f':'#9e9e9e')+';">'+(st.vn>0?fmtNF(st.restante):'—')+'</div>'
+      +'</div>';
+  }).join('');
+}
+
 </script>
 </body>
 </html>

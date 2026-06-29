@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sul Sign — Mapa de Processos</title>
+<style>
+:root{
+  --black:#0f0f0f;--ga:#52b788;--green:#2d6a4f;
+  --g100:#f5f5f5;--g200:#e8e8e8;--g400:#9e9e9e;--g600:#5a5a5a;
+  --white:#fff;--red:#c62828;--ylw:#fff8e1;--ylwb:#ffc107;
+  --blue:#1565c0;--blueL:#e3f2fd;--purple:#4a148c;--purpleL:#f3e5f5;
+  --sidebar:260px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f0f0f;color:var(--white);height:100vh;overflow:hidden;display:flex;}
+
+/* ── SIDEBAR ── */
+.sidebar{width:var(--sidebar);background:#111;border-right:1px solid #1e1e1e;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;}
+.sb-brand{padding:20px 18px 16px;border-bottom:1px solid #1e1e1e;}
+.sb-logo{font-size:11px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:var(--ga);}
+.sb-sub{font-size:9px;color:#444;margin-top:2px;letter-spacing:1px;}
+.sb-version{display:inline-block;background:#1e1e1e;color:var(--ga);font-size:8px;padding:1px 6px;border-radius:10px;margin-top:4px;}
+
+/* Role filter */
+.role-section{padding:14px 18px;border-bottom:1px solid #1e1e1e;}
+.role-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#444;margin-bottom:8px;}
+.role-btn{display:block;width:100%;text-align:left;background:none;border:1px solid #1e1e1e;border-radius:2px;padding:6px 10px;font-size:11px;color:#666;cursor:pointer;margin-bottom:4px;transition:.15s;font-family:inherit;}
+.role-btn:hover{border-color:#333;color:#aaa;}
+.role-btn.active{border-color:var(--ga);color:var(--ga);background:#0a1a10;}
+
+/* Nav phases */
+.nav-section{padding:12px 18px;border-bottom:1px solid #1e1e1e;}
+.nav-lbl{font-size:8px;letter-spacing:2px;text-transform:uppercase;color:#444;margin-bottom:8px;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:3px;cursor:pointer;transition:.15s;margin-bottom:1px;}
+.nav-item:hover{background:#1a1a1a;}
+.nav-item.active{background:#0a1a10;}
+.nav-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;background:#1e1e1e;color:#666;transition:.15s;}
+.nav-item.active .nav-num{background:var(--ga);color:#000;}
+.nav-txt{font-size:11px;color:#666;transition:.15s;}
+.nav-item.active .nav-txt{color:var(--white);}
+.nav-item:hover .nav-txt{color:#aaa;}
+.nav-divider{height:1px;background:#1e1e1e;margin:8px 0;}
+
+/* Checklist toggle */
+.sb-bottom{padding:14px 18px;margin-top:auto;border-top:1px solid #1e1e1e;}
+.mode-btn{display:block;width:100%;padding:8px 12px;border:1.5px solid #1e1e1e;border-radius:2px;background:none;color:#666;font-size:11px;cursor:pointer;font-family:inherit;text-align:left;margin-bottom:6px;transition:.15s;}
+.mode-btn:hover{border-color:var(--ga);color:var(--ga);}
+.mode-btn.on{border-color:var(--ga);color:var(--ga);background:#0a1a10;}
+
+/* ── MAIN ── */
+.main{flex:1;overflow-y:auto;background:#0f0f0f;}
+.main-inner{max-width:820px;margin:0 auto;padding:32px 36px 80px;}
+
+/* Phase header */
+.phase-header{margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid #1e1e1e;animation:fadeIn .3s ease;}
+.phase-tag{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:var(--ga);margin-bottom:8px;}
+.phase-title{font-size:28px;font-weight:700;color:var(--white);line-height:1.1;}
+.phase-desc{font-size:13px;color:#666;margin-top:8px;line-height:1.6;}
+
+/* Step cards */
+.step-card{background:#111;border:1px solid #1e1e1e;border-radius:4px;margin-bottom:8px;overflow:hidden;transition:.2s;animation:slideUp .25s ease forwards;opacity:0;}
+.step-card:nth-child(1){animation-delay:.05s}
+.step-card:nth-child(2){animation-delay:.1s}
+.step-card:nth-child(3){animation-delay:.15s}
+.step-card:nth-child(4){animation-delay:.2s}
+.step-card:nth-child(5){animation-delay:.25s}
+.step-card:nth-child(6){animation-delay:.3s}
+.step-card:nth-child(7){animation-delay:.35s}
+.step-card:nth-child(8){animation-delay:.4s}
+.step-card:hover{border-color:#2a2a2a;}
+.step-card.expandable>.sc-head{cursor:pointer;}
+.sc-head{display:flex;align-items:center;gap:12px;padding:12px 14px;}
+.sc-num{width:26px;height:26px;border-radius:50%;background:#1e1e1e;color:var(--ga);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.sc-title{font-size:13px;font-weight:600;color:var(--white);flex:1;}
+.sc-role{font-size:9px;padding:1px 7px;border-radius:10px;font-weight:600;flex-shrink:0;}
+.sc-role.carlos{background:#0a1a10;color:var(--ga);}
+.sc-role.conde{background:#0a1028;color:#64b5f6;}
+.sc-role.fernando{background:#1a1a1a;color:#aaa;}
+.sc-role.everson{background:#1a0a28;color:#ce93d8;}
+.sc-role.todos{background:#1a1a0a;color:var(--ylwb);}
+.sc-chevron{color:#333;font-size:12px;transition:.2s;}
+.sc-body{padding:0 14px 14px 52px;font-size:12px;color:#999;line-height:1.7;border-top:1px solid #1a1a1a;display:none;}
+.step-card.open .sc-body{display:block;}
+.step-card.open .sc-chevron{transform:rotate(180deg);color:var(--ga);}
+.sc-body ul{list-style:none;margin-top:6px;}
+.sc-body ul li{padding:3px 0;padding-left:14px;position:relative;}
+.sc-body ul li::before{content:'›';position:absolute;left:0;color:var(--ga);}
+.sc-body .callout{background:#1a1a0a;border-left:3px solid var(--ylwb);padding:8px 12px;border-radius:0 3px 3px 0;margin-top:8px;font-size:11px;color:#aaa;}
+.sc-body .callout.green{background:#0a1a10;border-left-color:var(--ga);}
+.sc-body .callout.blue{background:#0a1028;border-left-color:#64b5f6;}
+.sc-body .callout.red{background:#1a0a0a;border-left-color:var(--red);}
+.sc-body strong{color:var(--white);}
+
+/* Section title */
+.sec-title{font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ga);margin:24px 0 10px;font-weight:600;}
+
+/* Table */
+.data-table{width:100%;border-collapse:collapse;font-size:11px;margin:8px 0 16px;}
+.data-table th{background:#1e1e1e;color:#999;padding:7px 10px;text-align:left;font-size:9px;letter-spacing:.8px;text-transform:uppercase;font-weight:600;}
+.data-table td{padding:8px 10px;border-bottom:1px solid #1a1a1a;color:#ccc;vertical-align:top;}
+.data-table tr:hover td{background:#141414;}
+.data-table .mono{font-family:'Courier New',monospace;color:var(--ga);}
+
+/* Checklist mode */
+.checklist-item{display:flex;align-items:flex-start;gap:12px;padding:10px 14px;border-bottom:1px solid #1a1a1a;cursor:pointer;transition:.15s;}
+.checklist-item:hover{background:#141414;}
+.checklist-item.done{opacity:.5;}
+.checklist-item.done .ci-txt{text-decoration:line-through;}
+.ci-chk{width:18px;height:18px;border:1.5px solid #333;border-radius:3px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:.2s;}
+.checklist-item.done .ci-chk{background:var(--ga);border-color:var(--ga);}
+.ci-txt{font-size:12px;color:#ccc;flex:1;line-height:1.5;}
+.ci-resp{font-size:9px;color:#444;margin-top:2px;}
+.ci-phase{font-size:8px;padding:1px 6px;border-radius:10px;background:#1e1e1e;color:#555;flex-shrink:0;margin-top:2px;}
+.checklist-progress{height:3px;background:#1e1e1e;border-radius:2px;margin-bottom:20px;overflow:hidden;}
+.checklist-progress-bar{height:3px;background:var(--ga);border-radius:2px;transition:.4s;}
+
+/* Role cards (Papéis view) */
+.role-card{border:1px solid #1e1e1e;border-radius:4px;padding:20px;margin-bottom:12px;animation:slideUp .25s ease forwards;opacity:0;}
+.role-card:nth-child(1){animation-delay:.05s}
+.role-card:nth-child(2){animation-delay:.1s}
+.role-card:nth-child(3){animation-delay:.15s}
+.role-card:nth-child(4){animation-delay:.2s}
+.role-card:nth-child(5){animation-delay:.25s}
+.role-card-name{font-size:15px;font-weight:700;margin-bottom:4px;}
+.role-card-role{font-size:10px;color:#666;margin-bottom:14px;letter-spacing:.5px;}
+.role-card ol{padding-left:18px;}
+.role-card ol li{font-size:12px;color:#999;padding:4px 0;line-height:1.5;}
+.role-card ol li::marker{color:var(--ga);font-weight:700;}
+
+/* Rules */
+.rule-card{display:flex;gap:14px;padding:12px 14px;border:1px solid #1e1e1e;border-radius:4px;margin-bottom:8px;animation:slideUp .25s ease forwards;opacity:0;}
+.rule-card:nth-child(n){animation-delay:calc(var(--i,0)*.05s)}
+.rule-num{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.rule-body{flex:1;}
+.rule-title{font-size:12px;font-weight:600;color:var(--white);margin-bottom:4px;}
+.rule-consequence{font-size:11px;color:#666;}
+
+/* Animations */
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes slideUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+
+/* System URLs */
+.url-card{background:#111;border:1px solid #1e1e1e;border-radius:4px;padding:14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center;}
+.url-name{font-size:11px;font-weight:600;color:var(--white);}
+.url-link{font-size:10px;color:var(--ga);font-family:monospace;word-break:break-all;}
+
+/* BDI table highlight */
+.bdi-min{color:var(--red);font-weight:600;}
+
+/* Progress dots in nav */
+.nav-dot{width:6px;height:6px;border-radius:50%;background:#1e1e1e;margin-left:auto;flex-shrink:0;}
+.nav-dot.done{background:var(--ga);}
+
+/* Hidden by role */
+.role-hidden{display:none!important;}
+
+/* Scrollbar */
+::-webkit-scrollbar{width:4px;}
+::-webkit-scrollbar-track{background:#0f0f0f;}
+::-webkit-scrollbar-thumb{background:#1e1e1e;border-radius:2px;}
+::-webkit-scrollbar-thumb:hover{background:#2a2a2a;}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">Sul Sign Group</div>
+    <div class="sb-sub">Mapa de Processos</div>
+    <span class="sb-version">v2.0 · Jun/2026</span>
+  </div>
+
+  <div class="role-section">
+    <div class="role-lbl">Filtrar por papel</div>
+    <button class="role-btn active" data-role="todos" onclick="setRole('todos',this)">👥 Todos</button>
+    <button class="role-btn" data-role="carlos" onclick="setRole('carlos',this)">Carlos — COO/CFO</button>
+    <button class="role-btn" data-role="conde" onclick="setRole('conde',this)">Pondé — Comercial</button>
+    <button class="role-btn" data-role="fernando" onclick="setRole('fernando',this)">Fernando — Produção</button>
+    <button class="role-btn" data-role="everson" onclick="setRole('everson',this)">Everson — Campo</button>
+    <button class="role-btn" data-role="dudu" onclick="setRole('dudu',this)">Dudu — Investidor</button>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-lbl">Fases do processo</div>
+    <div class="nav-item active" onclick="showPhase('papeis',this)">
+      <div class="nav-num">0</div>
+      <div class="nav-txt">Papéis</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('captacao',this)">
+      <div class="nav-num">1</div>
+      <div class="nav-txt">Captação</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('orcamento',this)">
+      <div class="nav-num">2</div>
+      <div class="nav-txt">Orçamento</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('followup',this)">
+      <div class="nav-num">3</div>
+      <div class="nav-txt">Followup</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('aprovacao',this)">
+      <div class="nav-num">4</div>
+      <div class="nav-txt">Aprovação</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('producao',this)">
+      <div class="nav-num">5</div>
+      <div class="nav-txt">Produção</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('entrega',this)">
+      <div class="nav-num">6</div>
+      <div class="nav-txt">Entrega</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('faturamento',this)">
+      <div class="nav-num">7</div>
+      <div class="nav-txt">Faturamento</div>
+    </div>
+    <div class="nav-divider"></div>
+    <div class="nav-item" onclick="showPhase('regras',this)">
+      <div class="nav-num" style="background:#1a0a0a;color:var(--red);">!</div>
+      <div class="nav-txt">Regras</div>
+    </div>
+    <div class="nav-item" onclick="showPhase('sistema',this)">
+      <div class="nav-num">🔗</div>
+      <div class="nav-txt">Sistema</div>
+    </div>
+  </div>
+
+  <div class="sb-bottom">
+    <button class="mode-btn" id="checklist-btn" onclick="toggleChecklist()">☑ Modo Checklist</button>
+    <button class="mode-btn" onclick="resetChecklist()">↺ Resetar checklist</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main" id="main">
+<div class="main-inner" id="content"></div>
+</div>
+
+<script>
+var currentRole = 'todos';
+var currentPhase = 'papeis';
+var checklistMode = false;
+var checklistState = JSON.parse(localStorage.getItem('ss_mapa_checks') || '{}');
+
+// ══════════════════════════════════════
+// DATA
+// ══════════════════════════════════════
+const PHASES = {
+
+papeis: {
+  title: 'Papéis e Responsabilidades',
+  desc: 'Quem faz o quê no processo Sul Sign. Cada papel tem acesso específico ao sistema.',
+  render: () => `
+    <div class="sec-title">Equipe Sul Sign</div>
+    ${roleCard('Carlos Augusto','CEO + COO + CFO (35%)','carlos','Lidera a empresa, aprova orçamentos, supervisiona financeiro e toda a operação, configura o sistema','Todos os módulos + Painel Financeiro',[
+      'Revisar alertas do Painel ao abrir o dia',
+      'Aprovar orçamentos antes do envio (BDI + memorial)',
+      'Autorizar compras acima de 15% do custo orçado do grupo',
+      'Marcar sinal como recebido assim que PIX confirmar',
+      'Emitir NF e preencher valor real no ORC Manager',
+      'Mudar status para "Faturado" após receber saldo',
+      'Lançar Simples Nacional até dia 18 de cada mês',
+    ])}
+    ${roleCard('Eduardo Pondé','Comercial (15%)','conde','Primeiro contato com cliente/agência, envia proposta, followup comercial','ORC Manager (lista + envio)',[
+      'Abrir orçamento no ORC Manager ao qualificar contato',
+      'Preencher cabeçalho completo antes de calcular',
+      'Mudar status para "Proposta Enviada" ao enviar HTML',
+      'Registrar todo contato no botão 📞 do card',
+      'Usar "↑ Rev." para revisões — NUNCA cancelar e criar novo',
+      'Avisar Carlos ao receber aprovação do cliente',
+    ])}
+    ${roleCard('Fernando Jovita','Produção (10%)','fernando','Abre OS de compras, acompanha produção, confirma logística e entrega','OS Manager',[
+      'Criar OS de compras por fornecedor ao receber job aprovado',
+      'Preencher prazo + data prometida ao cliente em cada OS',
+      'Lançar valor fechado de cada compra no mesmo dia',
+      'Notificar Carlos em compras acima de 15% do orçado',
+      'Salvar NF de fornecedores em 04_Compras no Drive',
+      'Marcar aceite do cliente na OS na entrega',
+    ])}
+    ${roleCard('Everson','Supervisor de Montagem','everson','Executa montagem, registra imprevistos, confirma aceite do cliente em campo','OS Manager (leitura + tramitação)',[
+      'Verificar OS no sistema antes de cada montagem',
+      'Avançar status da OS em cada etapa concluída',
+      'Preencher observação obrigatória em Acabamento e Concluído',
+      'Fotografar e registrar qualquer imprevisto ANTES de resolver',
+      'Qualquer pedido de alteração em campo: ligar para Carlos primeiro',
+      'Registrar aceite do cliente na OS com nome do responsável',
+    ])}
+    ${roleCard('Eduardo Guedes (Dudu)','Investidor (40%)','dudu','Acompanha resultados e retorno do investimento, aprova aportes e distribuições','Dashboard do Investidor (PIN protegido)',[
+      'Acessar Dashboard do Investidor semanalmente',
+      'Verificar EBITDA, margem bruta e alertas críticos',
+      'Verificar break-even: empresa está acima ou abaixo?',
+      'Contatar Carlos (CEO) se houver alerta vermelho no dashboard',
+    ])}
+    ${roleCard('Edson','Operador','fernando','Produção interna: router, impressão, execução de peças','OS Manager (leitura)',[])}
+  `
+},
+
+captacao: {
+  title: 'Fase 1 — Captação e Primeiro Contato',
+  desc: 'Começa quando o cliente faz contato. Termina quando você decide orçar.',
+  steps: [
+    { title:'Identificar canal de entrada', role:'conde', body:`
+      <ul>
+        <li>WhatsApp direto (cliente ou agência)</li>
+        <li>Indicação de parceiro (PDVEX, outro fornecedor)</li>
+        <li>Reativação: cliente sem contato há +60 dias (alerta automático no Painel)</li>
+        <li>Edital ou RFP formal (Cinemark via NS CO., PRIO via Dio Mkt)</li>
+      </ul>` },
+    { title:'Coletar informações obrigatórias', role:'conde', body:`
+      <ul>
+        <li><strong>Cliente final + Agência</strong> — identificar quem paga</li>
+        <li><strong>Nome e cargo do contato</strong> — WhatsApp ou e-mail</li>
+        <li><strong>Descrição do projeto</strong> — brief, PDF, foto ou referência</li>
+        <li><strong>Local + Data/Prazo</strong> — confirmar se é hard deadline</li>
+        <li><strong>Responsável pelo pagamento</strong> — agência ou cliente direto?</li>
+        <li>Ideal: verba disponível e dimensões/referências visuais</li>
+      </ul>` },
+    { title:'Qualificar o contato', role:'conde', body:`
+      <div class="callout green"><strong>Critério de qualificação:</strong> projeto real com prazo definido e responsável de pagamento identificado. Se falta um desses três, não abrir orçamento ainda — coletar primeiro.</div>` },
+    { title:'Abrir orçamento no ORC Manager', role:'conde', body:`
+      <ul>
+        <li>Acessar ORC Manager → "Novo Orçamento"</li>
+        <li>Número SS gerado automaticamente (nunca editar à mão)</li>
+        <li>Preencher: Cliente / Agência / Atendimento / Projeto / Ref.</li>
+        <li>Status inicial: <strong>Cotação</strong></li>
+        <li>Preencher o Escopo com o briefing recebido</li>
+      </ul>
+      <div class="callout blue"><strong>Regra:</strong> abrir o orçamento no sistema é o que inicia o rastreamento. Sem número SS, o job não existe no sistema.</div>` },
+  ]
+},
+
+orcamento: {
+  title: 'Fase 2 — Orçamento',
+  desc: 'Da abertura do número SS até o envio da proposta ao cliente.',
+  steps: [
+    { title:'Construir o Memorial de Custos', role:'carlos', body:`
+      <table class="data-table">
+        <tr><th>Tipo de Peça</th><th>Estrutura de custo</th></tr>
+        <tr><td>Tapadeira 3m</td><td>Sarrafos + Compensado 6mm + Napa + MO montagem</td></tr>
+        <tr><td>Letreiro volumétrico iluminado</td><td>PVC 20mm (3 camadas) + PVC 5mm fundo + LED + MO</td></tr>
+        <tr><td>Letreiro volumétrico sem luz</td><td>PVC 10mm (1 camada) + pintura + MO</td></tr>
+        <tr><td>Banner / Lona</td><td>Impressão lona 380gr + estrutura/fixação</td></tr>
+        <tr><td>Cenografia MDF</td><td>MDF + pintura ou vinil + estrutura + MO</td></tr>
+      </table>
+      <ul><li>Consumíveis: sempre <strong>4%</strong> do subtotal de matéria-prima como linha separada em cada grupo</li></ul>` },
+    { title:'Configurar o BDI', role:'carlos', body:`
+      <table class="data-table">
+        <tr><th>Parâmetro</th><th>Padrão</th><th>Regra</th></tr>
+        <tr><td>AC</td><td>8%</td><td>Não alterar</td></tr>
+        <tr><td>DF</td><td>2%</td><td>Não alterar</td></tr>
+        <tr><td>RI</td><td>3%</td><td>Aumentar para obras externas complexas</td></tr>
+        <tr><td>Lucro</td><td>18%</td><td class="bdi-min">Mínimo absoluto: 15% — não negociar abaixo</td></tr>
+        <tr><td>Impostos</td><td>10%</td><td>Não alterar</td></tr>
+        <tr><td>BV — Comissão</td><td>5% ou 0%</td><td>5% apenas quando agência cobra comissão</td></tr>
+        <tr><td>Taxa NF</td><td>12%</td><td>Não alterar</td></tr>
+        <tr><td>Desconto</td><td>0%</td><td>Apenas com autorização do Carlos</td></tr>
+      </table>` },
+    { title:'Inserir grupos de Logística e Operacional', role:'todos', body:`
+      <ul>
+        <li>Clicar no botão <strong>"🚛⚙ Log+Operacional"</strong> na toolbar</li>
+        <li>Logística: frete de ida, volta, diárias de motorista</li>
+        <li>Operacional: diárias de montagem (Everson + equipe), estadia se fora do RJ</li>
+        <li>Se não estão inclusos no preço: marcar como "Opcional"</li>
+      </ul>` },
+    { title:'Preencher cronograma de recebimento', role:'carlos', body:`
+      <ul>
+        <li>Parcela 1 — <strong>Sinal (aprovação): 50%</strong> · preencher data prevista ao confirmar</li>
+        <li>Parcela 2 — <strong>Saldo (entrega): 50%</strong> · preencher data prevista de entrega</li>
+      </ul>
+      <div class="callout">O campo <strong>Sinal Recebido</strong> no painel de Faturamento deve ser marcado assim que o PIX confirmar. Sem isso o sistema alerta no Painel e no Dashboard do Investidor.</div>` },
+    { title:'Revisar condições comerciais', role:'todos', body:`
+      <ul>
+        <li><strong>Prazo de execução:</strong> prazo real baseado na data de entrega prometida</li>
+        <li><strong>Validade:</strong> padrão 15 dias — reduzir para eventos com data fixa</li>
+        <li><strong>Pagamento:</strong> ajustar conforme acordado (50/50 é padrão)</li>
+        <li><strong>Logística:</strong> especificar se inclusa ou não</li>
+      </ul>
+      <div class="callout green">As condições da Proposta sincronizam automaticamente para o Blocado.</div>` },
+    { title:'Enviar proposta ao cliente', role:'conde', body:`
+      <ul>
+        <li>Mudar status para <strong>"Proposta Enviada"</strong></li>
+        <li>Clicar <strong>"💾 Salvar"</strong> — sistema valida e registra</li>
+        <li>Clicar <strong>"⬇ HTML"</strong> → baixar arquivo no modo Blocado</li>
+        <li>Enviar para o cliente/agência via e-mail ou WhatsApp</li>
+        <li>Salvar cópia em: <code>01_Comercial → _Propostas → Enviadas → [MÊS]</code></li>
+      </ul>` },
+  ]
+},
+
+followup: {
+  title: 'Fase 3 — Followup Comercial',
+  desc: 'Do envio da proposta até a decisão do cliente (aprovação ou recusa).',
+  steps: [
+    { title:'Protocolo de followup', role:'conde', body:`
+      <table class="data-table">
+        <tr><th>Quando</th><th>Ação</th><th>Registro</th></tr>
+        <tr><td>1 dia após envio</td><td>"Posso tirar dúvidas sobre a proposta?"</td><td>📞 Log no card</td></tr>
+        <tr><td>3 dias sem retorno</td><td>Ligação direta ao contato</td><td>Log + resultado</td></tr>
+        <tr><td>7 dias sem retorno</td><td>Alerta automático no Painel — Carlos avalia</td><td>Sistema alerta</td></tr>
+        <tr><td>10 dias sem retorno</td><td>WhatsApp final com prazo de validade</td><td>Log de contato</td></tr>
+        <tr><td>Prazo vencido</td><td>Status → "Orçamento Vencido" + motivo</td><td>Sistema registra</td></tr>
+      </table>` },
+    { title:'Registrar contato no sistema', role:'conde', body:`
+      <ul>
+        <li>Na lista do ORC Manager, clicar no botão <strong>📞</strong> do card</li>
+        <li>Preencher: tipo, data, o que foi dito, próximo passo e data</li>
+        <li>Clicar "Salvar" — histórico fica vinculado ao orçamento</li>
+        <li>O contador de contatos aparece no card para Carlos acompanhar</li>
+      </ul>` },
+    { title:'Fazer revisão de proposta', role:'conde', body:`
+      <div class="callout green"><strong>Regra obrigatória:</strong> NUNCA cancelar o orçamento para revisar. Clicar em <strong>"↑ Rev."</strong> na toolbar → sistema cria Rev.02, preserva o histórico, mantém o número SS. Enviar o novo HTML com a revisão.</div>
+      <ul>
+        <li>Ao clicar "↑ Rev.": sistema cria nova revisão e muda status para "Em Orçamento"</li>
+        <li>Fazer as alterações necessárias no memorial ou condições</li>
+        <li>Salvar e reenviar o HTML</li>
+        <li>Botão "📋 Hist." mostra todas as revisões com datas e status</li>
+      </ul>` },
+    { title:'Registrar recusa com motivo', role:'carlos', body:`
+      <ul>
+        <li>Ao mudar status para "Orçamento Recusado": modal obrigatório de motivo</li>
+        <li>Opções: Preço alto / Prazo / Concorrente / Projeto cancelado / Sem resposta / Outro</li>
+        <li>Motivo fica registrado para análise de conversão no Painel</li>
+      </ul>` },
+  ]
+},
+
+aprovacao: {
+  title: 'Fase 4 — Aprovação e Abertura do Job',
+  desc: 'Da aprovação até o job estruturado para produção.',
+  steps: [
+    { title:'Registrar aprovação no sistema', role:'todos', body:`
+      <ul>
+        <li>Mudar status para <strong>"Orçamento Aprovado"</strong> no ORC Manager</li>
+        <li>Registrar no log 📞: quem aprovou, como (WhatsApp/e-mail), data</li>
+        <li>Salvar — pipeline do Painel e Dashboard do Investidor atualizam automaticamente</li>
+      </ul>` },
+    { title:'Confirmar recebimento do sinal', role:'carlos', body:`
+      <ul>
+        <li>Aguardar confirmação do PIX no C6 Bank (Eduardo Pondé confirma)</li>
+        <li>No ORC Manager → painel Faturamento → marcar <strong>"Sinal Recebido" ✓</strong></li>
+        <li>Preencher valor e data do sinal</li>
+      </ul>
+      <div class="callout red"><strong>Regra:</strong> nenhuma produção inicia sem sinal marcado como recebido no sistema.</div>` },
+    { title:'Criar pasta do job no Google Drive', role:'carlos', body:`
+      <div class="callout">⚠ <strong>Em breve: automação.</strong> Este passo será automatizado — o sistema criará a pasta ao mudar o status para Aprovado. Por enquanto, criar manualmente.</div>
+      <ul>
+        <li>Drive → <code>02_Operacional → [MÊS] → Criar pasta</code></li>
+        <li>Formato: <strong>SS-2026_06-42 — CLIENTE — PROJETO</strong></li>
+        <li>Dentro da pasta: copiar subpastas de ESTRUTURA_PADRAO (01 a 09)</li>
+        <li>Salvar HTML do orçamento aprovado em <code>01_Proposta</code></li>
+        <li>Salvar brief do cliente em <code>02_Brief</code></li>
+      </ul>` },
+    { title:'Subpastas do job (padrão obrigatório)', role:'todos', body:`
+      <table class="data-table">
+        <tr><th>Pasta</th><th>O que salvar aqui</th></tr>
+        <tr><td class="mono">01_Proposta</td><td>HTML do orçamento aprovado (todas as revisões)</td></tr>
+        <tr><td class="mono">02_Brief</td><td>Brief original, referências, plantas, fotos do local</td></tr>
+        <tr><td class="mono">03_Projeto</td><td>Arte final, vetores, faca, aprovação de arte pelo cliente</td></tr>
+        <tr><td class="mono">04_Compras</td><td>NFs de fornecedores, cotações, pedidos</td></tr>
+        <tr><td class="mono">05_Producao</td><td>Fotos de produção, checklist de qualidade</td></tr>
+        <tr><td class="mono">06_Entrega</td><td>Fotos de instalação, confirmação de aceite (print)</td></tr>
+        <tr><td class="mono">07_Financeiro</td><td>NF emitida pela Sul Sign, comprovantes de recebimento</td></tr>
+        <tr><td class="mono">08_Comunicacao</td><td>Prints de WhatsApp e e-mails importantes</td></tr>
+        <tr><td class="mono">09_Arquivo</td><td>Versões antigas e arquivos para consulta futura</td></tr>
+      </table>` },
+    { title:'Gerar Ordens de Serviço', role:'carlos', body:`
+      <ul>
+        <li>No ORC Manager: botão <strong>"⚙ Gerar OS"</strong></li>
+        <li>Selecionar grupos por disciplina (cada disciplina = 1 OS)</li>
+        <li>Definir responsável por disciplina: MDF/Marc → Everson · Router → Edson · Impressão → Edson</li>
+        <li>Preencher <strong>Prazo de produção</strong> (data interna) e <strong>Data prometida ao cliente</strong></li>
+        <li>Gerar → OSs aparecem no OS Manager vinculadas ao número SS</li>
+      </ul>
+      <div class="callout red"><strong>Regra:</strong> toda compra e toda hora de trabalho deve ser vinculada a uma OS ativa. Se chegou material sem OS, abrir a OS retroativamente ANTES de lançar o custo.</div>` },
+  ]
+},
+
+producao: {
+  title: 'Fase 5 — Produção e Compras',
+  desc: 'Da abertura das OS até a peça pronta para entrega.',
+  steps: [
+    { title:'Compras de material', role:'fernando', body:`
+      <ul>
+        <li>Fernando abre OS de compras no OS Manager por fornecedor/material</li>
+        <li>Lançar cada item: descrição, fornecedor, verba orçada, target e valor fechado</li>
+        <li>Qualquer compra acima de <strong>15% do custo orçado do grupo</strong>: notificar Carlos ANTES de fechar</li>
+        <li>NF do fornecedor → salvar em <code>04_Compras</code> no Drive no mesmo dia</li>
+      </ul>` },
+    { title:'Tramitação de etapas', role:'everson', body:`
+      <ul>
+        <li>Avançar status da OS em cada etapa concluída (clicar na próxima etapa)</li>
+        <li>Ao avançar para <strong>Acabamento/Pintura</strong> ou <strong>Concluído</strong>: observação obrigatória</li>
+        <li>O sistema bloqueia o avanço sem texto na observação</li>
+        <li>Descrever o que foi feito, imprevistos, quem executou</li>
+      </ul>` },
+    { title:'Semáforo de margem', role:'carlos', body:`
+      <table class="data-table">
+        <tr><th>Badge</th><th>Margem</th><th>Ação</th></tr>
+        <tr><td>🟢 Margem OK</td><td>≥ 20%</td><td>Continuar normalmente</td></tr>
+        <tr><td>🟡 Atenção</td><td>10–19%</td><td>Revisar compras pendentes antes de fechar novas</td></tr>
+        <tr><td>🔴 Baixa</td><td>&lt; 10%</td><td>Parar e comunicar Carlos antes de qualquer nova compra</td></tr>
+      </table>
+      <div class="callout">O semáforo aparece automaticamente no card da OS quando há custo fechado lançado. Manter OS atualizadas em tempo real é o que permite supervisão à distância.</div>` },
+    { title:'Fotos de produção', role:'everson', body:`
+      <ul>
+        <li>Fotografar em cada etapa relevante: corte, montagem, acabamento</li>
+        <li>Salvar em <code>05_Producao</code> no Drive do job</li>
+        <li>Formato: <strong>PRODUCAO — SS-## — ETAPA — DATA.jpg</strong></li>
+      </ul>` },
+    { title:'Imprevistos', role:'everson', body:`
+      <div class="callout red"><strong>Regra:</strong> qualquer imprevisto deve ser fotografado e registrado na observação da OS ANTES de ser resolvido. Sem registro não existe — e imprevistos não registrados viram prejuízo invisível.</div>` },
+  ]
+},
+
+entrega: {
+  title: 'Fase 6 — Entrega e Montagem',
+  desc: 'Do transporte até o aceite formal do cliente.',
+  steps: [
+    { title:'Preparação para saída', role:'fernando', body:`
+      <ul>
+        <li>Confirmar data e horário com o cliente com no mínimo <strong>48h de antecedência</strong></li>
+        <li>Fernando confirma veículo, equipe e checklist de itens (peça por peça, ferramentas)</li>
+        <li>Atualizar "Data prometida ao cliente" na OS se houve mudança</li>
+        <li>Registrar na OS de logística: data de saída, destino, equipe, veículo</li>
+      </ul>` },
+    { title:'Na montagem', role:'everson', body:`
+      <ul>
+        <li>Everson é o único interlocutor técnico com o cliente em campo</li>
+        <li>Qualquer alteração solicitada em campo: contatar Carlos ANTES de executar</li>
+        <li>Fotografar cada peça instalada: vista geral + detalhe de cada elemento</li>
+        <li>Imprevisto: fotografar e registrar na OS antes de resolver</li>
+      </ul>` },
+    { title:'Aceite formal do cliente', role:'everson', body:`
+      <ul>
+        <li>Apresentar as peças ao responsável do cliente</li>
+        <li>Solicitar confirmação por escrito (WhatsApp é válido: "Ficou ótimo, aprovado")</li>
+        <li>Fotografar o print/confirmação</li>
+        <li>No OS Manager: marcar <strong>"Entrega confirmada pelo cliente" ✓</strong> + nome do responsável</li>
+        <li>Salvar fotos de entrega + print em <code>06_Entrega</code> no Drive</li>
+      </ul>
+      <div class="callout red"><strong>Regra:</strong> aceite do cliente DEVE ser marcado na OS. Entrega sem registro formal vira risco de disputa posterior.</div>` },
+    { title:'Após a entrega — fechar o loop', role:'todos', body:`
+      <ul>
+        <li>Mudar status do orçamento para <strong>"Entregue"</strong> no ORC Manager</li>
+        <li>Registrar no log de contato: "Entrega realizada em [data], aceite confirmado por [nome]"</li>
+        <li>Comunicar Carlos para iniciar faturamento</li>
+      </ul>` },
+  ]
+},
+
+faturamento: {
+  title: 'Fase 7 — Faturamento e Fechamento',
+  desc: 'Da emissão de NF ao fechamento financeiro do job.',
+  steps: [
+    { title:'Emissão de Nota Fiscal', role:'carlos', body:`
+      <ul>
+        <li>Carlos emite NF-e pelo sistema da empresa</li>
+        <li>Valor: conforme orçamento aprovado — qualquer diferença passa por Carlos</li>
+        <li>CNPJ destinatário: da agência para jobs de agência; do cliente para contato direto</li>
+        <li>Salvar XML e PDF em <code>07_Financeiro</code> do job no Drive</li>
+        <li>No ORC Manager → painel Faturamento: preencher <strong>Valor da NF</strong> e <strong>Data de emissão</strong></li>
+      </ul>
+      <div class="callout green">O DRE e o Dashboard do Investidor passam a usar o valor real da NF (não a estimativa do orçamento) a partir deste momento.</div>` },
+    { title:'Cobrança e recebimento', role:'carlos', body:`
+      <ul>
+        <li><strong>Sinal:</strong> cobrar antes ou na aprovação — nunca produzir com sinal pendente</li>
+        <li><strong>Saldo:</strong> cobrar na entrega ou conforme condição acordada</li>
+        <li>PIX CNPJ: <strong>03.952.317/0001-16</strong> (C6 Bank) — único meio aceito</li>
+        <li>Eduardo Pondé confirma recebimento no C6 Bank e avisa Carlos</li>
+        <li>Salvar comprovante em <code>07_Financeiro</code> do job</li>
+      </ul>` },
+    { title:'Fechar o orçamento', role:'carlos', body:`
+      <ul>
+        <li>Mudar status para <strong>"Faturado"</strong> no ORC Manager</li>
+        <li>Job aparece na aba "● Faturados" (separado do Arquivo)</li>
+        <li>Painel e Dashboard do Investidor atualizam EBITDA e receita automaticamente</li>
+      </ul>` },
+    { title:'Lançar impostos', role:'carlos', body:`
+      <ul>
+        <li>Lancamentos.html → aba <strong>Impostos</strong> → lançar Simples Nacional</li>
+        <li>Competência do mês anterior → vencimento dia 20 do mês seguinte</li>
+        <li>Lançar até dia 18 para sistema alertar antes do vencimento</li>
+        <li>DRE e Dashboard do Investidor atualizam com o valor real de impostos</li>
+      </ul>
+      <div class="callout blue">Competência de junho → lançar até 18/07. Não esperar a fatura chegar — consultar contador se necessário.</div>` },
+  ]
+},
+
+regras: {
+  title: 'Regras Inegociáveis',
+  desc: 'Estas regras não têm exceção. Quebrar qualquer uma compromete a gestão à distância.',
+  render: () => `
+    ${rule(1,'Nenhuma produção sem OS aberta e sinal marcado como recebido no sistema','Risco de caixa negativo e margem não rastreável')}
+    ${rule(2,'Compras acima de 15% do custo orçado do grupo: autorização do Carlos antes de fechar','Estouros de margem chegam sem aviso')}
+    ${rule(3,'Nenhuma revisão de proposta sem usar "↑ Rev." — nunca cancelar e criar novo','Perda de histórico — cliente contesta qual versão aprovou')}
+    ${rule(4,'Todo custo lançado na OS no mesmo dia da compra','Semáforo de margem fica desatualizado — Carlos perde a visão em tempo real')}
+    ${rule(5,'Valor real da NF preenchido no ORC Manager no mesmo dia da emissão','DRE e Dashboard do Investidor mostram receita estimada em vez de receita real')}
+    ${rule(6,'Todo imprevisto em campo registrado na OS antes de ser resolvido','Imprevistos não registrados viram prejuízo invisível')}
+    ${rule(7,'Status do orçamento atualizado no mesmo dia da mudança','Alertas do sistema param de funcionar corretamente')}
+    ${rule(8,'Aceite do cliente marcado na OS com nome do responsável','Entrega sem registro formal — risco de disputa posterior')}
+  `
+},
+
+sistema: {
+  title: 'URLs do Sistema SulSign OS',
+  desc: 'Acesso a todos os módulos. Salvar esses links nos favoritos do navegador.',
+  render: () => `
+    <div class="sec-title">Módulos principais</div>
+    ${urlCard('ORC Manager — Orçamentos','sulsign01-sketch.github.io/sulign-os/ORC_Manager.html','Pondé, Carlos')}
+    ${urlCard('OS Manager — Produção e Compras','sulsign01-sketch.github.io/sulign-os/SulSign_OS_Manager.html','Fernando, Everson, Carlos')}
+    ${urlCard('Painel Financeiro','sulsign01-sketch.github.io/sulign-os/Painel_Financeiro.html','Carlos')}
+    ${urlCard('Lançamentos (custos e impostos)','sulsign01-sketch.github.io/sulign-os/Lancamentos.html','Carlos')}
+    ${urlCard('Dashboard do Investidor (PIN protegido)','sulsign01-sketch.github.io/sulign-os/CEO_Dashboard.html','Dudu')}
+    <div class="sec-title" style="margin-top:20px;">Google Drive Sul Sign</div>
+    ${urlCard('Drive Sul Sign','drive.google.com (conta sulsign01@gmail.com)','Todos')}
+    <div class="sec-title" style="margin-top:20px;">Chave PIX para recebimento</div>
+    <div class="url-card">
+      <div>
+        <div class="url-name">PIX CNPJ Sul Sign</div>
+        <div style="font-size:10px;color:#666;margin-top:2px;">Único meio de pagamento aceito — C6 Bank</div>
+      </div>
+      <div class="url-link" style="font-size:14px;color:var(--ga);font-weight:700;">03.952.317/0001-16</div>
+    </div>
+  `
+},
+
+};
+
+// Checklist data
+const CHECKLIST = [
+  {id:'c01',phase:'Fase 1',txt:'Informações coletadas (cliente, prazo, local, descrição)',resp:'Pondé',role:'conde'},
+  {id:'c02',phase:'Fase 2',txt:'Orçamento aberto com número SS e cabeçalho preenchido',resp:'Pondé',role:'conde'},
+  {id:'c03',phase:'Fase 2',txt:'Memorial completo + BDI + Log+Operacional + cronograma',resp:'Carlos / Pondé',role:'carlos'},
+  {id:'c04',phase:'Fase 2',txt:'Proposta enviada (status = Proposta Enviada + HTML salvo no Drive)',resp:'Pondé',role:'conde'},
+  {id:'c05',phase:'Fase 3',txt:'Log de contato registrado (botão 📞)',resp:'Pondé',role:'conde'},
+  {id:'c06',phase:'Fase 4',txt:'Aprovação registrada (status = Orçamento Aprovado)',resp:'Pondé / Carlos',role:'conde'},
+  {id:'c07',phase:'Fase 4',txt:'Sinal recebido e marcado no painel de Faturamento',resp:'Carlos',role:'carlos'},
+  {id:'c08',phase:'Fase 4',txt:'Pasta do job criada no Drive (SS-## — Cliente — Projeto)',resp:'Carlos / Fernando',role:'carlos'},
+  {id:'c09',phase:'Fase 4',txt:'HTML do orçamento aprovado em 01_Proposta',resp:'Carlos / Pondé',role:'carlos'},
+  {id:'c10',phase:'Fase 4',txt:'Brief salvo em 02_Brief',resp:'Fernando',role:'fernando'},
+  {id:'c11',phase:'Fase 4',txt:'OSs geradas com responsável + prazo + data prometida ao cliente',resp:'Carlos',role:'carlos'},
+  {id:'c12',phase:'Fase 5',txt:'Compras lançadas nas OS com valor fechado + NFs em 04_Compras',resp:'Fernando',role:'fernando'},
+  {id:'c13',phase:'Fase 5',txt:'Semáforo de margem monitorado (verde = ok)',resp:'Fernando / Carlos',role:'fernando'},
+  {id:'c14',phase:'Fase 5',txt:'Fotos de produção em 05_Producao',resp:'Everson',role:'everson'},
+  {id:'c15',phase:'Fase 6',txt:'Entrega confirmada com o cliente com 48h de antecedência',resp:'Fernando',role:'fernando'},
+  {id:'c16',phase:'Fase 6',txt:'Fotos de instalação em 06_Entrega',resp:'Everson',role:'everson'},
+  {id:'c17',phase:'Fase 6',txt:'Aceite do cliente marcado na OS com nome do responsável',resp:'Everson',role:'everson'},
+  {id:'c18',phase:'Fase 6',txt:'Status = Entregue no ORC Manager',resp:'Carlos / Pondé',role:'carlos'},
+  {id:'c19',phase:'Fase 7',txt:'NF emitida, valor real preenchido no ORC Manager, PDF em 07_Financeiro',resp:'Carlos',role:'carlos'},
+  {id:'c20',phase:'Fase 7',txt:'Saldo recebido, comprovante em 07_Financeiro',resp:'Pondé / Carlos',role:'carlos'},
+  {id:'c21',phase:'Fase 7',txt:'Status = Faturado no ORC Manager',resp:'Carlos',role:'carlos'},
+];
+
+// ══════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════
+function roleCard(name, papel, role, desc, sistema, steps) {
+  const colors = {carlos:'var(--ga)',conde:'#64b5f6',fernando:'#9e9e9e',everson:'#ce93d8',dudu:'var(--white)'};
+  const bgs = {carlos:'#0a1a10',conde:'#0a1028',fernando:'#1a1a1a',everson:'#1a0a28',dudu:'#1a1a1a'};
+  const c = colors[role]||'#fff', bg = bgs[role]||'#111';
+  const stepsHtml = steps.length ? `<ol style="margin-top:10px;padding-left:18px;">${steps.map(s=>`<li style="font-size:12px;color:#999;padding:3px 0;line-height:1.5;">${s}</li>`).join('')}</ol>` : '';
+  return `<div class="role-card" style="border-color:${c}20;background:${bg};">
+    <div class="role-card-name" style="color:${c};">${name}</div>
+    <div class="role-card-role">${papel}</div>
+    <div style="font-size:11px;color:#666;margin-bottom:8px;">${desc}</div>
+    <div style="font-size:10px;color:#444;">Acesso: <span style="color:${c};">${sistema}</span></div>
+    ${stepsHtml}
+  </div>`;
+}
+
+function rule(n, txt, consequence) {
+  return `<div class="rule-card" style="--i:${n}">
+    <div class="rule-num">${n}</div>
+    <div class="rule-body">
+      <div class="rule-title">${txt}</div>
+      <div class="rule-consequence">Risco: ${consequence}</div>
+    </div>
+  </div>`;
+}
+
+function urlCard(name, url, quem) {
+  return `<div class="url-card">
+    <div>
+      <div class="url-name">${name}</div>
+      <div style="font-size:9px;color:#444;margin-top:2px;">Acesso: ${quem}</div>
+    </div>
+    <div class="url-link">${url}</div>
+  </div>`;
+}
+
+function stepCard(step, idx) {
+  const roleMap = {carlos:'carlos',conde:'conde',fernando:'fernando',everson:'everson',todos:'todos'};
+  const roleLbl = {carlos:'Carlos',conde:'Pondé',fernando:'Fernando',everson:'Everson',todos:'Todos'};
+  const rCls = roleMap[step.role]||'todos';
+  const hasBody = step.body && step.body.trim();
+  return `<div class="step-card ${hasBody?'expandable':''}" onclick="${hasBody?'toggleStep(this)':''}">
+    <div class="sc-head">
+      <div class="sc-num">${idx+1}</div>
+      <div class="sc-title">${step.title}</div>
+      <span class="sc-role ${rCls}">${roleLbl[step.role]||step.role}</span>
+      ${hasBody?'<span class="sc-chevron">▾</span>':''}
+    </div>
+    ${hasBody?`<div class="sc-body">${step.body}</div>`:''}
+  </div>`;
+}
+
+// ══════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════
+function showPhase(phaseKey, navEl) {
+  currentPhase = phaseKey;
+  // Update nav
+  document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+  if(navEl) navEl.classList.add('active');
+
+  const phase = PHASES[phaseKey];
+  if(!phase) return;
+
+  if(checklistMode) { renderChecklist(); return; }
+
+  let html = `<div class="phase-header">
+    <div class="phase-tag">${phaseKey==='papeis'?'Equipe':phaseKey==='regras'?'Importante':phaseKey==='sistema'?'Links':'Processo'}</div>
+    <div class="phase-title">${phase.title}</div>
+    <div class="phase-desc">${phase.desc}</div>
+  </div>`;
+
+  if(phase.render) {
+    html += phase.render();
+  } else if(phase.steps) {
+    html += phase.steps.map((s,i) => {
+      // Role filter
+      if(currentRole !== 'todos' && s.role !== currentRole && s.role !== 'todos') {
+        return '';
+      }
+      return stepCard(s,i);
+    }).join('');
+  }
+
+  document.getElementById('content').innerHTML = html;
+  document.getElementById('main').scrollTop = 0;
+}
+
+function toggleStep(el) {
+  el.classList.toggle('open');
+}
+
+function setRole(role, btn) {
+  currentRole = role;
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  showPhase(currentPhase, document.querySelector('.nav-item.active'));
+}
+
+// ══════════════════════════════════════
+// CHECKLIST MODE
+// ══════════════════════════════════════
+function toggleChecklist() {
+  checklistMode = !checklistMode;
+  document.getElementById('checklist-btn').classList.toggle('on', checklistMode);
+  document.getElementById('checklist-btn').textContent = checklistMode ? '☑ Sair do Checklist' : '☑ Modo Checklist';
+  if(checklistMode) renderChecklist();
+  else showPhase(currentPhase, document.querySelector('.nav-item.active'));
+}
+
+function renderChecklist() {
+  const items = CHECKLIST.filter(c => currentRole==='todos' || c.role===currentRole || c.role==='todos');
+  const done = items.filter(c=>checklistState[c.id]).length;
+  const pct = items.length ? Math.round(done/items.length*100) : 0;
+
+  let html = `<div class="phase-header">
+    <div class="phase-tag">Checklist do Job</div>
+    <div class="phase-title">Lista de verificação</div>
+    <div class="phase-desc">${done} de ${items.length} itens completos</div>
+  </div>
+  <div class="checklist-progress"><div class="checklist-progress-bar" style="width:${pct}%"></div></div>`;
+
+  let lastPhase = '';
+  items.forEach(c=>{
+    if(c.phase !== lastPhase) {
+      html += `<div class="sec-title">${c.phase}</div>`;
+      lastPhase = c.phase;
+    }
+    const done = !!checklistState[c.id];
+    html += `<div class="checklist-item ${done?'done':''}" onclick="toggleCheck('${c.id}')">
+      <div class="ci-chk">${done?'✓':''}</div>
+      <div style="flex:1">
+        <div class="ci-txt">${c.txt}</div>
+        <div class="ci-resp">${c.resp}</div>
+      </div>
+      <div class="ci-phase">${c.phase}</div>
+    </div>`;
+  });
+
+  document.getElementById('content').innerHTML = html;
+  document.getElementById('main').scrollTop = 0;
+}
+
+function toggleCheck(id) {
+  checklistState[id] = !checklistState[id];
+  localStorage.setItem('ss_mapa_checks', JSON.stringify(checklistState));
+  renderChecklist();
+}
+
+function resetChecklist() {
+  if(!confirm('Resetar todos os itens do checklist?')) return;
+  checklistState = {};
+  localStorage.setItem('ss_mapa_checks', JSON.stringify(checklistState));
+  if(checklistMode) renderChecklist();
+}
+
+// ── Init ──
+showPhase('papeis', document.querySelector('.nav-item'));
+</script>
+</body>
+</html>

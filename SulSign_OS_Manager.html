@@ -141,6 +141,45 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 .tinf{background:var(--black);color:var(--white);}
 @keyframes si{from{transform:translateX(20px);opacity:0}to{transform:translateX(0);opacity:1}}
 @media(max-width:700px){.page{padding:12px 14px;}.kpi-row{grid-template-columns:1fr 1fr;}.ig{grid-template-columns:1fr 1fr;}.fg3,.fg4{grid-template-columns:1fr 1fr;}}
+
+/* Entrega prometida badge */
+.ep-badge{font-size:9px;padding:1px 6px;border-radius:2px;font-weight:600;margin-left:4px;display:inline-block;}
+.ep-ok{background:#e8f5e9;color:#2d6a4f;}
+.ep-venc{background:#ffebee;color:#c62828;}
+.ep-none{background:#f5f5f5;color:#9e9e9e;}
+
+/* Aceite cliente */
+.aceite-box{margin:10px 0 6px;padding:10px 12px;border:1.5px solid var(--g200);border-radius:3px;background:#fafafa;}
+.aceite-box.ok{border-color:#52b788;background:#f0faf5;}
+.aceite-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.aceite-lbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);margin-bottom:6px;}
+.aceite-inp{border:none;border-bottom:1.5px solid var(--g200);padding:4px 6px;font-family:'DM Sans',sans-serif;font-size:12px;outline:none;background:transparent;flex:1;min-width:140px;}
+.aceite-inp:focus{border-bottom-color:var(--ga);}
+.aceite-chk-lbl{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;font-weight:600;color:var(--green);}
+.aceite-status{font-size:10px;font-weight:600;padding:2px 8px;border-radius:10px;}
+.aceite-status.ok{background:#e8f5e9;color:#2d6a4f;}
+.aceite-status.pend{background:#fff8e1;color:#8a6d00;}
+
+/* Visão por job */
+.job-view-wrap{padding:16px 20px;}
+.job-card{border:1.5px solid var(--g200);border-radius:3px;margin-bottom:10px;overflow:hidden;}
+.job-card-hd{background:var(--black);color:var(--white);padding:10px 14px;display:flex;justify-content:space-between;align-items:center;cursor:pointer;}
+.job-card-num{font-family:'DM Mono',monospace;font-size:12px;color:var(--ga);font-weight:600;}
+.job-card-nome{font-size:12px;color:var(--g400);margin-left:10px;flex:1;}
+.job-card-body{padding:10px 14px;display:none;}
+.job-card.open .job-card-body{display:block;}
+.job-os-row{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--g200);font-size:11px;}
+.job-os-row:last-child{border-bottom:none;}
+
+/* Semáforo margem */
+.smf{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;margin-left:6px;}
+.smf.g{background:#e8f5e9;color:#2d6a4f;border:1px solid #a5d6a7;}
+.smf.y{background:#fff8e1;color:#8a6d00;border:1px solid #ffc107;}
+.smf.r{background:#ffebee;color:#c62828;border:1px solid #ffcdd2;}
+.smf-dot{width:7px;height:7px;border-radius:50%;display:inline-block;}
+.smf.g .smf-dot{background:#2d6a4f;}
+.smf.y .smf-dot{background:#f9a825;}
+.smf.r .smf-dot{background:#c62828;}
 </style>
 </head>
 <body>
@@ -156,10 +195,154 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
   </div>
 </div>
 <div class="toast-w" id="toasts"></div>
+<!-- Carregar configuração segura do Supabase -->
+<script src="./config.js">
+// ══════════════════════════════════════
+// ACEITE DO CLIENTE NA ENTREGA
+// ══════════════════════════════════════
+async function salvarAceite(osId, confirmado){
+  var nomeEl = document.getElementById('ac-nome-'+osId);
+  var nome = nomeEl ? nomeEl.value.trim() : '';
+  if(confirmado && !nome){
+    alert('Informe o nome do responsável que confirmou a entrega.');
+    document.getElementById('ac-chk-'+osId).checked = false;
+    return;
+  }
+  try{
+    await sbPatch('ordens_servico', osId, {
+      aceite_confirmado: confirmado,
+      aceite_nome: confirmado ? nome : null,
+      aceite_data: confirmado ? new Date().toISOString().split('T')[0] : null
+    });
+    // Se confirmou, avançar status para Concluído se ainda não estiver
+    var os = osList.find(function(o){return o.id===osId;});
+    if(confirmado && os && os.status !== 'Concluído'){
+      if(confirm('Marcar esta OS como Concluída também?')){
+        await sbPatch('ordens_servico', osId, {status:'Concluído'});
+      }
+    }
+    toast(confirmado ? '✓ Aceite registrado' : 'Aceite removido', confirmado?'ok':'');
+    await load();
+  }catch(e){ toast('Erro: '+e.message, 'err'); }
+}
+
+// ══════════════════════════════════════
+// SEMÁFORO DE MARGEM
+// ══════════════════════════════════════
+var _orcCache={};
+async function carregarOrcamentosParaSemaforo(){
+  try{
+    var r=await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,bdi,grupos',{
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
+    });
+    if(!r.ok)return;
+    (await r.json()).forEach(function(o){_orcCache[o.numero]=o;});
+  }catch(e){}
+}
+function calcVendaOrcSMF(orc){
+  if(!orc)return 0;
+  var bdi=orc.bdi||{};
+  var ac=(parseFloat(bdi.ac)||0)/100,df=(parseFloat(bdi.df)||0)/100,ri=(parseFloat(bdi.ri)||0)/100;
+  var l=(parseFloat(bdi.lc)||0)/100,im=(parseFloat(bdi.im)||0)/100,ir=(parseFloat(bdi.ir)||0)/100;
+  var dp=(parseFloat(bdi['desc-pct'])||0)/100;
+  var venda=0;
+  (orc.grupos||[]).forEach(function(g){
+    (g.linhas||[]).forEach(function(ln){
+      var c=(parseFloat(ln.qtd)||0)*(parseFloat(ln.unit)||0);
+      var v=c*(1+ac+df+ri)/(1-l-im);
+      venda+=v+v*ir;
+    });
+  });
+  return venda*(1-dp);
+}
+function smf(orcNum,os){
+  var orc=_orcCache[orcNum];if(!orc)return'';
+  var venda=calcVendaOrcSMF(orc);if(!venda)return'';
+  var custo=(os.itens||[]).reduce(function(a,it){return a+(parseFloat(it.fechado)||0);},0);
+  if(!custo)return'';
+  var mg=(venda-custo)/venda*100;
+  var cls=mg>=20?'g':mg>=10?'y':'r';
+  var lbl=mg>=20?'OK':mg>=10?'Atenção':'Baixa';
+  return '<span class="smf '+cls+'"><span class="smf-dot"></span>Margem '+lbl+' '+mg.toFixed(0)+'%</span>';
+}
+
+// ══════════════════════════════════════
+// VISÃO POR JOB
+// ══════════════════════════════════════
+function renderJobView(){
+  var body = document.getElementById('job-view-body'); if(!body)return;
+  var q = (document.getElementById('job-search')||{}).value||'';
+  q = q.toLowerCase().trim();
+
+  // Agrupar OSs por orcamento_numero
+  var jobMap = {};
+  osList.forEach(function(os){
+    var key = os.orcamento_numero || '__sem_orc__';
+    if(!jobMap[key]) jobMap[key] = {numero:key, cliente:os.cliente||'—', osList:[]};
+    jobMap[key].osList.push(os);
+  });
+
+  var jobs = Object.values(jobMap).sort(function(a,b){
+    return (b.numero||'').localeCompare(a.numero||'');
+  });
+
+  if(q) jobs = jobs.filter(function(j){
+    return j.numero.toLowerCase().includes(q) || j.cliente.toLowerCase().includes(q);
+  });
+
+  if(!jobs.length){body.innerHTML='<div style="text-align:center;padding:40px;color:var(--g400);">Nenhum job encontrado.</div>';return;}
+
+  var hoje = new Date().toISOString().split('T')[0];
+
+  body.innerHTML = jobs.map(function(job){
+    var total = job.osList.length;
+    var conc  = job.osList.filter(function(o){return o.status==='Concluído';}).length;
+    var venc  = job.osList.filter(function(o){return o.prazo&&o.prazo<hoje&&o.status!=='Concluído';}).length;
+    var semAceite = job.osList.filter(function(o){return o.disciplina!=='COMPRAS'&&o.status==='Concluído'&&!o.aceite_confirmado;}).length;
+    var pct = total>0?Math.round(conc/total*100):0;
+
+    var statusCor = venc>0?'var(--red)':conc===total?'var(--green)':'var(--ylwb)';
+
+    var osMf = job.numero!=='__sem_orc__' ? smf(job.numero, {itens: job.osList.flatMap(function(o){return o.itens||[];})}) : '';
+
+    var osList_html = job.osList.map(function(os){
+      var vn = os.prazo&&os.prazo<hoje&&os.status!=='Concluído';
+      return '<div class="job-os-row">'
+        +'<span class="dba d'+os.disciplina+'" style="font-size:9px;padding:1px 5px;">'+os.disciplina+'</span>'
+        +'<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--ga);">'+os.num+'</span>'
+        +'<span style="flex:1;color:var(--g600);font-size:11px;">'+(os.responsavel||'—')+'</span>'
+        +'<span class="sba '+stClass(os.status)+'" style="font-size:9px;">'+os.status+'</span>'
+        +(os.prazo?'<span style="font-size:9px;color:'+(vn?'var(--red)':'var(--g400)')+';">'+fmt(os.prazo)+(vn?' ⚠':'')+'</span>':'')
+        +(os.data_entrega_prometida?'<span class="ep-badge '+(os.data_entrega_prometida<hoje&&os.status!=='Concluído'?'ep-venc':'ep-ok')+'">📅 '+new Date(os.data_entrega_prometida+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+'</span>':'')
+        +(os.aceite_confirmado?'<span style="font-size:9px;color:var(--green);">✓ Aceite</span>':'')
+        +'</div>';
+    }).join('');
+
+    return '<div class="job-card" id="jc-'+job.numero+'">'
+      +'<div class="job-card-hd" onclick="this.parentNode.classList.toggle('open')">'
+      +'<span class="job-card-num">'+(job.numero==='__sem_orc__'?'Sem orçamento':job.numero)+'</span>'
+      +'<span class="job-card-nome">'+job.cliente+'</span>'
+      +(osMf?osMf:'')
+      +'<span style="font-size:10px;color:'+statusCor+';">'+conc+'/'+total+' OSs concluídas ('+pct+'%)'+(venc>0?' · '+venc+' vencida(s)':'')+(semAceite>0?' · '+semAceite+' sem aceite':'')+'</span>'
+      +'<span style="color:var(--g400);font-size:12px;margin-left:8px;">▾</span>'
+      +'</div>'
+      +'<div class="job-card-body">'+osList_html+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// Atualizar setView para incluir 'job'
+var _origSetView = setView;
+setView = function(v){
+  _origSetView(v);
+  var jv = document.getElementById('view-job');
+  if(jv) jv.style.display = v==='job'?'block':'none';
+  if(v==='job') renderJobView();
+};
+
+</script>
 <script>
 // CONFIG
-var SU='https://obeamqkcuytctfczhook.supabase.co';
-var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
 var H={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'};
 
 // ESTADO
@@ -270,6 +453,7 @@ async function load(){
     var d=await sbGet('ordens_servico?order=created_at.desc&select=*');
     osList=d;
     render();
+  carregarOrcamentosParaSemaforo();
   }catch(e){toast('Erro ao carregar: '+e.message,'err');}
 }
 
@@ -302,6 +486,7 @@ function render(){
     h+='<div class="kpi ok"><div class="kpi-v">'+conc+'</div><div class="kpi-l">Concluídas</div></div>';
     h+='</div>';
     h+='<div class="toolbar">';
+    h+='<button class="tbtn" onclick="setView(\'job\')" style="margin-right:4px;" title="Visão agrupada por job">📋 Por Job</button>';
     h+='<div class="search"><span>🔍</span><input id="s-inp" type="text" placeholder="Buscar..." value="'+search+'"></div>';
     h+='<div style="display:flex;gap:6px;">';
     h+='<button class="btn btn-green" data-v="nova">+ Nova OS</button>';
@@ -333,6 +518,13 @@ function render(){
         if(os.orcamento_numero)h+='<span style="font-size:10px;color:var(--g400);font-family:DM Mono,monospace;">'+os.orcamento_numero+'</span>';
         h+='<span class="sba '+stClass(os.status)+'">'+os.status+'</span>';
         h+='<span class="os-pr'+(vn?' venc':'')+'">'+fmt(os.prazo)+'</span>';
+        if(os.data_entrega_prometida){
+          var hoje2=new Date().toISOString().split('T')[0];
+          var eVenc=os.data_entrega_prometida<hoje2&&os.status!=='Concluído';
+          h+='<span class="ep-badge '+(eVenc?'ep-venc':'ep-ok')+'">📅 '+new Date(os.data_entrega_prometida+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+(eVenc?' ATRASADO':'')+'</span>';
+        } else if(os.disciplina!=='COMPRAS'){
+          h+='<span class="ep-badge ep-none">sem data entrega</span>';
+        }
         h+='<span style="color:var(--g400);font-size:11px;">▾</span>';
         h+='</div>';
         // BODY
@@ -437,6 +629,7 @@ function renderForm(){
     h+='<div class="ff"><label>Nº Orçamento (SS)</label><input class="fi mono" id="f-orc" value="'+(os.orcamento_numero||'')+'" placeholder="SS-2026_06-24"></div>';
     h+='<div class="ff"><label>Nº da OS <em>*</em></label><input class="fi mono" id="f-num" value="'+(os.num||'')+'" placeholder="Auto-gerado" readonly></div>';
     h+='<div class="ff"><label>Prazo para fechar compra</label><input type="date" class="fi" id="f-prazo" value="'+(os.prazo||'')+'"></div>';
+  h+='<div class="ff"><label>📅 Entrega prometida ao cliente</label><input type="date" class="fi" id="f-entrega" value="'+(os.data_entrega_prometida||'')+'"></div>';
     h+='<div class="ff" style="grid-column:span 2"><label>Cliente / Projeto vinculado</label><input class="fi" id="f-cli" value="'+(os.cliente||'')+'" placeholder="Nome do cliente ou projeto"></div>';
     h+='<div class="ff" style="grid-column:span 2"><label>Projeto</label><input class="fi" id="f-proj" value="'+(os.projeto||'')+'" placeholder="Ex: Festa Junina PRIO"></div>';
     h+='<div class="ff"><label>Comprador</label><input class="fi" id="f-resp" list="compradores-list" value="'+(os.responsavel||'')+'" placeholder="Nome de quem está comprando"><datalist id="compradores-list"></datalist></div>';
@@ -451,6 +644,7 @@ function renderForm(){
   h+='<div class="ff"><label>Nº Orçamento (SS)</label><input class="fi mono" id="f-orc" value="'+(os.orcamento_numero||'')+'" placeholder="SS-2026_06-24"></div>';
   h+='<div class="ff"><label>Nº da OS <em>*</em></label><input class="fi mono" id="f-num" value="'+(os.num||'')+'" placeholder="Auto-gerado" readonly></div>';
   h+='<div class="ff"><label>Prazo</label><input type="date" class="fi" id="f-prazo" value="'+(os.prazo||'')+'"></div>';
+  h+='<div class="ff"><label>📅 Entrega prometida ao cliente</label><input type="date" class="fi" id="f-entrega" value="'+(os.data_entrega_prometida||'')+'"></div>';
   h+='<div class="ff" style="grid-column:span 2"><label>Cliente <em>*</em></label><input class="fi" id="f-cli" value="'+(os.cliente||'')+'" placeholder="Nome do cliente"></div>';
   h+='<div class="ff" style="grid-column:span 2"><label>Projeto</label><input class="fi" id="f-proj" value="'+(os.projeto||'')+'" placeholder="Ex: Letreiro fachada"></div>';
   h+='<div class="ff"><label>Responsável</label><select class="fi" id="f-resp"><option value="">— selecionar —</option>';
@@ -655,6 +849,7 @@ async function salvar(){
     vendedor:(document.getElementById('f-vend')||{}).value||'',
     contato:(document.getElementById('f-cont')||{}).value||'',
     prazo:(document.getElementById('f-prazo')||{}).value||null,
+    data_entrega_prometida:(document.getElementById('f-entrega')||{}).value||null,
     data_entrada:(document.getElementById('f-ent')||{}).value||new Date().toISOString().split('T')[0],
     dimensoes:(document.getElementById('f-dim')||{}).value||'',
     logistica:(document.getElementById('f-log')||{}).value||'',
@@ -684,11 +879,15 @@ function abrirTram(osId,novoSt){
   tramId=osId;tramSt=novoSt;
   var os=osList.find(function(o){return o.id===osId;});
   var b=document.getElementById('tram-body');
+  // Etapas que exigem observação obrigatória
+  var ETAPAS_OBS_OBRIG = ['Concluído','Acabamento/Pintura','Acabamento'];
+  var obsObrig = ETAPAS_OBS_OBRIG.indexOf(novoSt) >= 0;
   b.innerHTML='<p style="font-size:12px;color:var(--g600);margin-bottom:12px;">Avançar <strong>'+(os?os.num:osId)+'</strong> para <strong>'+novoSt+'</strong></p>'
     +'<div class="fg fg2"><div class="ff"><label>Responsável</label><select class="fi" id="tr-resp"><option value="">— selecionar —</option>'
     +RESP.map(function(r){return '<option>'+r+'</option>';}).join('')
     +'</select></div></div>'
-    +'<div class="ff" style="margin-top:10px;"><label>Observação (opcional)</label><textarea class="fi" id="tr-obs" rows="2"></textarea></div>';
+    +'<div class="ff" style="margin-top:10px;"><label>Observação'+(obsObrig?' <span style="color:var(--red);">*obrigatória nesta etapa</span>':'(opcional)')+'</label><textarea class="fi" id="tr-obs" rows="2" placeholder="'+(obsObrig?'Descreva o que foi feito, quaisquer imprevistos ou observações de qualidade...':'')+'" ></textarea></div>'
+    +(obsObrig?'<div style="font-size:10px;color:var(--ylwb);margin-top:6px;">⚠ Registrar a observação garante rastreabilidade desta etapa.</div>':'');
   document.getElementById('modal-tram').classList.add('open');
 }
 async function confirmarTram(){
@@ -696,6 +895,12 @@ async function confirmarTram(){
   var os=osList.find(function(o){return o.id===tramId;});
   var resp=(document.getElementById('tr-resp')||{}).value||'';
   var obs=(document.getElementById('tr-obs')||{}).value||'';
+  var ETAPAS_OBS_OBRIG=['Concluído','Acabamento/Pintura','Acabamento'];
+  if(ETAPAS_OBS_OBRIG.indexOf(tramSt)>=0 && !obs.trim()){
+    alert('Esta etapa requer uma observação obrigatória.\nDescreva o que foi realizado antes de avançar.');
+    document.getElementById('tr-obs').focus();
+    return;
+  }
   try{
     await sbPatch('ordens_servico',tramId,{status:tramSt,updated_at:new Date().toISOString()});
     await sbPost('os_historico',{os_id:tramId,status_anterior:os?os.status:'',status_novo:tramSt,responsavel:resp,observacao:obs||null});
@@ -802,7 +1007,18 @@ function printOS(id){
     +(os.observacoes?'<div class="obs">'+os.observacoes+'</div>':'')
     +'<div class="srow"><div class="si">Responsável pela execução</div><div class="si">Conferência / Qualidade</div><div class="si">Retirada / Entrega</div></div>'
     +'<div style="text-align:center;padding:12px;"><button onclick="window.print()" style="padding:8px 24px;background:#2d6a4f;color:white;border:none;border-radius:2px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;font-size:12px;">🖨 Imprimir</button></div>'
-    +'</body></html>');
+    +'
+<div id="view-job" style="display:none;max-width:1020px;margin:0 auto;">
+  <div style="padding:12px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);">Jobs com OS abertas</span>
+    <input type="text" id="job-search" placeholder="Buscar SS-número ou cliente..." oninput="renderJobView()"
+      style="border:1.5px solid var(--g200);border-radius:2px;padding:5px 8px;font-size:12px;outline:none;flex:1;max-width:300px;">
+    <button onclick="setView('lista')" style="font-size:11px;color:var(--g400);background:none;border:1px solid var(--g200);padding:4px 10px;border-radius:2px;cursor:pointer;">← Voltar à lista</button>
+  </div>
+  <div class="job-view-wrap" id="job-view-body"><div style="text-align:center;padding:40px;color:var(--g400);">Carregando...</div></div>
+</div>
+
+</body></html>');
   win.document.close();
   setTimeout(function(){win.focus();},400);
 }
@@ -827,6 +1043,9 @@ function setView(v){
   view=v;
   if(v!=='editar'){osEd=null;printBase64='';itensFotos={};}
   if(v==='lista')document.getElementById('btn-confirm-tram').style.display='';
+  var jv=document.getElementById('view-job');
+  if(jv) jv.style.display=v==='job'?'block':'none';
+  if(v==='job'){render();renderJobView();return;}
   render();
 }
 
@@ -922,6 +1141,161 @@ document.getElementById('btn-cancel-tram').onclick=fecharTram;
 document.getElementById('btn-close-tram').onclick=fecharTram;
 
 load();
+
+// ══════════════════════════════════════
+// ACEITE DO CLIENTE NA ENTREGA
+// ══════════════════════════════════════
+async function salvarAceite(osId, confirmado){
+  var nomeEl = document.getElementById('ac-nome-'+osId);
+  var nome = nomeEl ? nomeEl.value.trim() : '';
+  if(confirmado && !nome){
+    alert('Informe o nome do responsável que confirmou a entrega.');
+    document.getElementById('ac-chk-'+osId).checked = false;
+    return;
+  }
+  try{
+    await sbPatch('ordens_servico', osId, {
+      aceite_confirmado: confirmado,
+      aceite_nome: confirmado ? nome : null,
+      aceite_data: confirmado ? new Date().toISOString().split('T')[0] : null
+    });
+    // Se confirmou, avançar status para Concluído se ainda não estiver
+    var os = osList.find(function(o){return o.id===osId;});
+    if(confirmado && os && os.status !== 'Concluído'){
+      if(confirm('Marcar esta OS como Concluída também?')){
+        await sbPatch('ordens_servico', osId, {status:'Concluído'});
+      }
+    }
+    toast(confirmado ? '✓ Aceite registrado' : 'Aceite removido', confirmado?'ok':'');
+    await load();
+  }catch(e){ toast('Erro: '+e.message, 'err'); }
+}
+
+// ══════════════════════════════════════
+// SEMÁFORO DE MARGEM
+// ══════════════════════════════════════
+var _orcCache={};
+async function carregarOrcamentosParaSemaforo(){
+  try{
+    var r=await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,bdi,grupos',{
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
+    });
+    if(!r.ok)return;
+    (await r.json()).forEach(function(o){_orcCache[o.numero]=o;});
+  }catch(e){}
+}
+function calcVendaOrcSMF(orc){
+  if(!orc)return 0;
+  var bdi=orc.bdi||{};
+  var ac=(parseFloat(bdi.ac)||0)/100,df=(parseFloat(bdi.df)||0)/100,ri=(parseFloat(bdi.ri)||0)/100;
+  var l=(parseFloat(bdi.lc)||0)/100,im=(parseFloat(bdi.im)||0)/100,ir=(parseFloat(bdi.ir)||0)/100;
+  var dp=(parseFloat(bdi['desc-pct'])||0)/100;
+  var venda=0;
+  (orc.grupos||[]).forEach(function(g){
+    (g.linhas||[]).forEach(function(ln){
+      var c=(parseFloat(ln.qtd)||0)*(parseFloat(ln.unit)||0);
+      var v=c*(1+ac+df+ri)/(1-l-im);
+      venda+=v+v*ir;
+    });
+  });
+  return venda*(1-dp);
+}
+function smf(orcNum,os){
+  var orc=_orcCache[orcNum];if(!orc)return'';
+  var venda=calcVendaOrcSMF(orc);if(!venda)return'';
+  var custo=(os.itens||[]).reduce(function(a,it){return a+(parseFloat(it.fechado)||0);},0);
+  if(!custo)return'';
+  var mg=(venda-custo)/venda*100;
+  var cls=mg>=20?'g':mg>=10?'y':'r';
+  var lbl=mg>=20?'OK':mg>=10?'Atenção':'Baixa';
+  return '<span class="smf '+cls+'"><span class="smf-dot"></span>Margem '+lbl+' '+mg.toFixed(0)+'%</span>';
+}
+
+// ══════════════════════════════════════
+// VISÃO POR JOB
+// ══════════════════════════════════════
+function renderJobView(){
+  var body = document.getElementById('job-view-body'); if(!body)return;
+  var q = (document.getElementById('job-search')||{}).value||'';
+  q = q.toLowerCase().trim();
+
+  // Agrupar OSs por orcamento_numero
+  var jobMap = {};
+  osList.forEach(function(os){
+    var key = os.orcamento_numero || '__sem_orc__';
+    if(!jobMap[key]) jobMap[key] = {numero:key, cliente:os.cliente||'—', osList:[]};
+    jobMap[key].osList.push(os);
+  });
+
+  var jobs = Object.values(jobMap).sort(function(a,b){
+    return (b.numero||'').localeCompare(a.numero||'');
+  });
+
+  if(q) jobs = jobs.filter(function(j){
+    return j.numero.toLowerCase().includes(q) || j.cliente.toLowerCase().includes(q);
+  });
+
+  if(!jobs.length){body.innerHTML='<div style="text-align:center;padding:40px;color:var(--g400);">Nenhum job encontrado.</div>';return;}
+
+  var hoje = new Date().toISOString().split('T')[0];
+
+  body.innerHTML = jobs.map(function(job){
+    var total = job.osList.length;
+    var conc  = job.osList.filter(function(o){return o.status==='Concluído';}).length;
+    var venc  = job.osList.filter(function(o){return o.prazo&&o.prazo<hoje&&o.status!=='Concluído';}).length;
+    var semAceite = job.osList.filter(function(o){return o.disciplina!=='COMPRAS'&&o.status==='Concluído'&&!o.aceite_confirmado;}).length;
+    var pct = total>0?Math.round(conc/total*100):0;
+
+    var statusCor = venc>0?'var(--red)':conc===total?'var(--green)':'var(--ylwb)';
+
+    var osMf = job.numero!=='__sem_orc__' ? smf(job.numero, {itens: job.osList.flatMap(function(o){return o.itens||[];})}) : '';
+
+    var osList_html = job.osList.map(function(os){
+      var vn = os.prazo&&os.prazo<hoje&&os.status!=='Concluído';
+      return '<div class="job-os-row">'
+        +'<span class="dba d'+os.disciplina+'" style="font-size:9px;padding:1px 5px;">'+os.disciplina+'</span>'
+        +'<span style="font-family:DM Mono,monospace;font-size:10px;color:var(--ga);">'+os.num+'</span>'
+        +'<span style="flex:1;color:var(--g600);font-size:11px;">'+(os.responsavel||'—')+'</span>'
+        +'<span class="sba '+stClass(os.status)+'" style="font-size:9px;">'+os.status+'</span>'
+        +(os.prazo?'<span style="font-size:9px;color:'+(vn?'var(--red)':'var(--g400)')+';">'+fmt(os.prazo)+(vn?' ⚠':'')+'</span>':'')
+        +(os.data_entrega_prometida?'<span class="ep-badge '+(os.data_entrega_prometida<hoje&&os.status!=='Concluído'?'ep-venc':'ep-ok')+'">📅 '+new Date(os.data_entrega_prometida+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+'</span>':'')
+        +(os.aceite_confirmado?'<span style="font-size:9px;color:var(--green);">✓ Aceite</span>':'')
+        +'</div>';
+    }).join('');
+
+    return '<div class="job-card" id="jc-'+job.numero+'">'
+      +'<div class="job-card-hd" onclick="this.parentNode.classList.toggle('open')">'
+      +'<span class="job-card-num">'+(job.numero==='__sem_orc__'?'Sem orçamento':job.numero)+'</span>'
+      +'<span class="job-card-nome">'+job.cliente+'</span>'
+      +(osMf?osMf:'')
+      +'<span style="font-size:10px;color:'+statusCor+';">'+conc+'/'+total+' OSs concluídas ('+pct+'%)'+(venc>0?' · '+venc+' vencida(s)':'')+(semAceite>0?' · '+semAceite+' sem aceite':'')+'</span>'
+      +'<span style="color:var(--g400);font-size:12px;margin-left:8px;">▾</span>'
+      +'</div>'
+      +'<div class="job-card-body">'+osList_html+'</div>'
+      +'</div>';
+  }).join('');
+}
+
+// Atualizar setView para incluir 'job'
+var _origSetView = setView;
+setView = function(v){
+  _origSetView(v);
+  var jv = document.getElementById('view-job');
+  if(jv) jv.style.display = v==='job'?'block':'none';
+  if(v==='job') renderJobView();
+};
+
 </script>
+
+<div id="view-job" style="display:none;max-width:1020px;margin:0 auto;">
+  <div style="padding:12px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+    <span style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);">Jobs com OS abertas</span>
+    <input type="text" id="job-search" placeholder="Buscar SS-número ou cliente..." oninput="renderJobView()"
+      style="border:1.5px solid var(--g200);border-radius:2px;padding:5px 8px;font-size:12px;outline:none;flex:1;max-width:300px;">
+    <button onclick="setView('lista')" style="font-size:11px;color:var(--g400);background:none;border:1px solid var(--g200);padding:4px 10px;border-radius:2px;cursor:pointer;">← Voltar à lista</button>
+  </div>
+  <div class="job-view-wrap" id="job-view-body"><div style="text-align:center;padding:40px;color:var(--g400);">Carregando...</div></div>
+</div>
+
 </body>
 </html>
