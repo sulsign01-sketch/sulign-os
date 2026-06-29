@@ -254,6 +254,11 @@ function fmt(v){
   return 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 }
 function fmtK(v){
+  if(v===null||v===undefined||v==='')return '—';
+  if(v===0)return 'R$ 0,00';
+  return 'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+function fmtKShort(v){
   if(!v)return '—';
   return Math.abs(v)>=1000?'R$ '+(v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})+'k':'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 }
@@ -422,7 +427,7 @@ function renderGrafico(orcs,todosLanc,todasFixas){
     var hE=maxVal>0?Math.round(Math.abs(m.ebitda)/maxVal*100):0;
     var eNeg=m.ebitda<0;
     return '<div class="chart-col">'
-      +'<div class="chart-val">'+(m.receita>0?fmtK(m.receita):'')+'</div>'
+      +'<div class="chart-val">'+(m.receita>0?fmtKShort(m.receita):'')+'</div>'
       +'<div class="chart-bar-wrap" style="gap:2px;display:flex;align-items:flex-end;width:100%;flex:1;">'
       +'<div class="chart-bar receita" style="height:'+hR+'%;width:48%;"></div>'
       +'<div class="chart-bar ebitda" style="height:'+hE+'%;width:48%;'+(eNeg?'background:var(--red);opacity:.7;':'')+'"></div>'
