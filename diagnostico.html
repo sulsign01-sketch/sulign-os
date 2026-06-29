@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Sul Sign — Diagnóstico</title>
+<style>
+body{font-family:'Segoe UI',sans-serif;background:#0f0f0f;color:#fff;padding:30px;max-width:700px;margin:0 auto;}
+h1{font-size:16px;color:#52b788;letter-spacing:2px;text-transform:uppercase;margin-bottom:20px;}
+.test{padding:10px 14px;margin-bottom:6px;border-radius:3px;font-size:13px;border-left:3px solid #333;}
+.ok{background:#0a1a10;border-left-color:#52b788;}
+.err{background:#1a0a0a;border-left-color:#c62828;}
+.warn{background:#1a1800;border-left-color:#ffc107;}
+.loading{background:#111;border-left-color:#555;color:#666;}
+.val{font-family:monospace;color:#52b788;}
+.errval{font-family:monospace;color:#c62828;}
+h2{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#555;margin:20px 0 8px;}
+pre{background:#111;padding:12px;border-radius:3px;font-size:11px;color:#52b788;overflow-x:auto;white-space:pre-wrap;}
+</style>
+</head>
+<body>
+<h1>🔍 Diagnóstico Sul Sign OS</h1>
+<div id="results"></div>
+
+<h2>SQL Para Corrigir Problemas Encontrados</h2>
+<pre id="sql-fix">Aguardando diagnóstico...</pre>
+
+<script>
+var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
+var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+var H={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
+var results=document.getElementById('results');
+var sqlFix=document.getElementById('sql-fix');
+var neededSQL=[];
+
+function add(cls,icon,txt){
+  var d=document.createElement('div');
+  d.className='test '+cls;
+  d.innerHTML=icon+' '+txt;
+  results.appendChild(d);
+}
+
+async function testSelect(label, table, select, sqlIfFail){
+  var d=document.createElement('div');
+  d.className='test loading';
+  d.textContent='⏳ Testando '+label+'...';
+  results.appendChild(d);
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/'+table+'?select='+select+'&limit=1',{headers:H});
+    if(r.ok){
+      var data=await r.json();
+      d.className='test ok';
+      d.innerHTML='✓ <b>'+label+'</b> — OK <span class="val">('+data.length+' registro(s))</span>';
+    } else {
+      var err=await r.json();
+      d.className='test err';
+      d.innerHTML='✗ <b>'+label+'</b> — <span class="errval">'+err.message+'</span>';
+      if(sqlIfFail) neededSQL.push(sqlIfFail);
+      updateSQL();
+    }
+  }catch(e){
+    d.className='test err';
+    d.innerHTML='✗ <b>'+label+'</b> — <span class="errval">Erro de rede: '+e.message+'</span>';
+  }
+}
+
+async function testTable(table, sqlIfMissing){
+  var d=document.createElement('div');
+  d.className='test loading';
+  d.textContent='⏳ Testando tabela '+table+'...';
+  results.appendChild(d);
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/'+table+'?limit=1',{headers:H});
+    if(r.ok){
+      d.className='test ok';
+      d.innerHTML='✓ Tabela <b>'+table+'</b> — existe';
+    } else {
+      var err=await r.json();
+      d.className='test err';
+      d.innerHTML='✗ Tabela <b>'+table+'</b> — <span class="errval">NÃO EXISTE</span>';
+      if(sqlIfMissing) neededSQL.push(sqlIfMissing);
+      updateSQL();
+    }
+  }catch(e){
+    d.className='test err';
+    d.innerHTML='✗ Tabela <b>'+table+'</b> — <span class="errval">'+e.message+'</span>';
+  }
+}
+
+function updateSQL(){
+  if(!neededSQL.length){sqlFix.textContent='-- Nenhuma correção necessária ✓';return;}
+  sqlFix.textContent=neededSQL.join('\n');
+}
+
+async function run(){
+  add('','','<b>Conexão Supabase</b>');
+  await testSelect('Conexão básica','orcamentos','id','-- Problema de rede ou credenciais');
+
+  add('','','');
+  add('','','<b>Colunas da tabela orcamentos</b>');
+  await testSelect('Coluna status','orcamentos','status',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS status text DEFAULT \'Cotação\';');
+  await testSelect('Coluna escopo','orcamentos','escopo',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS escopo text DEFAULT \'\';');
+  await testSelect('Coluna valor_nf','orcamentos','valor_nf',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS valor_nf numeric;');
+  await testSelect('Coluna sinal_recebido','orcamentos','sinal_recebido',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS sinal_recebido boolean DEFAULT false;');
+  await testSelect('Coluna sinal_valor','orcamentos','sinal_valor',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS sinal_valor numeric;');
+  await testSelect('Coluna sinal_data','orcamentos','sinal_data',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS sinal_data date;');
+  await testSelect('Coluna nf_numero','orcamentos','nf_numero',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS nf_numero text;');
+  await testSelect('Coluna saldo_recebido','orcamentos','saldo_recebido',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS saldo_recebido boolean DEFAULT false;');
+  await testSelect('Coluna saldo_valor','orcamentos','saldo_valor',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS saldo_valor numeric;');
+  await testSelect('Coluna saldo_data','orcamentos','saldo_data',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS saldo_data date;');
+  await testSelect('Coluna cronograma','orcamentos','cronograma',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS cronograma jsonb;');
+  await testSelect('Coluna rev','orcamentos','rev',
+    "ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS rev text DEFAULT 'Rev.01';");
+  await testSelect('Coluna rev_historico','orcamentos','rev_historico',
+    'ALTER TABLE orcamentos ADD COLUMN IF NOT EXISTS rev_historico jsonb;');
+
+  add('','','');
+  add('','','<b>Colunas da tabela ordens_servico</b>');
+  await testSelect('Coluna data_entrega_prometida','ordens_servico','data_entrega_prometida',
+    'ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS data_entrega_prometida date;');
+  await testSelect('Coluna aceite_confirmado','ordens_servico','aceite_confirmado',
+    'ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS aceite_confirmado boolean DEFAULT false;');
+  await testSelect('Coluna aceite_nome','ordens_servico','aceite_nome',
+    'ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS aceite_nome text;');
+  await testSelect('Coluna aceite_data','ordens_servico','aceite_data',
+    'ALTER TABLE ordens_servico ADD COLUMN IF NOT EXISTS aceite_data date;');
+
+  add('','','');
+  add('','','<b>Novas tabelas</b>');
+  await testTable('crm_interacoes',
+    "CREATE TABLE IF NOT EXISTS crm_interacoes (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, orcamento_numero text NOT NULL, tipo text, data date, resultado text, proximo text, proximo_data date, criado_em timestamptz DEFAULT now());\nALTER TABLE crm_interacoes ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS \"acesso_publico_crm\" ON crm_interacoes;\nCREATE POLICY \"acesso_publico_crm\" ON crm_interacoes FOR ALL USING (true) WITH CHECK (true);");
+  await testTable('impostos',
+    "CREATE TABLE IF NOT EXISTS impostos (id uuid DEFAULT gen_random_uuid() PRIMARY KEY, tipo text NOT NULL, competencia text, vencimento date, data_pgto date, valor numeric DEFAULT 0, multa numeric DEFAULT 0, codigo text, status text DEFAULT 'Pendente', obs text, criado_em timestamptz DEFAULT now());\nALTER TABLE impostos ENABLE ROW LEVEL SECURITY;\nDROP POLICY IF EXISTS \"acesso_publico_impostos\" ON impostos;\nCREATE POLICY \"acesso_publico_impostos\" ON impostos FOR ALL USING (true) WITH CHECK (true);");
+
+  if(!neededSQL.length){
+    sqlFix.textContent='-- Tudo OK! Nenhuma migração necessária.\n-- Se os apps ainda não carregam, faça Ctrl+Shift+R no navegador.';
+    add('ok','✅','<b>Banco de dados completo!</b> Se os apps ainda não carregam, pressione Ctrl+Shift+R.');
+  } else {
+    add('err','⚠','<b>'+neededSQL.length+' problema(s) encontrado(s).</b> Copie o SQL abaixo e rode no Supabase → SQL Editor.');
+  }
+}
+
+run();
+</script>
+</body>
+</html>
