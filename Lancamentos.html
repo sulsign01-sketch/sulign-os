@@ -75,6 +75,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 .imp-kpi-v.ok{color:#2d6a4f;} .imp-kpi-v.warn{color:#c62828;}
 /* Tags sem nota */
 .tag-sn{color:#c62828;font-weight:600;font-size:9px;border:1px solid #c62828;border-radius:2px;padding:1px 4px;margin-left:4px;}
+  .conc-btn{border:none;border-radius:2px;padding:2px 8px;font-size:10px;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:all .15s;white-space:nowrap;}
+  .conc-btn.nao{background:#2a2a2a;color:#9e9e9e;border:1px solid #3a3a3a;}
+  .conc-btn.nao:hover{background:#1b5e20;color:#fff;border-color:#2e7d32;}
+  .conc-btn.sim{background:#1b5e20;color:#a5d6a7;border:1px solid #2e7d32;}
+  .conc-btn.sim:hover{background:#c62828;color:#fff;border-color:#b71c1c;}
+  .conc-bar{display:flex;gap:12px;align-items:center;padding:8px 14px;background:#f0faf5;border-radius:3px;margin-bottom:10px;font-size:11px;border:1px solid #c8e6c9;}
+  .conc-bar b.ok{color:#2e7d32;} .conc-bar b.pend{color:#c62828;}
+  .tag-per{background:#4a148c;color:#ce93d8;font-size:9px;padding:1px 5px;border-radius:2px;margin-left:4px;font-weight:700;}
 .tag-pend{color:#8a6d00;font-weight:600;font-size:9px;border:1px solid #ffc107;border-radius:2px;padding:1px 4px;margin-left:4px;}
 /* Edit btn */
 .li-edit{font-size:11px;color:#52b788;cursor:pointer;margin-right:6px;}
@@ -188,6 +196,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   <div id="view-lista" style="display:none;">
     <div class="filt">
       <select id="filt-job" onchange="renderLista()"></select>
+      <select id="filt-conc" onchange="renderLista()" style="font-size:11px;padding:4px 8px;border:1px solid #ddd;border-radius:2px;">
+        <option value="">Conciliação: Todas</option>
+        <option value="nao">⏳ Pendentes</option>
+        <option value="sim">✓ Conciliadas</option>
+      </select>
+      <select id="filt-conc" onchange="renderLista()" style="font-size:11px;padding:4px 8px;border:1px solid #ddd;border-radius:2px;">
+        <option value="">Conciliação: Todas</option>
+        <option value="nao">⏳ Pendentes</option>
+        <option value="sim">✓ Conciliadas</option>
+      </select>
       <select id="filt-cat" onchange="renderLista()">
         <option value="">Todas as categorias</option>
         <option>Material</option><option>Insumo</option>
@@ -196,6 +214,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <input type="month" id="filt-mes" onchange="renderLista()" style="max-width:140px;">
     </div>
     <div class="totbar"><span>Total filtrado</span><b id="filt-total">R$ 0,00</b></div>
+    <div id="conc-resumo" class="conc-bar" style="display:none;"></div>
     <div id="lista-body"><div class="empty">Carregando...</div></div>
   </div>
 
@@ -631,14 +650,30 @@ function renderLista(){
   var filtJob=document.getElementById('filt-job').value;
   var filtCat=document.getElementById('filt-cat')?document.getElementById('filt-cat').value:'';
   var filtMes=document.getElementById('filt-mes')?document.getElementById('filt-mes').value:'';
+  var filtConc=document.getElementById('filt-conc')?document.getElementById('filt-conc').value:'';
   var filtrados=lancamentosCache.filter(function(l){
     if(filtJob && l.orcamento_numero!==filtJob) return false;
     if(filtCat && l.categoria!==filtCat) return false;
     if(filtMes && l.data && l.data.substring(0,7)!==filtMes) return false;
+    if(filtConc==='sim' && !l.conciliado) return false;
+    if(filtConc==='nao' && l.conciliado) return false;
     return true;
   });
   var total=filtrados.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
   document.getElementById('filt-total').textContent=fmt(total)+' ('+filtrados.length+' lançamentos)';
+
+    // Barra conciliação
+  var totConc=lancamentosCache.filter(function(l){return l.conciliado;});
+  var totPend=lancamentosCache.filter(function(l){return !l.conciliado;});
+  var vlConc=totConc.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
+  var vlPend=totPend.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
+  var resumoEl=document.getElementById('conc-resumo');
+  if(resumoEl&&lancamentosCache.length){
+    resumoEl.style.display='flex';
+    resumoEl.innerHTML='<span style="color:#555;">Conciliação —</span>'
+      +' <b class="ok">✓ '+totConc.length+' conc. ('+fmt(vlConc)+')</b>'
+      +' &nbsp;|&nbsp; <b class="pend">⏳ '+totPend.length+' pend. ('+fmt(vlPend)+')</b>';
+  }
 
   if(!filtrados.length){body.innerHTML='<div class="empty">Nenhum lançamento para este filtro.</div>';return;}
   body.innerHTML='';
@@ -646,18 +681,23 @@ function renderLista(){
     var div=document.createElement('div');div.className='list-item';
     var dt=l.data?new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR'):'—';
     var semNota=(l.tem_nota===false);
-    div.innerHTML='<div>'
+    var isConc=!!l.conciliado;
+    var perTag=l.periodicidade&&l.periodicidade!=='unica'?'<span class="tag-per">'+l.periodicidade+'</span>':'';
+    div.innerHTML='<div style="flex:1;min-width:0;">'
       +'<div class="li-desc"><strong>'+(l.orcamento_numero||'—')+'</strong> · '+(l.categoria||'—')+' · '+l.descricao
-      +(semNota?'<span class="tag-sn">SEM NOTA</span>':'')+'</div>'
-      +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · '+l.fornecedor:'')+'</div>'
+      +(semNota?'<span class="tag-sn">SEM NOTA</span>':'')+perTag+'</div>'
+      +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · '+l.fornecedor:'')
+      +(l.data_conciliacao?' · <span style="color:#2e7d32;font-size:10px;">conc. '+new Date(l.data_conciliacao).toLocaleDateString('pt-BR')+'</span>':'')+'</div>'
       +'</div>'
-      +'<div style="text-align:right;"><span class="li-val">'+fmt(l.valor)+'</span><br>'
-      +'<span class="li-del" data-id="'+l.id+'">remover</span></div>';
+      +'<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;">'
+      +'<span class="li-val">'+fmt(l.valor)+'</span>'
+      +'<button class="conc-btn '+(isConc?'sim':'nao')+'" onclick="toggleConciliado(''+l.id+'','+isConc+',this)">'+(isConc?'✓ Conciliado':'⏳ Pendente')+'</button>'
+      +'<span class="li-del" data-id="'+l.id+'">remover</span>'
+      +'</div>';
     div.querySelector('.li-del').onclick=function(){deletarLancamento(l.id,div);};
     body.appendChild(div);
   });
 }
-
 async function toggleConciliado(id, atual, btn){
   var novoVal = !atual;
   var dataConc = novoVal ? new Date().toISOString() : null;
