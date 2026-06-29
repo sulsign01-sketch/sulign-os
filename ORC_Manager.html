@@ -493,6 +493,14 @@
 .prop-foto-add{border:1.5px dashed var(--g200);border-radius:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;height:185px;cursor:pointer;color:var(--g400);font-size:12px;transition:.15s;}
 .prop-foto-add:hover{border-color:var(--ga);color:var(--ga);}
 @media print{.prop-foto-del{display:none!important;}.prop-foto-add{display:none!important;}}
+
+/* Revisão */
+.rev-badge{display:inline-block;background:#1565c0;color:#fff;font-size:9px;font-weight:700;
+  letter-spacing:1px;padding:1px 6px;border-radius:10px;margin-left:6px;font-family:'DM Mono',monospace;}
+.val-toast{position:fixed;bottom:24px;right:24px;color:#fff;padding:12px 18px;border-radius:3px;
+  font-size:12px;font-weight:600;z-index:9999;display:none;box-shadow:0 4px 20px rgba(0,0,0,.3);}
+.val-toast.show{display:block;animation:fadeInToast .2s;}
+@keyframes fadeInToast{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 </style>
 </head>
 <body class="">
@@ -559,6 +567,10 @@
           <option value="Faturado">Faturado</option>
           <option value="Cancelado">Cancelado</option>
         </select>
+      </div>
+      <div class="hd-info-item"><span class="hd-info-label">Revisão</span>
+        <span class="hd-info-val"><span id="rev-label" style="font-family:'DM Mono',monospace;color:#52b788;">Rev.01</span>
+        <span class="rev-badge" id="rev-badge" style="display:none;"></span></span>
       </div>
     </div>
   </div>
@@ -643,6 +655,8 @@
       <button class="tbtn" onclick="addIncItem(&#39;inc-sim&#39;)">+ Item incluso</button>
       <button class="tbtn" onclick="addIncItem(&#39;inc-nao&#39;)">+ Item não incluso</button>
       <div style="width:1px;background:var(--g200);height:20px;margin:0 4px;"></div>
+      <button class="save-btn" onclick="revCriarNovaRevisao()" style="background:#1565c0;" title="Criar nova revisão preservando histórico">↑ Rev.</button>
+      <button class="save-btn" onclick="revVerHistorico()" style="background:#333;font-size:10px;" title="Ver histórico de revisões">📋 Hist.</button>
       <button class="save-btn" onclick="salvarOrcamento()">💾 Salvar</button>
       <button class="save-btn load" onclick="voltarLista()">📋 Lista de Orçamentos</button>
       <button class="save-btn" onclick="inserirGrupoLogOperacional()" style="background:var(--ga);" title="Inserir grupos de Logística e Operacional">🚛⚙ Log+Operacional</button>
@@ -1762,6 +1776,8 @@ async function confirmarGerarOS(){
       dimensoes:dimsPecas.join(' | ')||null,
       logistica:'A combinar',
       data_proposta:(document.getElementById('dt').textContent||''),
+    rev:_revAtual,
+    rev_historico:_revHistorico,
     updated_at:new Date().toISOString()
     };
 
@@ -2212,6 +2228,67 @@ function removerFoto(idx){
   _propFotos.splice(idx,1);
   renderFotos();
 }
+
+// ══════════════════════════════════════
+// SISTEMA DE REVISÃO
+// ══════════════════════════════════════
+var _revHistorico = [];
+var _revAtual = 'Rev.01';
+
+function revInit(hist){
+  _revHistorico = hist || [];
+  _revAtual = _revHistorico.length ? _revHistorico[_revHistorico.length-1].rev : 'Rev.01';
+  revRender();
+}
+
+function revRender(){
+  var lbl=document.getElementById('rev-label');
+  var badge=document.getElementById('rev-badge');
+  if(lbl) lbl.textContent=_revAtual;
+  if(badge){
+    if(_revHistorico.length>1){
+      badge.textContent=_revHistorico.length+' versões';
+      badge.style.display='inline-block';
+    } else {
+      badge.style.display='none';
+    }
+  }
+}
+
+function revCriarNovaRevisao(){
+  var match=_revAtual.match(/Rev\.([0-9]+)/);
+  var n=match?parseInt(match[1],10)+1:2;
+  var novaRev='Rev.'+String(n).padStart(2,'0');
+  _revHistorico.push({
+    rev:_revAtual,
+    data:new Date().toISOString().split('T')[0],
+    status:(document.getElementById('orc-status')||{}).value||'Em Orçamento',
+    obs:'Substituída por '+novaRev
+  });
+  _revAtual=novaRev;
+  revRender();
+  var sel=document.getElementById('orc-status');
+  if(sel&&['Proposta Enviada','Orçamento Recusado','Orçamento Vencido'].indexOf(sel.value)>=0){
+    sel.value='Em Orçamento';
+  }
+  showToast('✓ Nova revisão criada: '+novaRev,'ok');
+}
+
+function revVerHistorico(){
+  if(!_revHistorico.length){showToast('Nenhum histórico ainda.');return;}
+  alert('Histórico de revisões:\n\n'+_revHistorico.map(function(r){
+    return r.rev+' · '+r.data+' · '+r.status+(r.obs?' ('+r.obs+')':'');
+  }).join('\n'));
+}
+
+function showToast(msg,tipo){
+  var el=document.getElementById('val-toast');
+  if(!el)return;
+  el.textContent=msg;
+  el.style.background=tipo==='ok'?'#2d6a4f':'#c62828';
+  el.classList.add('show');
+  setTimeout(function(){el.classList.remove('show');},3500);
+}
 function setSaveStatus(msg,ok){
   var el=document.getElementById('save-status');
   if(el){el.textContent=msg;el.style.color=ok?'var(--green)':'var(--g400)';}
@@ -2386,6 +2463,7 @@ async function carregarOrcamento(id){
     var _stElR=document.getElementById('orc-status');if(_stElR)_stElR.value=orc.status||'Em Orçamento';
     _cronRows=Array.isArray(orc.cronograma)?orc.cronograma:[];cronInit();
     if(orc.data_proposta)restaurarData(orc.data_proposta);
+    revInit(orc.rev_historico||(orc.rev?[{rev:orc.rev,data:'',status:'',obs:''}]:[]));
     fatRestaurar(orc);
     var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';
 
@@ -3596,6 +3674,7 @@ async function gerarProximoNumeroSS(){
 }
 
 async function novoOrcamento(){
+  revInit([]);
   _cronRows=[];
   // Resetar grupos/tabelas
   var cont=document.getElementById('tables-container');
@@ -3865,4 +3944,5 @@ function cronInit(){
   </div>
 </div>
 
+<div class="val-toast" id="val-toast"></div>
 </body></html>
