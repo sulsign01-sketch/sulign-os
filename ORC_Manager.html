@@ -664,6 +664,8 @@
       <button class="save-btn" onclick="abrirGerarOS()" style="background:#00695c;" title="Gerar Ordens de Serviço a partir deste orçamento">⚙ Gerar OS CV</button>
       <button class="save-btn" onclick="abrirGerarOSSetorial()" style="background:#4a148c;" title="Gerar OS por setor: Forração, Serralheria, Marcenaria, Pintura...">🏭 OS Setorial</button>
       <button id="btn-add-fotos" onclick="toggleFotosSec()" style="display:none;align-items:center;gap:4px;background:#1565c0;color:#fff;border:none;border-radius:2px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:inherit;">🖼 Fotos de layout</button>
+      <div style="width:1px;background:var(--g200);height:20px;margin:0 4px;"></div>
+      <button class="save-btn" onclick="excluirOrcamentoAtual()" style="background:#c62828;" title="Excluir este orçamento permanentemente">🗑 Excluir</button>
       <span class="save-status" id="save-status">—</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
@@ -2462,6 +2464,28 @@ async function deletarOrcamentoSalvo(id,el){
     method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
   });
   if(el)el.parentNode.removeChild(el);
+}
+
+async function excluirOrcamentoAtual(){
+  var numero = (document.querySelector('.doc-num-el')||{}).textContent||'este orçamento';
+  if(!_numeroSalvoAtual){
+    showToast('Este orçamento ainda não foi salvo no banco.','err');
+    return;
+  }
+  if(!confirm('Excluir "'+numero+'" permanentemente?\n\nEsta ação não pode ser desfeita.')) return;
+  if(!confirm('Confirme novamente: excluir "'+numero+'"?')) return;
+  setSaveStatus('🗑 Excluindo...', false);
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(_numeroSalvoAtual),{
+      method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    _numeroSalvoAtual = null;
+    showToast('✓ Orçamento excluído.','ok');
+    setTimeout(function(){ novoOrcamento(); voltarLista(); }, 800);
+  }catch(e){
+    setSaveStatus('✗ Erro ao excluir: '+e.message, false);
+  }
 }
 
 async function carregarOrcamento(id){
