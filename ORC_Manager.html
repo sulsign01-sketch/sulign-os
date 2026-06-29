@@ -728,7 +728,7 @@
   <div class="prop-only">
     <div class="sec">
       <div class="sec-title">Escopo do Projeto</div>
-      <p style="font-size:12px;color:var(--g600);margin-bottom:14px;" contenteditable="true">Fornecimento e produção de letreiro em PVC 20mm pintado branco para fachada da Igreja Batista Nova Filadélfia, conforme faca aprovada 410×160cm.</p>
+      <p id="prop-escopo-display" style="font-size:12px;color:var(--g600);margin-bottom:14px;white-space:pre-wrap;"></p>
       <div id="prop-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th style="width: 8%;">Qtd</th><th style="width: 6%; text-align: center;">Un.</th><th class="n">Valor Venda</th><th class="n" style="color: rgb(255, 138, 128);">Imposto</th><th class="n">Total</th></tr></thead><tbody><tr class="grand"><td colspan="4"><strong>Total Geral</strong></td><td class="imp2">—</td><td class="n" style="color: rgb(82, 183, 136); font-size: 14px;">R$ 0,00</td></tr></tbody></table></div>
     </div>
     <!-- FOTOS DE LAYOUT (opcional) -->
@@ -801,6 +801,7 @@
     <div class="sec">
       <div class="sec-title">Especificação Técnica</div>
       <div class="desc-nota">Documento descritivo — valores suprimidos. Para orçamento completo solicite a Proposta Comercial.</div>
+      <p id="desc-escopo-display" style="font-size:12px;color:var(--g600);margin-bottom:14px;white-space:pre-wrap;"></p>
       <div id="desc-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th class="n" style="width: 10%;">Qtd</th><th style="width: 8%; text-align: center;">Un.</th></tr></thead><tbody></tbody></table></div>
     </div>
   </div>
@@ -809,7 +810,7 @@
   <div class="bloc-only">
     <div class="sec">
       <div class="sec-title">Escopo do Projeto</div>
-      <p style="font-size:12px;color:var(--g600);margin-bottom:14px;" contenteditable="true">Fornecimento e produção de letreiro em PVC 20mm pintado branco para fachada da Igreja Batista Nova Filadélfia, conforme faca aprovada 410×160cm.</p>
+      <p id="bloc-escopo-display" style="font-size:12px;color:var(--g600);margin-bottom:14px;white-space:pre-wrap;"></p>
       <div id="bloc-tables-container"><table><thead><tr style="background: var(--black);"><th>Descrição</th><th class="n" style="color: rgb(255, 138, 128); width: 15%;">Imposto</th><th class="n" style="width: 17%;">Total do Grupo</th></tr></thead><tbody><tr class="grand"><td colspan="2"><strong>Total Geral</strong></td><td class="n" style="color: rgb(82, 183, 136); font-size: 14px;">R$ 0,00</td></tr></tbody></table></div>
     </div>
     <div class="sec">
@@ -1055,7 +1056,7 @@
         <span>Orçamento Estratificado</span>
         <button class="sync-btn" onclick="gerarTodasDescricoes()" id="btn-gerar-todas">✨ Gerar todas as descrições</button>
       </div>
-      <p style="font-size:12px;color:var(--g600);margin-bottom:16px;" contenteditable="true">Prezado cliente, apresentamos abaixo a especificação técnica e valoração dos itens que compõem o escopo de fornecimento.</p>
+      <p id="estr-escopo-display" style="font-size:12px;color:var(--g600);margin-bottom:16px;white-space:pre-wrap;"></p>
       <div id="estr-container"></div>
     </div>
     <div class="estr-resumo">
@@ -2482,7 +2483,7 @@ async function carregarOrcamento(id){
     if(orc.data_proposta)restaurarData(orc.data_proposta);
     revInit(orc.rev_historico||(orc.rev&&orc.rev!=='Rev.01'?[]:[]),(orc.rev||'Rev.01'));
     fatRestaurar(orc);
-    var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';
+    var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';sincronizarEscopo();
 
     // Restaurar BDI
     if(orc.bdi)Object.keys(orc.bdi).forEach(function(k){var el=document.getElementById(k);if(el)el.value=orc.bdi[k];});
@@ -3447,6 +3448,16 @@ async function gerarTodasDescricoes(){
   btn.textContent='✨ Gerar todas as descrições';btn.disabled=false;
 }
 
+function sincronizarEscopo(){
+  var src=document.getElementById('escopo-text');
+  if(!src) return;
+  var txt=src.textContent||src.innerText||'';
+  ['prop-escopo-display','desc-escopo-display','bloc-escopo-display','estr-escopo-display'].forEach(function(id){
+    var el=document.getElementById(id);
+    if(el) el.textContent=txt;
+  });
+}
+
 function setModo(m,e){
   document.querySelectorAll('.mbtn').forEach(function(b){b.classList.remove('active');b.classList.remove('alt-active');});
   e.target.classList.add((m==='descritivo'||m==='blocado')?'alt-active':(m==='base'?'alt-active':'active'));
@@ -3474,10 +3485,16 @@ function setModo(m,e){
   // Botão adicionar fotos: só na proposta
   var fb=document.getElementById('btn-add-fotos');
   if(fb)fb.style.display=m==='proposta'?'inline-flex':'none';
+  sincronizarEscopo();
   calcAll();
 }
 
 carregarBase();
+// Propagar escopo ao digitar no memorial
+(function(){
+  var escopoEl=document.getElementById('escopo-text');
+  if(escopoEl) escopoEl.addEventListener('input',sincronizarEscopo);
+})();
 var hoje=new Date().toLocaleDateString('pt-BR');
 // Campo de data editável
 var hojeISO=new Date().toISOString().split('T')[0];
