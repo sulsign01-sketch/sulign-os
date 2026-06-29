@@ -2235,9 +2235,24 @@ function removerFoto(idx){
 var _revHistorico = [];
 var _revAtual = 'Rev.01';
 
-function revInit(hist){
+function revInit(hist, revAtualSalva){
+  // hist = array de revisões ANTERIORES (substituídas)
+  // revAtualSalva = string da revisão atual (ex: 'Rev.02'), vinda do banco
   _revHistorico = hist || [];
-  _revAtual = _revHistorico.length ? _revHistorico[_revHistorico.length-1].rev : 'Rev.01';
+  if(revAtualSalva){
+    _revAtual = revAtualSalva;
+  } else if(_revHistorico.length){
+    // Compatibilidade legado: se hist guarda a atual como último item
+    var ultimo = _revHistorico[_revHistorico.length-1];
+    if(ultimo && ultimo.rev && ultimo.obs && ultimo.obs.indexOf('Substituída')>=0){
+      // histórico correto: anteriores; a atual vem do campo rev separado
+      _revAtual = 'Rev.01';
+    } else {
+      _revAtual = ultimo.rev || 'Rev.01';
+    }
+  } else {
+    _revAtual = 'Rev.01';
+  }
   revRender();
 }
 
@@ -2377,6 +2392,8 @@ async function salvarOrcamento(){
     cronograma:_cronRows,
     status:estado.header.status||'Em Orçamento',
     escopo:estado.header.escopo||'',
+    rev:_revAtual,
+    rev_historico:_revHistorico,
     updated_at:new Date().toISOString()
   };
   try{
@@ -2401,7 +2418,7 @@ async function abrirCarregarOrcamento(){
   var lista=document.getElementById('orc-lista');
   lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,updated_at&order=updated_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,rev,rev_historico,updated_at&order=updated_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var data=await r.json();
@@ -2463,7 +2480,7 @@ async function carregarOrcamento(id){
     var _stElR=document.getElementById('orc-status');if(_stElR)_stElR.value=orc.status||'Em Orçamento';
     _cronRows=Array.isArray(orc.cronograma)?orc.cronograma:[];cronInit();
     if(orc.data_proposta)restaurarData(orc.data_proposta);
-    revInit(orc.rev_historico||(orc.rev?[{rev:orc.rev,data:'',status:'',obs:''}]:[]));
+    revInit(orc.rev_historico||(orc.rev&&orc.rev!=='Rev.01'?[]:[]),(orc.rev||'Rev.01'));
     fatRestaurar(orc);
     var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';
 
@@ -3558,7 +3575,7 @@ async function carregarListaOrcamentos(){
   var body=document.getElementById('lv-body');
   body.innerHTML='<div class="lv-loading">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,updated_at&order=updated_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,rev,rev_historico,updated_at&order=updated_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -3583,17 +3600,37 @@ function checkVencido(orc){
 
 function renderListaOrcamentos(data){
   window._lvOrcamentosCache=data;
-  // filtrar por aba ativa
   var isArquivo=_lvTabAtual==='arquivo';
   var isFaturados=_lvTabAtual==='faturados';
   var isTodos=_lvTabAtual==='todos';
-  var filtrados=data.filter(function(orc){
+
+  // Agrupar por numero, manter revisao mais alta como principal
+  var grupos={};
+  data.forEach(function(orc){
+    var num=orc.numero||'';
+    if(!grupos[num]) grupos[num]=[];
+    grupos[num].push(orc);
+  });
+  var principal=[];
+  Object.keys(grupos).forEach(function(num){
+    var revs=grupos[num].slice().sort(function(a,b){
+      var ra=parseInt((a.rev||'Rev.01').replace('Rev.',''),10)||1;
+      var rb=parseInt((b.rev||'Rev.01').replace('Rev.',''),10)||1;
+      return rb-ra;
+    });
+    var atual=revs[0];
+    atual._todasRevisoes=revs;
+    principal.push(atual);
+  });
+
+  var filtrados=principal.filter(function(orc){
     var st=checkVencido(orc);
     if(isTodos) return true;
     if(isFaturados) return FATURADO_STATUS.indexOf(st)>=0;
     if(isArquivo) return ARQUIVO_STATUS.indexOf(st)>=0;
     return ARQUIVO_STATUS.indexOf(st)<0 && FATURADO_STATUS.indexOf(st)<0;
   });
+
   if(isTodos){
     filtrados=filtrados.slice().sort(function(a,b){
       var ca=(a.cliente||'').toLowerCase(), cb=(b.cliente||'').toLowerCase();
@@ -3601,40 +3638,100 @@ function renderListaOrcamentos(data){
       return (a.numero||'')>(b.numero||'')?1:-1;
     });
   }
+
+  var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Faturado':'background:#1b5e20;color:#fff','Cancelado':'background:#ffebee;color:#c62828'};
+
   var body=document.getElementById('lv-body');
   if(!filtrados.length){
     body.innerHTML='<div class="lv-empty">'+(isTodos?'Nenhum orçamento cadastrado.':isFaturados?'Nenhum orçamento faturado ainda.':isArquivo?'Nenhum orçamento arquivado.':'Nenhum orçamento ativo.')+'</div>';return;
   }
   body.innerHTML='';
+
   filtrados.forEach(function(orc){
+    var revAtual=orc.rev||'Rev.01';
+    var revNum=parseInt(revAtual.replace('Rev.',''),10)||1;
+    var temRevisoes=revNum>1;
+    var todasRevs=orc._todasRevisoes||[orc];
+
+    var wrapper=document.createElement('div');
+    wrapper.style.cssText='margin-bottom:4px;';
+
     var item=document.createElement('div');item.className='lv-item';
-    var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'—';
-    var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Faturado':'background:#1b5e20;color:#fff','Cancelado':'background:#ffebee;color:#c62828'};
+    if(temRevisoes) item.style.borderLeft='3px solid #1565c0';
+
+    var dt=orc.updated_at?new Date(orc.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'--';
     var statusEfetivo=checkVencido(orc);
     var stCls=stStyles[statusEfetivo]||'background:#e3f2fd;color:#1565c0';
     var nLogs=countLogs(orc.numero||'');
-    item.innerHTML='<div>'
-      +'<div class="lv-item-num">'+(orc.numero||'—')+'</div>'
-      +'<div class="lv-item-info">'+(orc.cliente||orc.cliente_nome||'—')+' · '+(orc.projeto||'—')+'</div>'
+
+    var revBadge=temRevisoes
+      ?'<span style="background:#1565c0;color:#fff;font-size:9px;padding:1px 5px;border-radius:2px;font-weight:700;margin-right:3px;font-family:DM Mono,monospace;">'+revAtual+'</span>'
+      :'';
+    var revToggle=temRevisoes
+      ?'<span style="font-size:9px;color:#1565c0;cursor:pointer;margin-left:5px;" class="lv-rev-toggle">&#9660; '+revNum+' rev.</span>'
+      :'';
+
+    item.innerHTML='<div style="flex:1;min-width:0;">'
+      +'<div class="lv-item-num" style="display:flex;align-items:center;gap:2px;">'
+      +revBadge+(orc.numero||'--')+revToggle
       +'</div>'
-      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<div class="lv-item-info">'+(orc.cliente||orc.cliente_nome||'--')+' &middot; '+(orc.projeto||'--')+'</div>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">'
       +(nLogs?'<span class="lv-log-count">'+nLogs+' contato'+(nLogs>1?'s':'')+'</span>':'')
-      +'<span class="lv-log-btn">📞</span>'
+      +'<span class="lv-log-btn">&#128222;</span>'
       +'<span style="'+stCls+';font-size:9px;padding:1px 6px;border-radius:2px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:inline-block;">'+statusEfetivo+'</span>'
       +'<span class="lv-item-date">'+dt+'</span>'
-      +'<span class="lv-item-del">× remover</span>'
+      +'<span class="lv-item-del">&times; remover</span>'
       +'</div>';
+
     item.onclick=function(e){
       if(e.target.classList.contains('lv-item-del'))return;
       if(e.target.classList.contains('lv-log-btn')){abrirLogModal(orc);return;}
+      if(e.target.classList.contains('lv-rev-toggle')){
+        var sub=wrapper.querySelector('.lv-rev-sub');
+        if(sub) sub.style.display=sub.style.display==='none'?'block':'none';
+        return;
+      }
       carregarOrcamentoEAbrir(orc.id);
     };
     item.querySelector('.lv-item-del').onclick=function(e){
       e.stopPropagation();
-      if(!confirm('Remover orçamento '+orc.numero+'?'))return;
+      if(!confirm('Remover orçamento '+orc.numero+' ('+revAtual+')?'))return;
       deletarOrcamentoSalvo(orc.id,item);
     };
-    body.appendChild(item);
+    wrapper.appendChild(item);
+
+    if(temRevisoes && todasRevs.length>1){
+      var sub=document.createElement('div');
+      sub.className='lv-rev-sub';
+      sub.style.cssText='display:none;margin-left:12px;border-left:2px solid #c5cae9;padding-left:8px;margin-bottom:4px;';
+      todasRevs.slice(1).forEach(function(rv){
+        var rvdt=rv.updated_at?new Date(rv.updated_at).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'2-digit'}):'--';
+        var rvRev=rv.rev||'Rev.01';
+        var rvSt=checkVencido(rv);
+        var rvStCls=stStyles[rvSt]||'background:#e3f2fd;color:#1565c0';
+        var rvItem=document.createElement('div');
+        rvItem.style.cssText='display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:4px;cursor:pointer;font-size:11px;color:var(--g400);margin-bottom:2px;opacity:.72;background:var(--g900);';
+        rvItem.innerHTML='<span style="font-family:DM Mono,monospace;color:#9fa8da;font-size:10px;font-weight:700;">'+rvRev+'</span>'
+          +'<span style="flex:1;">'+rvRev+' &middot; '+(rv.cliente||rv.numero||'--')+'</span>'
+          +'<span style="'+rvStCls+';font-size:8px;padding:1px 5px;border-radius:2px;font-weight:600;">'+rvSt+'</span>'
+          +'<span style="color:var(--g500);font-size:10px;">'+rvdt+'</span>'
+          +'<span style="color:#c62828;font-size:10px;cursor:pointer;padding:0 4px;" class="lv-rv-del">&times;</span>';
+        rvItem.onclick=function(e){
+          if(e.target.classList.contains('lv-rv-del')){
+            e.stopPropagation();
+            if(!confirm('Remover revisão '+rvRev+' de '+rv.numero+'?'))return;
+            deletarOrcamentoSalvo(rv.id,rvItem);
+            return;
+          }
+          carregarOrcamentoEAbrir(rv.id);
+        };
+        sub.appendChild(rvItem);
+      });
+      wrapper.appendChild(sub);
+    }
+    body.appendChild(wrapper);
   });
 }
 document.getElementById('lv-search-inp').addEventListener('input',function(){
