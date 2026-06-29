@@ -122,6 +122,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="tab" id="tab-fixas" onclick="setTab('fixas')">Despesas Fixas</div>
     <div class="tab" id="tab-impostos" onclick="setTab('impostos')" style="color:#c62828;">Impostos</div>
     <div class="tab" id="tab-nf" onclick="setTab('nf')" style="color:var(--ga);">NF Emitidas</div>
+    <div class="tab" id="tab-aportes" onclick="setTab('aportes')" style="color:#7e57c2;">💰 Aportes</div>
   </div>
 
   <div id="view-novo" class="sec">
@@ -384,6 +385,74 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 
 </div>
 
+  <!-- APORTES / EMPRÉSTIMOS / CRÉDITOS -->
+  <div id="view-aportes" class="sec" style="display:none;">
+    <div class="row2">
+      <div class="fl">
+        <label>Tipo</label>
+        <select id="ap-tipo">
+          <option value="Aporte de Sócio">Aporte de Sócio</option>
+          <option value="Empréstimo Recebido">Empréstimo Recebido</option>
+          <option value="Crédito Externo">Crédito Externo</option>
+          <option value="Retirada de Sócio">Retirada de Sócio</option>
+          <option value="Devolução de Empréstimo">Devolução de Empréstimo</option>
+          <option value="Outros">Outros</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Data</label>
+        <input type="date" id="ap-data">
+      </div>
+    </div>
+    <div class="fl">
+      <label>Origem / Sócio</label>
+      <input type="text" id="ap-origem" placeholder="Ex: Eduardo Guedes, Banco XYZ">
+    </div>
+    <div class="fl">
+      <label>Descrição</label>
+      <input type="text" id="ap-descricao" placeholder="Ex: Aporte capital de giro Junho/2026">
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Valor (R$)</label>
+        <input type="number" id="ap-valor" step="0.01" placeholder="0,00">
+      </div>
+      <div class="fl">
+        <label>Forma</label>
+        <input type="text" id="ap-forma" placeholder="PIX, TED, C6Bank...">
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Status</label>
+        <select id="ap-status">
+          <option>Recebido</option>
+          <option>Pendente</option>
+          <option>Devolvido</option>
+          <option>Parcial</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Mês Ref.</label>
+        <input type="text" id="ap-mes" placeholder="Ex: Jun/2026">
+      </div>
+    </div>
+    <div class="fl">
+      <label>Observação</label>
+      <input type="text" id="ap-obs" placeholder="Condições, prazo de devolução, juros...">
+    </div>
+    <button class="btn" onclick="salvarAporte()" id="btn-salvar-aporte">Salvar Aporte</button>
+    <div class="status" id="status-aporte">—</div>
+
+    <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;">
+      <div class="totbar" style="margin:0 -20px 10px -20px;background:#1a1228;">
+        <span>Saldo líquido (Entradas − Saídas)</span>
+        <b id="ap-saldo" style="color:#ce93d8;">R$ 0,00</b>
+      </div>
+      <div id="aportes-lista-body"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
 <script>
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
@@ -395,7 +464,7 @@ var jobSelecionado=null;
 function fmt(v){return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 function setTab(t){
-  ['novo','lista','fixas','impostos','nf'].forEach(function(n){
+  ['novo','lista','fixas','impostos','nf','aportes'].forEach(function(n){
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('view-'+n).style.display=t===n?'block':'none';
   });
@@ -403,6 +472,7 @@ function setTab(t){
   if(t==='fixas')carregarDespesasFixas();
   if(t==='impostos')carregarImpostos();
   if(t==='nf')carregarNF();
+  if(t==='aportes')carregarAportes();
 }
 
 // localStorage autocomplete helpers (últimos 8)
@@ -424,6 +494,7 @@ lsFillDatalist('ll_funcoes','lista-funcoes');
 lsFillDatalist('ll_fornecedores','lista-fornecedores');
 
 document.getElementById('f-data').valueAsDate=new Date();
+document.getElementById('ap-data').valueAsDate=new Date();
 
 // Busca de job
 async function carregarOrcamentos(){
@@ -905,6 +976,137 @@ function renderNF(){
       +'<div class="nf-cell nf-rest n" style="color:'+(st.restante>0?'#c62828':st.restante===0&&st.vn>0?'#2d6a4f':'#9e9e9e')+';">'+(st.vn>0?fmtNF(st.restante):'—')+'</div>'
       +'</div>';
   }).join('');
+}
+
+
+// ══════════════════════════════════════════════════════
+// APORTES / EMPRÉSTIMOS / CRÉDITOS
+// ══════════════════════════════════════════════════════
+var aportesCache = [];
+
+async function salvarAporte(){
+  var btn = document.getElementById('btn-salvar-aporte');
+  var st  = document.getElementById('status-aporte');
+  btn.disabled = true; st.textContent = 'Salvando...';
+  var tipo      = document.getElementById('ap-tipo').value;
+  var data      = document.getElementById('ap-data').value;
+  var origem    = document.getElementById('ap-origem').value.trim();
+  var descricao = document.getElementById('ap-descricao').value.trim();
+  var valor     = parseFloat(document.getElementById('ap-valor').value)||0;
+  var forma     = document.getElementById('ap-forma').value.trim();
+  var status    = document.getElementById('ap-status').value;
+  var mes       = document.getElementById('ap-mes').value.trim();
+  var obs       = document.getElementById('ap-obs').value.trim();
+  if(!valor||!data){st.textContent='Preencha data e valor.';btn.disabled=false;return;}
+  var payload = {tipo:tipo, data:data, origem:origem, descricao:descricao,
+    valor:valor, forma_pgto:forma, status:status, mes_ref:mes, observacao:obs};
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/aportes',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok){
+      var err = await r.text();
+      // Se tabela não existe, criar e tentar novamente
+      if(err.indexOf('does not exist')>=0||r.status===404||r.status===400){
+        st.textContent='Tabela "aportes" não encontrada — rode o SQL de migration.';
+        btn.disabled=false; return;
+      }
+      throw new Error('HTTP '+r.status+': '+err);
+    }
+    st.textContent = '✓ Salvo!';
+    ['ap-origem','ap-descricao','ap-valor','ap-forma','ap-obs'].forEach(function(id){
+      var el=document.getElementById(id); if(el) el.value='';
+    });
+    carregarAportes();
+  }catch(e){
+    st.textContent = '✗ Erro: '+e.message;
+  }
+  btn.disabled = false;
+}
+
+async function carregarAportes(){
+  var body = document.getElementById('aportes-lista-body');
+  body.innerHTML = '<div class="empty">Carregando...</div>';
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/aportes?select=*&order=data.desc,created_at.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    aportesCache = await r.json();
+    renderAportes();
+  }catch(e){
+    body.innerHTML = '<div class="empty" style="color:#c62828;">Erro: '+e.message+' — verifique se a tabela "aportes" existe no Supabase.</div>';
+  }
+}
+
+function renderAportes(){
+  var body = document.getElementById('aportes-lista-body');
+  var saldoEl = document.getElementById('ap-saldo');
+  if(!aportesCache.length){
+    body.innerHTML='<div class="empty">Nenhum aporte lançado ainda.</div>';
+    saldoEl.textContent='R$ 0,00'; return;
+  }
+  // Tipos que representam saída de caixa
+  var saidas = ['Retirada de Sócio','Devolução de Empréstimo'];
+  var saldo = aportesCache.reduce(function(a,ap){
+    var v = parseFloat(ap.valor)||0;
+    return a + (saidas.indexOf(ap.tipo)>=0 ? -v : v);
+  },0);
+  saldoEl.textContent = 'R$ '+saldo.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  saldoEl.style.color = saldo>=0 ? '#ce93d8' : '#ef9a9a';
+
+  var TIPO_COR = {
+    'Aporte de Sócio':     {bg:'#1a1228',bord:'#7e57c2',clr:'#ce93d8'},
+    'Empréstimo Recebido': {bg:'#0d1b2a',bord:'#1565c0',clr:'#64b5f6'},
+    'Crédito Externo':     {bg:'#0d1b2a',bord:'#00838f',clr:'#80deea'},
+    'Retirada de Sócio':   {bg:'#1c0a0a',bord:'#c62828',clr:'#ef9a9a'},
+    'Devolução de Empréstimo':{bg:'#1c0a0a',bord:'#c62828',clr:'#ef9a9a'},
+    'Outros':              {bg:'#111',   bord:'#5a5a5a',clr:'#9e9e9e'},
+  };
+  var STATUS_COR = {
+    'Recebido': 'color:#52b788;', 'Pendente':'color:#f9a825;',
+    'Devolvido':'color:#ef9a9a;', 'Parcial':  'color:#ffcc02;'
+  };
+  var saidas2 = ['Retirada de Sócio','Devolução de Empréstimo'];
+  body.innerHTML = aportesCache.map(function(ap){
+    var cor = TIPO_COR[ap.tipo] || TIPO_COR['Outros'];
+    var eSaida = saidas2.indexOf(ap.tipo)>=0;
+    var sinalCor = eSaida ? 'color:#ef9a9a;' : 'color:#ce93d8;';
+    var sinal = eSaida ? '− ' : '+ ';
+    var val = parseFloat(ap.valor)||0;
+    var stCor = STATUS_COR[ap.status]||'';
+    var dt = ap.data ? new Date(ap.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    return '<div style="background:'+cor.bg+';border-left:3px solid '+cor.bord+';border-radius:3px;padding:10px 14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">'
+      +'<div style="flex:1;min-width:0;">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">'
+      +'<span style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:'+cor.clr+';">'+ap.tipo+'</span>'
+      +(ap.mes_ref?'<span style="font-size:10px;color:#5a5a5a;">'+ap.mes_ref+'</span>':'')
+      +'</div>'
+      +(ap.origem?'<div style="font-size:12px;font-weight:600;color:#e0e0e0;margin-bottom:2px;">'+ap.origem+'</div>':'')
+      +(ap.descricao?'<div style="font-size:11px;color:#9e9e9e;">'+ap.descricao+'</div>':'')
+      +(ap.forma_pgto?'<div style="font-size:10px;color:#616161;margin-top:2px;">'+ap.forma_pgto+'</div>':'')
+      +(ap.observacao?'<div style="font-size:10px;color:#757575;font-style:italic;margin-top:3px;">'+ap.observacao+'</div>':'')
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0;">'
+      +'<div style="font-family:DM Mono,monospace;font-size:14px;font-weight:700;'+sinalCor+'">'+sinal+'R$ '+val.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2})+'</div>'
+      +'<div style="font-size:10px;color:#616161;margin-top:2px;">'+dt+'</div>'
+      +'<div style="font-size:10px;'+stCor+'margin-top:2px;">'+ap.status+'</div>'
+      +'<span style="font-size:10px;color:#c62828;cursor:pointer;margin-top:6px;display:inline-block;" onclick="deletarAporte(''+ap.id+'',this.parentNode.parentNode)">× remover</span>'
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+async function deletarAporte(id, el){
+  if(!confirm('Remover este lançamento?')) return;
+  await fetch(SUPA_URL+'/rest/v1/aportes?id=eq.'+id,{
+    method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+  });
+  aportesCache = aportesCache.filter(function(a){return a.id!==id;});
+  if(el) el.parentNode.removeChild(el);
+  renderAportes();
 }
 
 </script>
