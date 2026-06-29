@@ -3250,6 +3250,9 @@ function setModo(m,e){
   else if(m==='pecas'){document.body.classList.add('pecas');if(dt)dt.textContent='BASE DE PECAS';carregarPecas();}
   else if(m==='estr'){document.body.classList.add('estr');if(dt)dt.textContent='ORÇAMENTO ESTRATIFICADO';renderEstr();}
   else{if(dt)dt.textContent='MEMORIAL DE CUSTO';}
+  // Painel de faturamento: só no memorial
+  var fp=document.getElementById('fat-panel');
+  if(fp)fp.style.display=(m==='memorial'||m===''||(!m))?'block':'none';
   calcAll();
 }
 
