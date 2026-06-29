@@ -502,13 +502,15 @@ async function carregarOrcamentos(){
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto&order=numero.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
-    orcamentosCache=await r.json();
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    orcamentosCache=Array.isArray(data)?data:[];
     var sel=document.getElementById('filt-job');
     sel.innerHTML='<option value="">— Todos os jobs —</option>';
     orcamentosCache.forEach(function(o){
       var op=document.createElement('option');op.value=o.numero;op.textContent=o.numero+' — '+(o.cliente||'—');sel.appendChild(op);
     });
-  }catch(e){console.error(e);}
+  }catch(e){console.error('carregarOrcamentos:',e);}
 }
 carregarOrcamentos();
 
@@ -614,11 +616,13 @@ async function carregarLancamentos(){
     var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&order=data.desc,created_at.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
+    if(r.status===401){body.innerHTML='<div class="empty" style="color:#c62828;">⚠ Chave Supabase inválida (401). Tente Ctrl+Shift+R para limpar o cache.</div>';return;}
     if(!r.ok)throw new Error('HTTP '+r.status);
-    lancamentosCache=await r.json();
+    var data=await r.json();
+    lancamentosCache=Array.isArray(data)?data:[];
     renderLista();
   }catch(e){
-    body.innerHTML='<div class="empty">Erro: '+e.message+'</div>';
+    body.innerHTML='<div class="empty" style="color:#c62828;">Erro: '+e.message+'</div>';
   }
 }
 
