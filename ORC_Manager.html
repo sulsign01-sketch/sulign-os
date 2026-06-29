@@ -428,6 +428,57 @@
   .st-vencido{background:#f3e5f5;color:#6a1b9a;}
   .lv-empty{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
   .lv-loading{text-align:center;padding:50px 20px;color:var(--g400);font-size:13px;}
+
+/* CRM — Log de contato */
+.log-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:none;align-items:center;justify-content:center;}
+.log-modal-overlay.open{display:flex;}
+.log-modal{background:#fff;border-radius:4px;padding:24px;width:380px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.2);}
+.log-modal h3{font-size:13px;font-weight:600;margin-bottom:16px;color:#0f0f0f;}
+.log-fl{margin-bottom:10px;}
+.log-fl label{display:block;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#5a5a5a;margin-bottom:4px;}
+.log-fl select,.log-fl input,.log-fl textarea{width:100%;border:1.5px solid #e8e8e8;border-radius:2px;padding:7px 10px;font-family:'DM Sans',sans-serif;font-size:12px;outline:none;}
+.log-fl select:focus,.log-fl input:focus,.log-fl textarea:focus{border-color:#52b788;}
+.log-fl textarea{min-height:60px;resize:vertical;}
+.log-btn-row{display:flex;gap:8px;margin-top:14px;}
+.log-btn-row button{flex:1;padding:9px;border:none;border-radius:2px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit;}
+.log-btn-save{background:#52b788;color:#fff;} .log-btn-save:hover{background:#2d6a4f;}
+.log-btn-cancel{background:#e8e8e8;color:#5a5a5a;}
+/* Botão log na lista */
+.lv-log-btn{font-size:10px;color:#52b788;cursor:pointer;padding:2px 6px;border:1px solid #52b788;border-radius:2px;margin-right:6px;}
+.lv-log-btn:hover{background:#52b788;color:#fff;}
+.lv-log-count{font-size:9px;background:#e8f5e9;color:#2d6a4f;padding:1px 5px;border-radius:10px;margin-right:4px;}
+/* Modal recusa */
+.recusa-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:none;align-items:center;justify-content:center;}
+.recusa-overlay.open{display:flex;}
+.recusa-modal{background:#fff;border-radius:4px;padding:24px;width:360px;max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.2);}
+.recusa-modal h3{font-size:13px;font-weight:600;margin-bottom:14px;color:#c62828;}
+.recusa-opts label{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0f0f0;font-size:12px;cursor:pointer;}
+.recusa-opts label:last-child{border-bottom:none;}
+
+.cron-wrap{padding:10px 20px;background:#111;border-top:1px solid #2a2a2a;}
+.cron-title{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:10px;}
+.cron-row{display:flex;align-items:center;gap:8px;margin-bottom:7px;}
+.cron-inp{background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:12px;padding:3px 4px;font-family:'DM Sans',sans-serif;}
+.cron-pct{background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:#52b788;font-size:12px;padding:3px 4px;font-family:'DM Mono',sans-serif;width:50px;}
+.cron-lbl{font-size:11px;color:var(--g400);min-width:80px;}
+.cron-val{font-family:'DM Mono',monospace;font-size:11px;color:var(--g400);min-width:90px;}
+.cron-add{background:none;border:1px solid #2a2a2a;color:var(--g400);padding:3px 10px;font-size:11px;cursor:pointer;border-radius:2px;}
+.cron-add:hover{border-color:#52b788;color:#52b788;}
+.cron-del{color:#5a5a5a;cursor:pointer;font-size:13px;}
+.cron-del:hover{color:#c62828;}
+
+/* Painel de faturamento */
+.fat-panel{background:#0a0a0a;border-top:1px solid #1e1e1e;padding:10px 20px;}
+.fat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px;}
+.fat-field{display:flex;flex-direction:column;gap:3px;}
+.fat-label{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);}
+.fat-inp{background:transparent;border:none;border-bottom:1.5px solid #1e1e1e;color:var(--white);font-size:13px;padding:4px 2px;font-family:'DM Mono',monospace;outline:none;width:100%;}
+.fat-inp:focus{border-bottom-color:var(--ga);}
+.fat-inp[type=checkbox]{width:16px;height:16px;margin-top:4px;}
+.fat-sinal-ok{color:var(--ga);font-size:11px;margin-top:4px;}
+.fat-sinal-warn{color:var(--ylwb);font-size:11px;margin-top:4px;}
+  .fat-divider{grid-column:1/-1;height:1px;background:#1e1e1e;margin:6px 0;}
+  .fat-total{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:var(--ga);}
 </style>
 </head>
 <body class="">
@@ -500,6 +551,72 @@
   <div id="escopo-section" style="background:#111;border-top:1px solid #2a2a2a;padding:10px 20px;">
     <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">Escopo do Projeto</div>
     <div id="escopo-text" contenteditable="true" style="font-size:12px;color:var(--white);line-height:1.5;min-height:20px;outline:none;" data-placeholder="Descreva o escopo do projeto..."></div>
+  </div>
+  <div id="cron-section" style="background:#111;border-top:1px solid #2a2a2a;padding:10px 20px;">
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:10px;">Cronograma de Recebimento</div>
+    <div id="cron-rows"></div>
+    <button class="cron-add" onclick="cronAddRow()">+ Parcela</button>
+    <div id="cron-total" style="font-size:10px;color:#5a5a5a;margin-top:6px;"></div>
+  </div>
+  <!-- PAINEL DE FATURAMENTO E SINAL -->
+  <div class="fat-panel" id="fat-panel">
+    <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:4px;">Faturamento & Sinal</div>
+    <div class="fat-grid">
+      <div class="fat-field">
+        <span class="fat-label">Sinal Recebido</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <input type="checkbox" id="fat-sinal-chk" onchange="fatAtualizarSinal()">
+          <span id="fat-sinal-status" class="fat-sinal-warn">⚠ Aguardando</span>
+        </div>
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Valor do Sinal (R$)</span>
+        <input type="number" class="fat-inp" id="fat-sinal-valor" placeholder="0,00" step="0.01" oninput="fatAtualizarSinal()">
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Data do Sinal</span>
+        <input type="date" class="fat-inp" id="fat-sinal-data" oninput="fatAtualizarSinal()">
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Valor da NF Emitida (R$)</span>
+        <input type="number" class="fat-inp" id="fat-valor-nf" placeholder="= venda se não preenchido" step="0.01">
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Data de Emissão da NF</span>
+        <input type="date" class="fat-inp" id="fat-data-nf">
+      </div>
+      <div class="fat-field" style="justify-content:flex-end;">
+        <span id="fat-nf-diff" style="font-size:10px;color:var(--g400);"></span>
+      </div>
+      <div class="fat-field" style="grid-column:1/-1;"><div class="fat-divider"></div></div>
+      <div class="fat-field">
+        <span class="fat-label">Nº da Nota Fiscal</span>
+        <input type="text" class="fat-inp" id="fat-nf-numero" placeholder="Ex: 000042">
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Saldo Recebido</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <input type="checkbox" id="fat-saldo-chk" onchange="fatAtualizarSaldo()">
+          <span id="fat-saldo-status" style="font-size:11px;color:var(--ylwb);">⚠ Pendente</span>
+        </div>
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Valor do Saldo (R$)</span>
+        <input type="number" class="fat-inp" id="fat-saldo-valor" placeholder="0,00" step="0.01">
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Data do Saldo</span>
+        <input type="date" class="fat-inp" id="fat-saldo-data">
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Total Recebido</span>
+        <div class="fat-total" id="fat-total-recebido">R$ 0,00</div>
+      </div>
+      <div class="fat-field">
+        <span class="fat-label">Saldo a Receber</span>
+        <div id="fat-saldo-restante" style="font-family:'DM Mono',monospace;font-size:13px;color:var(--ylwb);">—</div>
+      </div>
+    </div>
   </div>
   <div class="ab"></div>
 
@@ -1034,6 +1151,7 @@ function reindexar(){
   });
 }
 function calcAll(){
+  setTimeout(renderCronRows,50);
   var f=getBDI();
   s('bdi-f',((f-1)*100).toFixed(1)+'% ('+f.toFixed(4)+'x)');
   var gC=0,gI=0,gT=0;
@@ -1517,6 +1635,7 @@ function abrirGerarOS(){
 }
 
 async function confirmarGerarOS(){
+  if(!verificarSinalParaOS()) return;
   var btn=document.getElementById('gos-btn-gerar');
   btn.textContent='⏳ Gerando...';btn.disabled=true;
 
@@ -1868,6 +1987,118 @@ function exportarHTML(){
 
 // ═══ SALVAR / CARREGAR ORÇAMENTO ═══
 
+
+// ══════════════════════════════════════
+// FATURAMENTO & SINAL
+// ══════════════════════════════════════
+function fatAtualizarSaldo(){
+  var chk = document.getElementById('fat-saldo-chk');
+  var st  = document.getElementById('fat-saldo-status');
+  if(chk && st){
+    st.textContent = chk.checked ? '✓ Confirmado' : '⚠ Pendente';
+    st.style.color = chk.checked ? 'var(--ga)' : 'var(--ylwb)';
+  }
+  fatAtualizarTotais();
+}
+function fatAtualizarTotais(){
+  var sv = parseFloat((document.getElementById('fat-sinal-valor')||{}).value)||0;
+  var lv = parseFloat((document.getElementById('fat-saldo-valor')||{}).value)||0;
+  var vn = parseFloat((document.getElementById('fat-valor-nf')||{}).value)||0;
+  var sc = (document.getElementById('fat-sinal-chk')||{}).checked||false;
+  var lc = (document.getElementById('fat-saldo-chk')||{}).checked||false;
+  var recebido = (sc?sv:0) + (lc?lv:0);
+  var restante = vn > 0 ? vn - recebido : 0;
+  var el1 = document.getElementById('fat-total-recebido');
+  var el2 = document.getElementById('fat-saldo-restante');
+  if(el1) el1.textContent = 'R$ '+recebido.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(el2){
+    if(vn > 0){
+      el2.textContent = 'R$ '+restante.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+      el2.style.color = restante <= 0 ? 'var(--ga)' : 'var(--ylwb)';
+    } else {
+      el2.textContent = '—';
+    }
+  }
+}
+function fatAtualizarSinal(){
+  var chk = document.getElementById('fat-sinal-chk');
+  var st  = document.getElementById('fat-sinal-status');
+  if(!chk||!st) return;
+  if(chk.checked){
+    st.textContent = '✓ Confirmado';
+    st.className = 'fat-sinal-ok';
+  } else {
+    st.textContent = '⚠ Aguardando';
+    st.className = 'fat-sinal-warn';
+  }
+  fatAtualizarTotais();
+}
+
+function fatColetarDados(){
+  return {
+    sinal_recebido: (document.getElementById('fat-sinal-chk')||{}).checked || false,
+    sinal_valor:    parseFloat((document.getElementById('fat-sinal-valor')||{}).value) || null,
+    sinal_data:     (document.getElementById('fat-sinal-data')||{}).value || null,
+    valor_nf:       parseFloat((document.getElementById('fat-valor-nf')||{}).value) || null,
+    data_nf:        (document.getElementById('fat-data-nf')||{}).value || null,
+    nf_numero:      (document.getElementById('fat-nf-numero')||{}).value || null,
+    saldo_recebido: (document.getElementById('fat-saldo-chk')||{}).checked || false,
+    saldo_valor:    parseFloat((document.getElementById('fat-saldo-valor')||{}).value) || null,
+    saldo_data:     (document.getElementById('fat-saldo-data')||{}).value || null,
+  };
+}
+
+function fatRestaurar(orc){
+  var chk = document.getElementById('fat-sinal-chk');
+  var sv  = document.getElementById('fat-sinal-valor');
+  var sd  = document.getElementById('fat-sinal-data');
+  var vn  = document.getElementById('fat-valor-nf');
+  var dn  = document.getElementById('fat-data-nf');
+  if(chk) chk.checked = orc.sinal_recebido || false;
+  if(sv)  sv.value    = orc.sinal_valor || '';
+  if(sd)  sd.value    = orc.sinal_data  || '';
+  if(vn)  vn.value    = orc.valor_nf    || '';
+  if(dn)  dn.value    = orc.data_nf     || '';
+  var nn = document.getElementById('fat-nf-numero');
+  var sc = document.getElementById('fat-saldo-chk');
+  var sl = document.getElementById('fat-saldo-valor');
+  var sd = document.getElementById('fat-saldo-data');
+  if(nn) nn.value    = orc.nf_numero    || '';
+  if(sc) sc.checked  = orc.saldo_recebido || false;
+  if(sl) sl.value    = orc.saldo_valor  || '';
+  if(sd) sd.value    = orc.saldo_data   || '';
+  fatAtualizarSinal();
+  fatAtualizarSaldo();
+  // Mostrar diferença NF vs orçamento
+  var diffEl = document.getElementById('fat-nf-diff');
+  if(diffEl && orc.valor_nf){
+    var f = getBDI ? getBDI() : {fator:1,ir:0,dp:0};
+    var vendaOrc = 0;
+    tables.forEach(function(t){
+      var sub=t.rows.reduce(function(a,r){return a+r.total;},0);
+      vendaOrc += sub*f.fator*(1+f.ir);
+    });
+    vendaOrc = vendaOrc*(1-(f.dp||0));
+    var diff = orc.valor_nf - vendaOrc;
+    if(Math.abs(diff) > 1){
+      diffEl.textContent = 'Δ NF vs. Orçamento: R$ '+diff.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+      diffEl.style.color = diff < 0 ? 'var(--red)' : 'var(--ga)';
+    } else {
+      diffEl.textContent = '✓ NF = Orçamento';
+      diffEl.style.color = 'var(--ga)';
+    }
+  }
+}
+
+// Alerta ao gerar OS sem sinal
+function verificarSinalParaOS(){
+  var chk = document.getElementById('fat-sinal-chk');
+  var st = (document.getElementById('orc-status')||{}).value||'';
+  if(['Orçamento Aprovado','Em Produção'].indexOf(st) >= 0 && chk && !chk.checked){
+    return confirm('⚠ Sinal ainda não confirmado neste orçamento.\n\nIniciar produção sem sinal recebido pode comprometer o caixa.\n\nDeseja continuar mesmo assim?');
+  }
+  return true;
+}
 function setSaveStatus(msg,ok){
   var el=document.getElementById('save-status');
   if(el){el.textContent=msg;el.style.color=ok?'var(--green)':'var(--g400)';}
@@ -1953,6 +2184,7 @@ async function salvarOrcamento(){
     nao_inclusos:estado.nao_inclusos,
     condicoes:estado.condicoes,
     estr:estado.estr,
+    cronograma:_cronRows,
     status:estado.header.status||'Em Orçamento',
     escopo:estado.header.escopo||'',
     updated_at:new Date().toISOString()
@@ -2039,6 +2271,8 @@ async function carregarOrcamento(id){
     var numEl=document.querySelector('.doc-num-el');if(numEl&&orc.numero)numEl.textContent=orc.numero;
     var valEl=document.querySelector('.hd-right span[contenteditable]');if(valEl&&orc.validade)valEl.textContent=orc.validade;
     var _stElR=document.getElementById('orc-status');if(_stElR)_stElR.value=orc.status||'Em Orçamento';
+    _cronRows=Array.isArray(orc.cronograma)?orc.cronograma:[];cronInit();
+    fatRestaurar(orc);
     var _escopoR=document.getElementById('escopo-text');if(_escopoR)_escopoR.textContent=orc.escopo||'';
 
     // Restaurar BDI
@@ -3024,6 +3258,20 @@ document.getElementById('dt').textContent=hoje;
 
 // ═══ MANAGER: LISTA / NOVO / NAVEGAÇÃO ═══
 function showEditor(){
+  // Wire status-change listener para recusa
+  setTimeout(function(){
+    var sel=document.getElementById('orc-status');
+    if(sel && !sel._recusaWired){
+      sel._recusaWired=true;
+      sel.addEventListener('change',function(){
+        if(this.value==='Orçamento Recusado'){
+          var estado=coletarEstado();
+          var orc={numero:estado.header.numero,cliente:estado.header.cliente};
+          abrirRecusaModal(this,orc);
+        }
+      });
+    }
+  },300);
   document.getElementById('list-view').style.display='none';
   document.getElementById('editor-view').style.display='block';
 }
@@ -3122,7 +3370,10 @@ function checkVencido(orc){
   return orc.status||'Em Orçamento';
 }
 
-function renderListaOrcamentos(data){
+async function renderListaOrcamentos(data){
+  // Pré-carregar contagens de CRM
+  var numeros = (data||[]).map(function(o){return o.numero||'';}).filter(Boolean);
+  await preCarregarContagens(numeros);
   window._lvOrcamentosCache=data;
   // filtrar por aba ativa
   var isArquivo=_lvTabAtual==='arquivo';
@@ -3144,17 +3395,21 @@ function renderListaOrcamentos(data){
     var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Faturado':'background:#1b5e20;color:#fff','Cancelado':'background:#ffebee;color:#c62828'};
     var statusEfetivo=checkVencido(orc);
     var stCls=stStyles[statusEfetivo]||'background:#e3f2fd;color:#1565c0';
+    var nLogs=countLogs(orc.numero||'');
     item.innerHTML='<div>'
       +'<div class="lv-item-num">'+(orc.numero||'—')+'</div>'
       +'<div class="lv-item-info">'+(orc.cliente||orc.cliente_nome||'—')+' · '+(orc.projeto||'—')+'</div>'
       +'</div>'
-      +'<div style="display:flex;align-items:center;gap:10px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +(nLogs?'<span class="lv-log-count">'+nLogs+' contato'+(nLogs>1?'s':'')+'</span>':'')
+      +'<span class="lv-log-btn">📞</span>'
       +'<span style="'+stCls+';font-size:9px;padding:1px 6px;border-radius:2px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;display:inline-block;">'+statusEfetivo+'</span>'
       +'<span class="lv-item-date">'+dt+'</span>'
       +'<span class="lv-item-del">× remover</span>'
       +'</div>';
     item.onclick=function(e){
       if(e.target.classList.contains('lv-item-del'))return;
+      if(e.target.classList.contains('lv-log-btn')){abrirLogModal(orc);return;}
       carregarOrcamentoEAbrir(orc.id);
     };
     item.querySelector('.lv-item-del').onclick=function(e){
@@ -3202,6 +3457,7 @@ async function gerarProximoNumeroSS(){
 }
 
 async function novoOrcamento(){
+  _cronRows=[];
   // Resetar grupos/tabelas
   var cont=document.getElementById('tables-container');
   cont.innerHTML='';tables=[];tableCounter=0;
@@ -3228,4 +3484,244 @@ async function novoOrcamento(){
 // Boot: sempre inicia na lista
 showListView();
 
-</script></body></html>
+
+// ══════════════════════════════════════
+// CRM — LOG DE CONTATO (Supabase)
+// ══════════════════════════════════════
+var _logOrcAtual = null;
+var _logCountCache = {}; // {numero: count} para exibição na lista
+
+async function loadLogs(numero){
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/crm_interacoes?orcamento_numero=eq.'+encodeURIComponent(numero)+'&order=criado_em.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok) return [];
+    return await r.json();
+  }catch(e){ return []; }
+}
+
+async function saveLog(numero, log){
+  var payload = {
+    orcamento_numero: numero,
+    tipo: log.tipo,
+    data: log.data || null,
+    resultado: log.resultado,
+    proximo: log.proximo || null,
+    proximo_data: log.proximoData || null
+  };
+  await fetch(SUPA_URL+'/rest/v1/crm_interacoes',{
+    method:'POST',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,
+             'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify(payload)
+  });
+  // Atualizar cache
+  _logCountCache[numero] = (_logCountCache[numero]||0) + 1;
+}
+
+function countLogs(numero){
+  return _logCountCache[numero] || 0;
+}
+
+async function preCarregarContagens(numeros){
+  // Carrega contagens de uma vez para exibir na lista sem N+1 queries
+  if(!numeros.length) return;
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/crm_interacoes?select=orcamento_numero&orcamento_numero=in.('+numeros.map(encodeURIComponent).join(',')+')',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok) return;
+    var rows = await r.json();
+    _logCountCache = {};
+    rows.forEach(function(r){ _logCountCache[r.orcamento_numero] = (_logCountCache[r.orcamento_numero]||0)+1; });
+  }catch(e){}
+}
+
+async function abrirLogModal(orc){
+  _logOrcAtual=orc;
+  document.getElementById('log-modal-overlay').classList.add('open');
+  document.getElementById('log-orc-info').textContent=(orc.numero||'')+(orc.cliente?' — '+orc.cliente:'');
+  document.getElementById('log-data').valueAsDate=new Date();
+  document.getElementById('log-resultado').value='';
+  document.getElementById('log-proximo').value='';
+  document.getElementById('log-proximo-data').value='';
+  await renderLogHistorico(orc.numero);
+}
+function fecharLogModal(){
+  document.getElementById('log-modal-overlay').classList.remove('open');
+  _logOrcAtual=null;
+}
+async function renderLogHistorico(numero){
+  var cont=document.getElementById('log-historico');
+  cont.innerHTML='<div style="font-size:11px;color:#9e9e9e;">Carregando...</div>';
+  var logs=await loadLogs(numero);
+  if(!logs.length){cont.innerHTML='<div style="font-size:11px;color:#9e9e9e;">Nenhum contato registrado ainda.</div>';return;}
+  cont.innerHTML='<div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#5a5a5a;margin-bottom:8px;">Histórico</div>'
+    +logs.map(function(l){
+      var dt=l.data?new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR'):'—';
+      return '<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:11px;">'
+        +'<div style="font-weight:600;color:#0f0f0f;">'+l.tipo+' · '+dt+'</div>'
+        +'<div style="color:#5a5a5a;margin-top:2px;">'+l.resultado+'</div>'
+        +(l.proximo?'<div style="color:#52b788;font-size:10px;margin-top:2px;">→ '+l.proximo+(l.proximo_data?' ('+new Date(l.proximo_data+'T00:00:00').toLocaleDateString('pt-BR')+')</div>':'</div>'):'')
+        +'</div>';
+    }).join('');
+}
+async function salvarLog(){
+  if(!_logOrcAtual)return;
+  var tipo=document.getElementById('log-tipo').value;
+  var data=document.getElementById('log-data').value;
+  var resultado=document.getElementById('log-resultado').value.trim();
+  var proximo=document.getElementById('log-proximo').value.trim();
+  var proximoData=document.getElementById('log-proximo-data').value;
+  if(!resultado){alert('Descreva o resultado do contato.');return;}
+  var btnSave=document.querySelector('#log-modal-overlay .log-btn-save');
+  if(btnSave){btnSave.textContent='Salvando...';btnSave.disabled=true;}
+  await saveLog(_logOrcAtual.numero,{tipo:tipo,data:data,resultado:resultado,proximo:proximo,proximoData:proximoData});
+  await renderLogHistorico(_logOrcAtual.numero);
+  if(btnSave){btnSave.textContent='Salvar';btnSave.disabled=false;}
+  document.getElementById('log-resultado').value='';
+  document.getElementById('log-proximo').value='';
+  document.getElementById('log-proximo-data').value='';
+  // Atualizar contador na lista
+  var cache=window._lvOrcamentosCache||[];
+  renderListaOrcamentos(cache);
+}
+
+// ══════════════════════════════════════
+// BLOCO D — MOTIVO DE RECUSA
+// ══════════════════════════════════════
+var _recusaStatusPendente = null;
+var _recusaSelectEl = null;
+var RECUSA_KEY = 'ss_crm_recusas_v1';
+
+function abrirRecusaModal(selectEl, orc){
+  _recusaSelectEl = selectEl;
+  _recusaStatusPendente = orc;
+  document.getElementById('recusa-overlay').classList.add('open');
+  document.getElementById('recusa-orc-info').textContent=(orc.numero||'')+(orc.cliente?' — '+orc.cliente:'');
+  document.querySelectorAll('input[name="recusa-motivo"]').forEach(function(r){r.checked=false;});
+  document.getElementById('recusa-obs').value='';
+}
+function fecharRecusaModal(){
+  document.getElementById('recusa-overlay').classList.remove('open');
+  // Reverter select para valor anterior
+  if(_recusaSelectEl) _recusaSelectEl.value='Proposta Enviada';
+  _recusaStatusPendente=null;_recusaSelectEl=null;
+}
+function confirmarRecusa(){
+  var motivo=document.querySelector('input[name="recusa-motivo"]:checked');
+  if(!motivo){alert('Selecione o motivo da recusa.');return;}
+  var obs=document.getElementById('recusa-obs').value.trim();
+  try{
+    var all=JSON.parse(localStorage.getItem(RECUSA_KEY)||'{}');
+    if(_recusaStatusPendente){
+      all[_recusaStatusPendente.numero]={motivo:motivo.value,obs:obs,data:new Date().toISOString()};
+      localStorage.setItem(RECUSA_KEY,JSON.stringify(all));
+    }
+  }catch(e){}
+  document.getElementById('recusa-overlay').classList.remove('open');
+  _recusaStatusPendente=null;_recusaSelectEl=null;
+  // O status já foi mudado pelo select antes de abrir o modal — só salvar
+  salvarOrcamento();
+}
+
+
+// ══════════════════════════════════════
+// CRONOGRAMA DE RECEBIMENTO
+// ══════════════════════════════════════
+var _cronRows=[];
+function cronAddRow(desc,pct,data){
+  _cronRows.push({id:(Date.now()+Math.random()).toString(36),desc:desc||'',pct:pct||'',data:data||''});
+  renderCronRows();
+}
+function cronDelRow(id){_cronRows=_cronRows.filter(function(r){return r.id!==id;});renderCronRows();}
+function cronUpdate(id,field,val){var r=_cronRows.find(function(r){return r.id===id;});if(r){r[field]=val;renderCronRows();}}
+function renderCronRows(){
+  var cont=document.getElementById('cron-rows');if(!cont)return;
+  var f=getBDI?getBDI():{fator:1,ir:0,dp:0};
+  var vt=0;
+  tables.forEach(function(t){var s=t.rows.reduce(function(a,r){return a+r.total;},0);var g=s*f.fator;vt+=(g+g*f.ir);});
+  vt=vt*(1-(f.dp||0));
+  cont.innerHTML='';
+  _cronRows.forEach(function(row){
+    var vp=vt*(parseFloat(row.pct)||0)/100;
+    var div=document.createElement('div');div.className='cron-row';
+    div.innerHTML='<input class="cron-inp" placeholder="Parcela" value="'+row.desc+'" oninput="cronUpdate(''+row.id+'','desc',this.value)" style="width:110px;">'
+      +'<input class="cron-pct" type="number" placeholder="%" value="'+row.pct+'" oninput="cronUpdate(''+row.id+'','pct',this.value)">'
+      +'<input class="cron-inp" type="date" value="'+row.data+'" oninput="cronUpdate(''+row.id+'','data',this.value)" style="width:120px;">'
+      +'<span class="cron-val">'+(vp>0?'≈ R$ '+vp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</span>'
+      +'<span class="cron-del" onclick="cronDelRow(''+row.id+'')">×</span>';
+    cont.appendChild(div);
+  });
+  var tp=_cronRows.reduce(function(a,r){return a+(parseFloat(r.pct)||0);},0);
+  var el=document.getElementById('cron-total');
+  if(el)el.textContent=tp.toFixed(0)+'% coberto'+(Math.abs(tp-100)<0.1?' ✓':(tp>100?' ⚠ Acima de 100%':' — faltam '+(100-tp).toFixed(0)+'%'));
+}
+function cronInit(){
+  if(!_cronRows.length){cronAddRow('Sinal (aprovação)','50','');cronAddRow('Saldo (entrega)','50','');}
+  else renderCronRows();
+}
+
+</script>
+<!-- LOG DE CONTATO -->
+<div class="log-modal-overlay" id="log-modal-overlay">
+  <div class="log-modal">
+    <h3>📞 Registrar Contato</h3>
+    <div id="log-orc-info" style="font-size:11px;color:#9e9e9e;margin-bottom:12px;font-family:'DM Mono',monospace;"></div>
+    <div class="log-fl">
+      <label>Tipo de Contato</label>
+      <select id="log-tipo">
+        <option>WhatsApp</option><option>Ligação</option>
+        <option>E-mail</option><option>Reunião</option><option>Visita</option>
+      </select>
+    </div>
+    <div class="log-fl">
+      <label>Data</label>
+      <input type="date" id="log-data">
+    </div>
+    <div class="log-fl">
+      <label>Resultado / O que foi dito</label>
+      <textarea id="log-resultado" placeholder="Ex: Cliente pediu prazo de 3 dias para retornar. Confirmou interesse."></textarea>
+    </div>
+    <div class="log-fl">
+      <label>Próximo Passo</label>
+      <input type="text" id="log-proximo" placeholder="Ex: Ligar segunda às 10h">
+    </div>
+    <div class="log-fl">
+      <label>Data do Próximo Contato</label>
+      <input type="date" id="log-proximo-data">
+    </div>
+    <div class="log-btn-row">
+      <button class="log-btn-cancel" onclick="fecharLogModal()">Cancelar</button>
+      <button class="log-btn-save" onclick="salvarLog()">Salvar</button>
+    </div>
+    <div id="log-historico" style="margin-top:16px;border-top:1px solid #e8e8e8;padding-top:12px;max-height:200px;overflow-y:auto;"></div>
+  </div>
+</div>
+
+<!-- MODAL MOTIVO RECUSA -->
+<div class="recusa-overlay" id="recusa-overlay">
+  <div class="recusa-modal">
+    <h3>✗ Motivo da Recusa</h3>
+    <div id="recusa-orc-info" style="font-size:11px;color:#9e9e9e;margin-bottom:12px;"></div>
+    <div class="recusa-opts">
+      <label><input type="radio" name="recusa-motivo" value="Preço alto"> Preço alto / fora do orçamento</label>
+      <label><input type="radio" name="recusa-motivo" value="Prazo"> Prazo incompatível</label>
+      <label><input type="radio" name="recusa-motivo" value="Concorrente"> Optou por outro fornecedor</label>
+      <label><input type="radio" name="recusa-motivo" value="Projeto cancelado"> Projeto cancelado pelo cliente</label>
+      <label><input type="radio" name="recusa-motivo" value="Sem resposta"> Sem resposta / perdeu contato</label>
+      <label><input type="radio" name="recusa-motivo" value="Outro"> Outro</label>
+    </div>
+    <div class="log-fl" style="margin-top:10px;">
+      <label>Observação (opcional)</label>
+      <input type="text" id="recusa-obs" placeholder="Detalhes adicionais">
+    </div>
+    <div class="log-btn-row">
+      <button class="log-btn-cancel" onclick="fecharRecusaModal()">Cancelar</button>
+      <button class="log-btn-save" style="background:#c62828;" onclick="confirmarRecusa()">Confirmar Recusa</button>
+    </div>
+  </div>
+</div>
+
+</body></html>
