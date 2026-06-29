@@ -654,6 +654,28 @@ function renderLista(){
   });
 }
 
+async function toggleConciliado(id, atual, btn){
+  var novoVal = !atual;
+  var dataConc = novoVal ? new Date().toISOString() : null;
+  btn.disabled = true;
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({conciliado:novoVal, data_conciliacao:dataConc})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    lancamentosCache=lancamentosCache.map(function(l){
+      if(l.id===id){l.conciliado=novoVal;l.data_conciliacao=dataConc;}
+      return l;
+    });
+    renderLista();
+  }catch(e){
+    alert('Erro ao atualizar: '+e.message);
+    btn.disabled=false;
+  }
+}
+
 async function deletarLancamento(id,el){
   if(!confirm('Remover este lançamento?'))return;
   await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
