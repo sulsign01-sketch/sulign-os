@@ -1006,16 +1006,7 @@ function printOS(id){
     +(os.observacoes?'<div class="obs">'+os.observacoes+'</div>':'')
     +'<div class="srow"><div class="si">Responsável pela execução</div><div class="si">Conferência / Qualidade</div><div class="si">Retirada / Entrega</div></div>'
     +'<div style="text-align:center;padding:12px;"><button onclick="window.print()" style="padding:8px 24px;background:#2d6a4f;color:white;border:none;border-radius:2px;cursor:pointer;font-family:DM Sans,sans-serif;font-weight:600;font-size:12px;">🖨 Imprimir</button></div>'
-    +'
-<div id="view-job" style="display:none;max-width:1020px;margin:0 auto;">
-  <div style="padding:12px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-    <span style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);">Jobs com OS abertas</span>
-    <input type="text" id="job-search" placeholder="Buscar SS-número ou cliente..." oninput="renderJobView()"
-      style="border:1.5px solid var(--g200);border-radius:2px;padding:5px 8px;font-size:12px;outline:none;flex:1;max-width:300px;">
-    <button onclick="setView('lista')" style="font-size:11px;color:var(--g400);background:none;border:1px solid var(--g200);padding:4px 10px;border-radius:2px;cursor:pointer;">← Voltar à lista</button>
-  </div>
-  <div class="job-view-wrap" id="job-view-body"><div style="text-align:center;padding:40px;color:var(--g400);">Carregando...</div></div>
-</div>
+    +'<div id="view-job" style="display:none;max-width:1020px;margin:0 auto;"><div style="padding:12px 20px;border-bottom:1px solid var(--g200);display:flex;align-items:center;gap:10px;flex-wrap:wrap;"><span style="font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);">Jobs com OS abertas</span><input type="text" id="job-search" placeholder="Buscar SS-número ou cliente..." oninput="renderJobView()" style="border:1.5px solid var(--g200);border-radius:2px;padding:5px 8px;font-size:12px;outline:none;flex:1;max-width:300px;"><button onclick="setView(\'lista\')" style="font-size:11px;color:var(--g400);background:none;border:1px solid var(--g200);padding:4px 10px;border-radius:2px;cursor:pointer;">← Voltar à lista</button></div><div class="job-view-wrap" id="job-view-body"><div style="text-align:center;padding:40px;color:var(--g400);">Carregando...</div></div></div>'
 
 </body></html>');
   win.document.close();
