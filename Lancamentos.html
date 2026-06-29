@@ -131,6 +131,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="tab" id="tab-impostos" onclick="setTab('impostos')" style="color:#c62828;">Impostos</div>
     <div class="tab" id="tab-nf" onclick="setTab('nf')" style="color:var(--ga);">NF Emitidas</div>
     <div class="tab" id="tab-aportes" onclick="setTab('aportes')" style="color:#7e57c2;">💰 Aportes</div>
+    <div class="tab" id="tab-pagar" onclick="setTab('pagar')" style="color:#c62828;">📤 A Pagar</div>
+    <div class="tab" id="tab-receber" onclick="setTab('receber')" style="color:#2e7d32;">📥 A Receber</div>
   </div>
 
   <div id="view-novo" class="sec">
@@ -188,6 +190,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="fl" style="display:flex;align-items:center;gap:8px;">
       <input type="checkbox" id="f-tem-nota" checked style="width:auto;">
       <label style="margin:0;text-transform:none;font-size:12px;color:#333;">Possui nota fiscal</label>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Tipo de Lançamento</label>
+        <select id="f-tipo-lancamento">
+          <option value="saida">💸 Saída (Custo / Despesa)</option>
+          <option value="entrada">💰 Entrada (Reembolso / Receita extra)</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Periodicidade</label>
+        <select id="f-periodicidade">
+          <option value="unica">Única (pontual)</option>
+          <option value="mensal">Mensal</option>
+          <option value="quinzenal">Quinzenal</option>
+          <option value="semanal">Semanal</option>
+          <option value="anual">Anual</option>
+        </select>
+      </div>
+    </div>
+    <div class="fl" id="f-vencimento-wrap" style="display:none;">
+      <label>Próximo Vencimento</label>
+      <input type="date" id="f-vencimento">
     </div>
     <button class="btn" id="btn-salvar" onclick="salvarLancamento()">Salvar Lançamento</button>
     <div class="status" id="status">—</div>
@@ -281,6 +306,29 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
         <label>Mês Ref.</label>
         <input type="text" id="ff-mes" placeholder="Ex: Jun/2026">
       </div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Tipo</label>
+        <select id="ff-tipo">
+          <option value="saida">💸 Saída (Despesa)</option>
+          <option value="entrada">💰 Entrada (Receita Fixa)</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Periodicidade</label>
+        <select id="ff-periodicidade">
+          <option value="mensal">Mensal</option>
+          <option value="anual">Anual</option>
+          <option value="trimestral">Trimestral</option>
+          <option value="semestral">Semestral</option>
+          <option value="unica">Única</option>
+        </select>
+      </div>
+    </div>
+    <div class="fl">
+      <label>Vencimento / Próxima Data</label>
+      <input type="date" id="ff-vencimento">
     </div>
     <button class="btn" id="btn-salvar-fixa" onclick="salvarDespesaFixa()">Salvar</button>
     <div class="status" id="status-fixa">—</div>
@@ -472,6 +520,84 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
   </div>
 
+  <!-- A PAGAR -->
+  <div id="view-pagar" class="sec" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e8;margin-bottom:16px;">
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">VENCE EM 7 DIAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#c62828;" id="pp-7d">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">VENCE EM 30 DIAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#e65100;" id="pp-30d">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">TOTAL PENDENTE</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#333;" id="pp-total">—</div></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#c62828;margin-bottom:12px;">+ Nova Conta a Pagar</div>
+    <div class="row2">
+      <div class="fl"><label>Descrição</label><input type="text" id="pp-desc" placeholder="Ex: Aluguel galpão, DARF, Fornecedor X"></div>
+      <div class="fl"><label>Favorecido</label><input type="text" id="pp-fav" placeholder="Ex: Locadora Silva, Receita Federal"></div>
+    </div>
+    <div class="row2">
+      <div class="fl"><label>Valor (R$)</label><input type="number" id="pp-valor" step="0.01" placeholder="0,00"></div>
+      <div class="fl"><label>Vencimento</label><input type="date" id="pp-venc"></div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Categoria</label>
+        <select id="pp-cat">
+          <option>Fornecedor</option><option>Imposto</option><option>Aluguel</option>
+          <option>Serviço</option><option>Folha</option><option>Logística</option><option>Outros</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Periodicidade</label>
+        <select id="pp-per">
+          <option value="unica">Única</option><option value="mensal">Mensal</option>
+          <option value="trimestral">Trimestral</option><option value="anual">Anual</option>
+        </select>
+      </div>
+    </div>
+    <div class="fl"><label>Observação</label><input type="text" id="pp-obs" placeholder="Número do boleto, chave PIX, condições..."></div>
+    <button class="btn" onclick="salvarContaPagar()" id="btn-pp" style="background:#c62828;">Salvar Conta a Pagar</button>
+    <div class="status" id="status-pp">—</div>
+    <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;" id="pp-lista-wrap">
+      <div id="pp-body"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- A RECEBER -->
+  <div id="view-receber" class="sec" style="display:none;">
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e8;margin-bottom:16px;">
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">VENCE EM 7 DIAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#1b5e20;" id="pr-7d">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">VENCE EM 30 DIAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#2e7d32;" id="pr-30d">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">TOTAL A RECEBER</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#333;" id="pr-total">—</div></div>
+    </div>
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#2e7d32;margin-bottom:12px;">+ Nova Conta a Receber</div>
+    <div class="row2">
+      <div class="fl"><label>Descrição</label><input type="text" id="pr-desc" placeholder="Ex: Saldo job SS-2026_06-43, Aluguel equipamento"></div>
+      <div class="fl"><label>Devedor / Cliente</label><input type="text" id="pr-dev" placeholder="Ex: PRIO, Eduardo Guedes"></div>
+    </div>
+    <div class="row2">
+      <div class="fl"><label>Valor (R$)</label><input type="number" id="pr-valor" step="0.01" placeholder="0,00"></div>
+      <div class="fl"><label>Vencimento / Previsão</label><input type="date" id="pr-venc"></div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Categoria</label>
+        <select id="pr-cat">
+          <option>Saldo de Job</option><option>Sinal</option><option>Devolução</option>
+          <option>Aporte</option><option>Outros</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>SS Vinculado (opcional)</label>
+        <input type="text" id="pr-ss" placeholder="Ex: SS-2026_06-43">
+      </div>
+    </div>
+    <div class="fl"><label>Observação</label><input type="text" id="pr-obs" placeholder="Condições, contato, comprovante..."></div>
+    <button class="btn" onclick="salvarContaReceber()" id="btn-pr" style="background:#2e7d32;">Salvar Conta a Receber</button>
+    <div class="status" id="status-pr">—</div>
+    <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;" id="pr-lista-wrap">
+      <div id="pr-body"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+
 <script>
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
@@ -483,7 +609,7 @@ var jobSelecionado=null;
 function fmt(v){return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 function setTab(t){
-  ['novo','lista','fixas','impostos','nf','aportes'].forEach(function(n){
+  ['novo','lista','fixas','impostos','nf','aportes','pagar','receber'].forEach(function(n){
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('view-'+n).style.display=t===n?'block':'none';
   });
@@ -492,6 +618,8 @@ function setTab(t){
   if(t==='impostos')carregarImpostos();
   if(t==='nf')carregarNF();
   if(t==='aportes')carregarAportes();
+  if(t==='pagar')carregarContasPagar();
+  if(t==='receber')carregarContasReceber();
 }
 
 // localStorage autocomplete helpers (últimos 8)
@@ -599,11 +727,15 @@ async function salvarLancamento(){
   processarComprovante(async function(comprovanteB64){
     try{
       var temNota=document.getElementById('f-tem-nota').checked;
+      var tipoLanc=document.getElementById('f-tipo-lancamento').value;
+      var periodicidade=document.getElementById('f-periodicidade').value;
+      var vencimento=document.getElementById('f-vencimento').value||null;
       var payload={
         orcamento_numero:jobSelecionado.numero,
         pessoa:pessoa,funcao:funcao,categoria:categoria,
         data:data,fornecedor:fornecedor,descricao:descricao,valor:valor,
-        comprovante:comprovanteB64,tem_nota:temNota
+        comprovante:comprovanteB64,tem_nota:temNota,
+        tipo_lancamento:tipoLanc,periodicidade:periodicidade,vencimento:vencimento
       };
       var r=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
         method:'POST',
@@ -1175,6 +1307,229 @@ async function deletarAporte(btnEl){
   aportesCache = aportesCache.filter(function(a){return a.id!==id;});
   if(el) el.parentNode.removeChild(el);
   renderAportes();
+}
+
+
+// ══════════════════════════════════════════════════════
+// TOGGLE VENCIMENTO quando periodicidade != única
+// ══════════════════════════════════════════════════════
+document.getElementById('f-periodicidade').addEventListener('change',function(){
+  document.getElementById('f-vencimento-wrap').style.display=this.value!=='unica'?'block':'none';
+});
+
+// ══════════════════════════════════════════════════════
+// CONTAS A PAGAR
+// ══════════════════════════════════════════════════════
+var contasPagarCache=[];
+
+async function salvarContaPagar(){
+  var btn=document.getElementById('btn-pp');
+  var st=document.getElementById('status-pp');
+  var desc=document.getElementById('pp-desc').value.trim();
+  var fav=document.getElementById('pp-fav').value.trim();
+  var valor=parseFloat(document.getElementById('pp-valor').value)||0;
+  var venc=document.getElementById('pp-venc').value;
+  var cat=document.getElementById('pp-cat').value;
+  var per=document.getElementById('pp-per').value;
+  var obs=document.getElementById('pp-obs').value.trim();
+  if(!desc||!valor||!venc){st.textContent='✗ Preencha descrição, valor e vencimento.';st.className='status err';return;}
+  btn.disabled=true;st.textContent='Salvando...';st.className='status';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({descricao:desc,favorecido:fav,valor:valor,vencimento:venc,categoria:cat,periodicidade:per,observacao:obs,status:'Pendente'})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status+' — '+await r.text());
+    st.textContent='✓ Salvo!';st.className='status ok';
+    ['pp-desc','pp-fav','pp-valor','pp-obs'].forEach(function(id){document.getElementById(id).value='';});
+    carregarContasPagar();
+  }catch(e){st.textContent='✗ '+e.message;st.className='status err';}
+  btn.disabled=false;
+}
+
+async function carregarContasPagar(){
+  var body=document.getElementById('pp-body');
+  body.innerHTML='<div class="empty">Carregando...</div>';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&order=vencimento.asc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    contasPagarCache=Array.isArray(data)?data.filter(function(c){return c.status!=='Pago';}):[]; 
+    renderContasPagar();
+  }catch(e){body.innerHTML='<div class="empty" style="color:#c62828;">Erro: '+e.message+'</div>';}
+}
+
+function renderContasPagar(){
+  var body=document.getElementById('pp-body');
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var d7=new Date(hoje);d7.setDate(d7.getDate()+7);
+  var d30=new Date(hoje);d30.setDate(d30.getDate()+30);
+  var tot=0,tot7=0,tot30=0;
+  contasPagarCache.forEach(function(c){
+    var v=parseFloat(c.valor)||0;
+    tot+=v;
+    if(c.vencimento){
+      var dv=new Date(c.vencimento+'T12:00:00');
+      if(dv<=d7)tot7+=v;
+      if(dv<=d30)tot30+=v;
+    }
+  });
+  document.getElementById('pp-7d').textContent=fmt(tot7);
+  document.getElementById('pp-30d').textContent=fmt(tot30);
+  document.getElementById('pp-total').textContent=fmt(tot);
+  if(!contasPagarCache.length){body.innerHTML='<div class="empty">Nenhuma conta a pagar pendente.</div>';return;}
+  body.innerHTML='';
+  contasPagarCache.forEach(function(c){
+    var vv=parseFloat(c.valor)||0;
+    var dv=c.vencimento?new Date(c.vencimento+'T12:00:00'):null;
+    var vencStr=dv?dv.toLocaleDateString('pt-BR'):'—';
+    var atrasado=dv&&dv<hoje;
+    var urgente=dv&&dv<=d7&&dv>=hoje;
+    var bord=atrasado?'#c62828':urgente?'#e65100':'#e0e0e0';
+    var perBadge=c.periodicidade&&c.periodicidade!=='unica'?'<span class="tag-per">'+c.periodicidade+'</span>':'';
+    var div=document.createElement('div');
+    div.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-left:3px solid '+bord+';border-bottom:1px solid #f0f0f0;gap:12px;';
+    div.innerHTML='<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.descricao||'—')+perBadge+'</div>'
+      +'<div style="font-size:11px;color:#777;margin-top:2px;">'+(c.categoria||'—')+(c.favorecido?' · '+c.favorecido:'')+(c.observacao?' · '+c.observacao:'')+'</div>'
+      +'<div style="font-size:10px;color:'+(atrasado?'#c62828':urgente?'#e65100':'#999')+';margin-top:3px;">'+(atrasado?'⚠ ATRASADO':'Vence')+' '+vencStr+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+      +'<span style="font-family:DM Mono,monospace;font-weight:700;color:#c62828;">'+fmt(vv)+'</span>'
+      +'<button onclick="pagarConta(''+c.id+'')" style="font-size:10px;padding:2px 8px;border:1px solid #2e7d32;border-radius:2px;background:#e8f5e9;color:#1b5e20;cursor:pointer;">✓ Pagar</button>'
+      +'<span style="font-size:10px;color:#c62828;cursor:pointer;" onclick="deletarContaPagar(''+c.id+'',this.parentNode.parentNode)">× remover</span>'
+      +'</div>';
+    body.appendChild(div);
+  });
+}
+
+async function pagarConta(id){
+  if(!confirm('Marcar como Pago?'))return;
+  await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({status:'Pago',data_pagamento:new Date().toISOString().split('T')[0]})
+  });
+  contasPagarCache=contasPagarCache.filter(function(c){return c.id!==id;});
+  renderContasPagar();
+}
+
+async function deletarContaPagar(id,el){
+  if(!confirm('Remover esta conta?'))return;
+  await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  if(el)el.remove();
+  contasPagarCache=contasPagarCache.filter(function(c){return c.id!==id;});
+  renderContasPagar();
+}
+
+// ══════════════════════════════════════════════════════
+// CONTAS A RECEBER
+// ══════════════════════════════════════════════════════
+var contasReceberCache=[];
+
+async function salvarContaReceber(){
+  var btn=document.getElementById('btn-pr');
+  var st=document.getElementById('status-pr');
+  var desc=document.getElementById('pr-desc').value.trim();
+  var dev=document.getElementById('pr-dev').value.trim();
+  var valor=parseFloat(document.getElementById('pr-valor').value)||0;
+  var venc=document.getElementById('pr-venc').value;
+  var cat=document.getElementById('pr-cat').value;
+  var ss=document.getElementById('pr-ss').value.trim();
+  var obs=document.getElementById('pr-obs').value.trim();
+  if(!desc||!valor||!venc){st.textContent='✗ Preencha descrição, valor e vencimento.';st.className='status err';return;}
+  btn.disabled=true;st.textContent='Salvando...';st.className='status';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_receber',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({descricao:desc,devedor:dev,valor:valor,vencimento:venc,categoria:cat,orcamento_numero:ss||null,observacao:obs,status:'Pendente'})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status+' — '+await r.text());
+    st.textContent='✓ Salvo!';st.className='status ok';
+    ['pr-desc','pr-dev','pr-valor','pr-ss','pr-obs'].forEach(function(id){document.getElementById(id).value='';});
+    carregarContasReceber();
+  }catch(e){st.textContent='✗ '+e.message;st.className='status err';}
+  btn.disabled=false;
+}
+
+async function carregarContasReceber(){
+  var body=document.getElementById('pr-body');
+  body.innerHTML='<div class="empty">Carregando...</div>';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_receber?select=*&order=vencimento.asc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    contasReceberCache=Array.isArray(data)?data.filter(function(c){return c.status!=='Recebido';}):[]; 
+    renderContasReceber();
+  }catch(e){body.innerHTML='<div class="empty" style="color:#c62828;">Erro: '+e.message+'</div>';}
+}
+
+function renderContasReceber(){
+  var body=document.getElementById('pr-body');
+  var hoje=new Date();hoje.setHours(0,0,0,0);
+  var d7=new Date(hoje);d7.setDate(d7.getDate()+7);
+  var d30=new Date(hoje);d30.setDate(d30.getDate()+30);
+  var tot=0,tot7=0,tot30=0;
+  contasReceberCache.forEach(function(c){
+    var v=parseFloat(c.valor)||0;
+    tot+=v;
+    if(c.vencimento){
+      var dv=new Date(c.vencimento+'T12:00:00');
+      if(dv<=d7)tot7+=v;
+      if(dv<=d30)tot30+=v;
+    }
+  });
+  document.getElementById('pr-7d').textContent=fmt(tot7);
+  document.getElementById('pr-30d').textContent=fmt(tot30);
+  document.getElementById('pr-total').textContent=fmt(tot);
+  if(!contasReceberCache.length){body.innerHTML='<div class="empty">Nenhuma conta a receber pendente.</div>';return;}
+  body.innerHTML='';
+  contasReceberCache.forEach(function(c){
+    var vv=parseFloat(c.valor)||0;
+    var dv=c.vencimento?new Date(c.vencimento+'T12:00:00'):null;
+    var vencStr=dv?dv.toLocaleDateString('pt-BR'):'—';
+    var atrasado=dv&&dv<hoje;
+    var proximo=dv&&dv<=d7&&dv>=hoje;
+    var bord=atrasado?'#e65100':proximo?'#1b5e20':'#c8e6c9';
+    var div=document.createElement('div');
+    div.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-left:3px solid '+bord+';border-bottom:1px solid #f0f0f0;gap:12px;';
+    div.innerHTML='<div style="flex:1;min-width:0;">'
+      +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.descricao||'—')+(c.orcamento_numero?'<span style="font-family:DM Mono,monospace;font-size:10px;color:#5a5a5a;margin-left:6px;">'+c.orcamento_numero+'</span>':'')+'</div>'
+      +'<div style="font-size:11px;color:#777;margin-top:2px;">'+(c.categoria||'—')+(c.devedor?' · '+c.devedor:'')+(c.observacao?' · '+c.observacao:'')+'</div>'
+      +'<div style="font-size:10px;color:'+(atrasado?'#e65100':proximo?'#1b5e20':'#999')+';margin-top:3px;">'+(atrasado?'⚠ EM ATRASO':'Vence')+' '+vencStr+'</div>'
+      +'</div>'
+      +'<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
+      +'<span style="font-family:DM Mono,monospace;font-weight:700;color:#1b5e20;">'+fmt(vv)+'</span>'
+      +'<button onclick="receberConta(''+c.id+'')" style="font-size:10px;padding:2px 8px;border:1px solid #1565c0;border-radius:2px;background:#e3f2fd;color:#0d47a1;cursor:pointer;">✓ Recebido</button>'
+      +'<span style="font-size:10px;color:#c62828;cursor:pointer;" onclick="deletarContaReceber(''+c.id+'',this.parentNode.parentNode)">× remover</span>'
+      +'</div>';
+    body.appendChild(div);
+  });
+}
+
+async function receberConta(id){
+  if(!confirm('Marcar como Recebido?'))return;
+  await fetch(SUPA_URL+'/rest/v1/contas_receber?id=eq.'+id,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({status:'Recebido',data_recebimento:new Date().toISOString().split('T')[0]})
+  });
+  contasReceberCache=contasReceberCache.filter(function(c){return c.id!==id;});
+  renderContasReceber();
+}
+
+async function deletarContaReceber(id,el){
+  if(!confirm('Remover esta conta?'))return;
+  await fetch(SUPA_URL+'/rest/v1/contas_receber?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  if(el)el.remove();
+  contasReceberCache=contasReceberCache.filter(function(c){return c.id!==id;});
+  renderContasReceber();
 }
 
 </script>
