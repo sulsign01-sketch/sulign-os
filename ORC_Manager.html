@@ -3370,10 +3370,7 @@ function checkVencido(orc){
   return orc.status||'Em Orçamento';
 }
 
-async function renderListaOrcamentos(data){
-  // Pré-carregar contagens de CRM
-  var numeros = (data||[]).map(function(o){return o.numero||'';}).filter(Boolean);
-  await preCarregarContagens(numeros);
+function renderListaOrcamentos(data){
   window._lvOrcamentosCache=data;
   // filtrar por aba ativa
   var isArquivo=_lvTabAtual==='arquivo';
@@ -3524,18 +3521,20 @@ function countLogs(numero){
   return _logCountCache[numero] || 0;
 }
 
-async function preCarregarContagens(numeros){
-  // Carrega contagens de uma vez para exibir na lista sem N+1 queries
-  if(!numeros.length) return;
-  try{
-    var r = await fetch(SUPA_URL+'/rest/v1/crm_interacoes?select=orcamento_numero&orcamento_numero=in.('+numeros.map(encodeURIComponent).join(',')+')',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
-    });
-    if(!r.ok) return;
-    var rows = await r.json();
-    _logCountCache = {};
-    rows.forEach(function(r){ _logCountCache[r.orcamento_numero] = (_logCountCache[r.orcamento_numero]||0)+1; });
-  }catch(e){}
+// Contagens CRM: carregadas em background, não bloqueiam a lista
+function preCarregarContagens(numeros){
+  if(!numeros||!numeros.length) return;
+  fetch(SUPA_URL+'/rest/v1/crm_interacoes?select=orcamento_numero&orcamento_numero=in.('+numeros.map(encodeURIComponent).join(',')+')',{
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+  }).then(function(r){ return r.ok?r.json():[] ;})
+    .then(function(rows){
+      if(!Array.isArray(rows)) return;
+      _logCountCache={};
+      rows.forEach(function(r){ _logCountCache[r.orcamento_numero]=(_logCountCache[r.orcamento_numero]||0)+1; });
+      // Atualizar badges de contagem na lista se ainda visível
+      var cache=window._lvOrcamentosCache||[];
+      if(cache.length) renderListaOrcamentos(cache);
+    }).catch(function(){});
 }
 
 async function abrirLogModal(orc){
