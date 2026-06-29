@@ -19,7 +19,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 .hd-nav a{color:var(--g400);text-decoration:none;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-left:18px}
 .hd-nav a:hover{color:var(--white)}
 .ab{height:3px;background:var(--ga)}
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g200)}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--g200)}
 .kpi{background:var(--white);padding:16px 20px}
 .kpi-l{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:6px}
 .kpi-v{font-family:'DM Mono',monospace;font-size:20px;font-weight:600;color:var(--black)}
@@ -76,6 +76,87 @@ tr:hover td{background:var(--g100)}
 .filter-count{font-size:10px;color:var(--g400);margin-left:auto;}
 .filter-clear{font-size:11px;color:var(--ga);cursor:pointer;padding:6px 10px;border:1.5px solid var(--ga);border-radius:2px;background:none;font-family:inherit;}
 .filter-clear:hover{background:var(--ga);color:var(--white);}
+
+/* ── Pipeline ── */
+.pipe-wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--g200);}
+.pipe-col{background:var(--white);padding:14px 16px;}
+.pipe-col-hd{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;}
+.pipe-col-total{font-family:'DM Mono',monospace;font-size:13px;font-weight:600;color:var(--black);}
+.pipe-item{padding:7px 0;border-bottom:1px solid var(--g200);font-size:11px;}
+.pipe-item:last-child{border-bottom:none;}
+.pipe-item-num{font-family:'DM Mono',monospace;font-size:10px;color:var(--green);font-weight:600;}
+.pipe-item-cli{color:var(--g600);font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pipe-item-val{font-family:'DM Mono',monospace;font-size:11px;font-weight:600;color:var(--black);}
+.pipe-empty{color:var(--g400);font-size:11px;padding:8px 0;}
+.pipe-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:5px;}
+
+/* ── Previsão de Caixa ── */
+.caixa-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
+.caixa-card{border:1.5px solid var(--g200);border-radius:3px;padding:12px 14px;}
+.caixa-card-tit{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:10px;}
+.caixa-row{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid var(--g200);font-size:11px;}
+.caixa-row:last-child{border-bottom:none;}
+.caixa-row-lbl{color:var(--g600);}
+.caixa-row-val{font-family:'DM Mono',monospace;font-weight:600;}
+.caixa-saldo{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:2px solid var(--g200);}
+.caixa-saldo-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--g600);}
+.caixa-saldo-val{font-family:'DM Mono',monospace;font-size:15px;font-weight:600;}
+
+/* ── Alertas ── */
+.alert-list{display:flex;flex-direction:column;gap:6px;}
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:3px;font-size:12px;}
+.alert-item.red{background:#ffebee;border-left:3px solid var(--red);}
+.alert-item.ylw{background:#fff8e1;border-left:3px solid var(--ylwb);}
+.alert-item.grn{background:#e8f5e9;border-left:3px solid var(--ga);}
+.alert-icon{font-size:14px;flex-shrink:0;margin-top:1px;}
+.alert-body{flex:1;}
+.alert-title{font-weight:600;color:var(--black);margin-bottom:2px;}
+.alert-sub{font-size:10px;color:var(--g600);}
+.alert-empty{color:var(--g400);font-size:12px;padding:12px 0;}
+
+/* Métricas Comerciais */
+.met-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:0;}
+.met-card{border:1.5px solid var(--g200);border-radius:3px;padding:14px 16px;}
+.met-card-tit{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:12px;}
+.met-funil{display:flex;flex-direction:column;gap:4px;}
+.met-funil-row{display:flex;align-items:center;gap:8px;font-size:11px;}
+.met-funil-bar-wrap{flex:1;background:var(--g200);border-radius:2px;height:8px;overflow:hidden;}
+.met-funil-bar{height:8px;border-radius:2px;transition:width .4s;}
+.met-funil-lbl{min-width:110px;color:var(--g600);}
+.met-funil-val{min-width:30px;text-align:right;font-family:'DM Mono',monospace;font-weight:600;font-size:10px;}
+.met-ranking-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--g200);font-size:11px;}
+.met-ranking-row:last-child{border-bottom:none;}
+.met-ranking-pos{color:var(--g400);font-size:10px;min-width:16px;}
+.met-ranking-nome{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px;}
+.met-ranking-val{font-family:'DM Mono',monospace;font-weight:600;font-size:11px;color:var(--green);}
+.met-conv-pct{font-family:'DM Mono',monospace;font-size:22px;font-weight:600;color:var(--green);text-align:center;padding:8px 0;}
+.met-conv-sub{font-size:10px;color:var(--g400);text-align:center;}
+
+.dre-wrap{font-size:12px;}
+.dre-row{display:flex;justify-content:space-between;align-items:center;padding:6px 12px;border-bottom:1px solid var(--g200);}
+.dre-row.hd{background:var(--black);color:var(--white);font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.dre-row.total{background:var(--g100);font-weight:700;}
+.dre-row.subtot{font-weight:600;}
+.dre-lbl{flex:1;color:var(--g600);}
+.dre-lbl.indent{padding-left:16px;}
+.dre-val{font-family:'DM Mono',monospace;font-weight:600;min-width:110px;text-align:right;}
+.dre-pct{font-size:10px;color:var(--g400);min-width:50px;text-align:right;padding-left:8px;}
+.forn-card{border:1.5px solid var(--g200);border-radius:3px;padding:14px 16px;margin-bottom:10px;}
+.forn-card-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+.forn-nome{font-weight:600;font-size:13px;}
+.forn-vol{font-family:'DM Mono',monospace;font-size:13px;color:var(--green);font-weight:600;}
+.forn-stats{display:flex;gap:16px;font-size:11px;color:var(--g600);}
+.forn-stat-val{font-family:'DM Mono',monospace;font-weight:600;color:var(--black);}
+
+.ciclo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--g200);margin-bottom:14px;}
+.ciclo-kpi{background:var(--white);padding:12px 14px;}
+.ciclo-kpi-l{font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g600);margin-bottom:4px;}
+.ciclo-kpi-v{font-family:'DM Mono',monospace;font-size:18px;font-weight:600;}
+.reativ-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--g200);font-size:11px;}
+.reativ-row:last-child{border-bottom:none;}
+.reativ-nome{flex:1;font-weight:600;}
+.reativ-dias{font-family:'DM Mono',monospace;font-size:10px;color:var(--red);margin-left:6px;}
+.reativ-ult{font-size:10px;color:var(--g400);}
 .loading{text-align:center;padding:40px;color:var(--g400)}
 .err{text-align:center;padding:40px;color:var(--red)}
 .foot{padding:12px 24px;font-size:10px;color:var(--g400);border-top:1px solid var(--g200)}
@@ -112,10 +193,35 @@ tr:hover td{background:var(--g100)}
   </div>
   <div class="kpis" id="kpis">
     <div class="kpi"><div class="kpi-l">Orçamentos</div><div class="kpi-v" id="k-count">—</div></div>
-    <div class="kpi"><div class="kpi-l">Venda Total (c/NF)</div><div class="kpi-v green" id="k-venda">—</div></div>
+    <div class="kpi"><div class="kpi-l">Faturado / Entregue</div><div class="kpi-v green" id="k-venda">—</div></div>
+    <div class="kpi"><div class="kpi-l">Pipeline em Aberto</div><div class="kpi-v" id="k-pipeline" style="color:#1565c0;">—</div></div>
     <div class="kpi"><div class="kpi-l">Custo Realizado (compras fechadas)</div><div class="kpi-v" id="k-custo">—</div></div>
     <div class="kpi"><div class="kpi-l">Margem Realizada</div><div class="kpi-v" id="k-margem">—</div></div>
   </div>
+  <!-- MÉTRICAS COMERCIAIS -->
+  <div class="sec">
+    <div class="sec-title">Métricas Comerciais</div>
+    <div id="metricas-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+
+  <!-- ALERTAS -->
+  <div class="sec">
+    <div class="sec-title">⚡ Alertas Ativos</div>
+    <div id="alertas-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="sec">
+    <div class="sec-title">Pipeline de Propostas</div>
+    <div id="pipeline-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+
+  <!-- PREVISÃO DE CAIXA -->
+  <div class="sec">
+    <div class="sec-title">Previsão de Caixa — 30 dias</div>
+    <div id="caixa-wrap-sec"><div class="loading">Carregando...</div></div>
+  </div>
+
   <div class="sec">
     <div class="sec-title">Por Job — Orçado × Realizado</div>
     <div id="tbl-wrap"><div class="loading">Carregando...</div></div>
@@ -166,6 +272,19 @@ tr:hover td{background:var(--g100)}
       <button class="todo-add" onclick="adicionarTodo()">+ Adicionar Tarefa</button>
     </div>
     <div id="todo-lista"></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">Ciclo Comercial & Reativação</div>
+    <div id="ciclo-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+
+  <div class="sec">
+    <div class="sec-title">DRE Simplificado</div>
+    <div id="dre-wrap"><div class="loading">Carregando...</div></div>
+  </div>
+  <div class="sec">
+    <div class="sec-title">Ficha de Fornecedores</div>
+    <div id="forn-ficha-wrap"><div class="loading">Carregando...</div></div>
   </div>
   <div class="foot">Custo orçado/venda vêm do orçamento (memorial × BDI). Custo realizado soma "Fechado" das compras + lançamentos avulsos vinculados ao número do orçamento. Margem realizada = Venda − Custo Realizado. Repasse por fornecedor soma compras + lançamentos por fornecedor, categoria e job — base para conferência e pagamento (ex: PDVEX). Despesas fixas são custos/receitas da empresa sem vínculo a um job específico (impostos, contador, aportes de sócio).</div>
 </div>
@@ -368,7 +487,9 @@ function renderTabela(){
       +'<td>'+r.cliente+'<div class="proj">'+r.projeto+'</div></td>'
       +'<td>'+r.statusBadge+'</td>'
       +'<td class="n">'+fmt(r.custoOrcado)+'</td>'
-      +'<td class="n">'+fmt(r.venda)+'</td>'
+      +'<td class="n">'+(r.orc.valor_nf&&parseFloat(r.orc.valor_nf)>0
+  ?'<span title="Valor da NF emitida">'+fmt(r.orc.valor_nf)+'<span style="font-size:9px;color:var(--ga);margin-left:4px;">NF</span></span>'
+  :fmt(r.venda))+'</td>'
       +'<td class="n">'+(r.custoReal===null?'<span class="muted">—</span>':fmt(r.custoReal))+'</td>'
       +'<td class="n '+(r.margem>=0?'pos':'neg')+'">'+fmt(r.margem)+'</td>'
       +'<td class="n '+(r.margemPct>=0?'pos':'neg')+'">'+(r.margemPct===null?'—':r.margemPct.toFixed(1)+'%')+'</td>'
@@ -377,12 +498,465 @@ function renderTabela(){
   html+='</tbody></table>';
   wrap.innerHTML=html;
 }
+// ══════════════════════════════════════
+// MÉTRICAS COMERCIAIS (Bloco C)
+// ══════════════════════════════════════
+function renderMetricas(orcamentos) {
+  var wrap = document.getElementById('metricas-wrap');
+  if(!wrap || !orcamentos.length){ if(wrap)wrap.innerHTML='<div class="loading">Sem dados.</div>'; return; }
+  var total=orcamentos.length, emCotacao=0,enviadas=0,aprovadas=0,fechados=0,recusados=0;
+  orcamentos.forEach(function(o){
+    var s=o.status||'Em Orçamento';
+    if(s==='Cotação'||s==='Em Orçamento')emCotacao++;
+    else if(s==='Proposta Enviada')enviadas++;
+    else if(s==='Orçamento Aprovado'||s==='Em Produção')aprovadas++;
+    else if(s==='Entregue'||s==='Faturado')fechados++;
+    else if(s==='Orçamento Recusado'||s==='Cancelado'||s==='Orçamento Vencido')recusados++;
+  });
+  var txAprov=total>0?Math.round((aprovadas+fechados)/total*100):0;
+  var vendas=orcamentos.map(function(o){return calcOrcamento(o).venda;}).filter(function(v){return v>0;});
+  var ticketMedio=vendas.length?vendas.reduce(function(a,b){return a+b;},0)/vendas.length:0;
+  var volTotal=vendas.reduce(function(a,b){return a+b;},0);
+  var rankMap={};
+  orcamentos.forEach(function(o){
+    var key=o.agencia||o.cliente||'—'; var v=calcOrcamento(o).venda;
+    if(!rankMap[key])rankMap[key]={nome:key,total:0,count:0};
+    rankMap[key].total+=v;rankMap[key].count++;
+  });
+  var ranking=Object.values(rankMap).sort(function(a,b){return b.total-a.total;}).slice(0,6);
+  var funil=[
+    {lbl:'Cotações/Rascunhos',n:emCotacao,cor:'#1565c0'},
+    {lbl:'Propostas Enviadas',n:enviadas,cor:'#f9a825'},
+    {lbl:'Aprovadas/Produção',n:aprovadas,cor:'#2d6a4f'},
+    {lbl:'Entregues/Faturadas',n:fechados,cor:'#00c853'},
+    {lbl:'Recusadas/Vencidas',n:recusados,cor:'#c62828'},
+  ];
+  var h='<div class="met-grid">';
+  h+='<div class="met-card"><div class="met-card-tit">Funil de Propostas</div><div class="met-funil">';
+  funil.forEach(function(f){
+    var pct=total>0?Math.round(f.n/total*100):0;
+    h+='<div class="met-funil-row"><span class="met-funil-lbl">'+f.lbl+'</span>'
+      +'<div class="met-funil-bar-wrap"><div class="met-funil-bar" style="width:'+pct+'%;background:'+f.cor+'"></div></div>'
+      +'<span class="met-funil-val">'+f.n+'</span></div>';
+  });
+  h+='</div></div>';
+  h+='<div class="met-card"><div class="met-card-tit">Top Clientes / Agências</div>';
+  ranking.forEach(function(r,i){
+    h+='<div class="met-ranking-row"><span class="met-ranking-pos">'+(i+1)+'</span>'
+      +'<span class="met-ranking-nome" title="'+r.nome+'">'+r.nome+'</span>'
+      +'<span style="font-size:10px;color:var(--g400);margin-right:6px;">'+r.count+'j</span>'
+      +'<span class="met-ranking-val">'+fmt(r.total)+'</span></div>';
+  });
+  h+='</div>';
+  h+='<div class="met-card"><div class="met-card-tit">Taxa de Conversão</div>'
+    +'<div class="met-conv-pct">'+txAprov+'%</div>'
+    +'<div class="met-conv-sub">do total virou aprovado ou fechado</div>'
+    +'<div style="margin-top:12px;display:flex;justify-content:space-between;font-size:11px;">'
+    +'<div><div style="color:var(--g400);font-size:9px;text-transform:uppercase;letter-spacing:1px;">Recusadas</div>'
+    +'<div style="font-family:DM Mono,monospace;font-weight:600;color:var(--red);">'+recusados+'</div></div>'
+    +'<div><div style="color:var(--g400);font-size:9px;text-transform:uppercase;letter-spacing:1px;">Em aberto</div>'
+    +'<div style="font-family:DM Mono,monospace;font-weight:600;">'+enviadas+'</div></div>'
+    +'<div><div style="color:var(--g400);font-size:9px;text-transform:uppercase;letter-spacing:1px;">Fechadas</div>'
+    +'<div style="font-family:DM Mono,monospace;font-weight:600;color:var(--green);">'+fechados+'</div></div>'
+    +'</div></div>';
+  h+='<div class="met-card"><div class="met-card-tit">Ticket Médio</div>'
+    +'<div class="met-conv-pct" style="font-size:18px;">'+fmt(ticketMedio)+'</div>'
+    +'<div class="met-conv-sub">média por orçamento ('+vendas.length+' com valor)</div>'
+    +'<div style="margin-top:12px;display:flex;justify-content:space-between;font-size:11px;">'
+    +'<div><div style="color:var(--g400);font-size:9px;text-transform:uppercase;letter-spacing:1px;">Total orçamentos</div>'
+    +'<div style="font-family:DM Mono,monospace;font-weight:600;">'+total+'</div></div>'
+    +'<div><div style="color:var(--g400);font-size:9px;text-transform:uppercase;letter-spacing:1px;">Volume Total</div>'
+    +'<div style="font-family:DM Mono,monospace;font-weight:600;color:var(--green);">'+fmt(volTotal)+'</div></div>'
+    +'</div></div>';
+  h+='</div>';
+  wrap.innerHTML=h;
+}
 
+
+
+
+// ══════════════════════════════════════════════
+// PIPELINE DE PROPOSTAS
+// ══════════════════════════════════════════════
+var PIPE_STAGES = [
+  {key:'cotacao',    label:'Cotação',          dot:'#1565c0', statuses:['Cotação','Em Orçamento']},
+  {key:'enviada',   label:'Proposta Enviada',  dot:'#f9a825', statuses:['Proposta Enviada']},
+  {key:'aprovado',  label:'Aprovado',          dot:'#2d6a4f', statuses:['Orçamento Aprovado']},
+  {key:'producao',  label:'Em Produção',       dot:'#7b1fa2', statuses:['Em Produção']},
+  {key:'entregue',  label:'Entregue/Faturado', dot:'#00c853', statuses:['Entregue','Faturado']},
+];
+
+function renderPipeline(orcamentos) {
+  var wrap = document.getElementById('pipeline-wrap');
+  // calcOrcamento já existe — reutiliza
+  var cols = PIPE_STAGES.map(function(st) {
+    var items = orcamentos.filter(function(o) {
+      return st.statuses.indexOf(o.status||'Em Orçamento') >= 0;
+    });
+    var total = items.reduce(function(acc, o) {
+      return acc + (calcOrcamento(o).venda || 0);
+    }, 0);
+    return {stage: st, items: items, total: total};
+  });
+
+  var html = '<div class="pipe-wrap">';
+  cols.forEach(function(col) {
+    html += '<div class="pipe-col">';
+    html += '<div class="pipe-col-hd">'
+      + '<span><span class="pipe-dot" style="background:' + col.stage.dot + '"></span>' + col.stage.label + '</span>'
+      + '<span style="font-size:10px;background:var(--g200);padding:1px 6px;border-radius:10px;">' + col.items.length + '</span>'
+      + '</div>';
+    html += '<div class="pipe-col-total">' + fmt(col.total) + '</div>';
+    if (!col.items.length) {
+      html += '<div class="pipe-empty">—</div>';
+    } else {
+      col.items.slice(0, 4).forEach(function(o) {
+        var calc = calcOrcamento(o);
+        html += '<div class="pipe-item">'
+          + '<div class="pipe-item-num">' + (o.numero||'—') + '</div>'
+          + '<div class="pipe-item-cli">' + (o.cliente||'—') + '</div>'
+          + '<div class="pipe-item-val">' + fmt(calc.venda) + '</div>'
+          + '</div>';
+      });
+      if (col.items.length > 4) {
+        html += '<div style="font-size:10px;color:var(--g400);padding-top:4px;">+ ' + (col.items.length-4) + ' mais</div>';
+      }
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// PREVISÃO DE CAIXA 30 DIAS
+// ══════════════════════════════════════════════
+function renderPrevisaoCaixa(orcamentos, todasFixas) {
+  var wrap = document.getElementById('caixa-wrap-sec');
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var em30 = new Date(hoje); em30.setDate(em30.getDate()+30);
+
+  // Entradas previstas: propostas em Aprovado ou Em Produção (venda orçada ainda não faturada)
+  var entradas = orcamentos.filter(function(o) {
+    return ['Orçamento Aprovado','Em Produção'].indexOf(o.status||'') >= 0;
+  }).map(function(o) {
+    var calc = calcOrcamento(o);
+    return {label: o.numero + ' — ' + (o.cliente||''), val: calc.venda};
+  });
+  var totalEntradas = entradas.reduce(function(a,b){return a+b.val;}, 0);
+
+  // Saídas fixas pendentes nos próximos 30 dias
+  var saidasFixas = todasFixas.filter(function(d) {
+    if (d.tipo === 'Receita') return false;
+    if (d.status !== 'Pendente') return false;
+    if (!d.data) return true; // sem data = inclui
+    var dt = new Date(d.data + 'T00:00:00');
+    return dt >= hoje && dt <= em30;
+  });
+  var totalSaidasFixas = saidasFixas.reduce(function(a,b){return a+(parseFloat(b.valor)||0);}, 0);
+
+  var saldo = totalEntradas - totalSaidasFixas;
+
+  var html = '<div class="caixa-wrap">';
+
+  // Card entradas
+  html += '<div class="caixa-card">'
+    + '<div class="caixa-card-tit" style="color:#2d6a4f;">↓ Entradas Previstas</div>';
+  if (!entradas.length) {
+    html += '<div style="font-size:11px;color:var(--g400);">Nenhuma proposta aprovada em aberto.</div>';
+  } else {
+    entradas.slice(0,5).forEach(function(e) {
+      html += '<div class="caixa-row"><span class="caixa-row-lbl">' + e.label + '</span>'
+        + '<span class="caixa-row-val pos">' + fmt(e.val) + '</span></div>';
+    });
+    if (entradas.length > 5) html += '<div style="font-size:10px;color:var(--g400);padding-top:4px;">+ '+(entradas.length-5)+' mais</div>';
+  }
+  html += '<div class="caixa-saldo"><span class="caixa-saldo-lbl">Total</span>'
+    + '<span class="caixa-saldo-val pos">' + fmt(totalEntradas) + '</span></div>';
+  html += '</div>';
+
+  // Card saídas fixas
+  html += '<div class="caixa-card">'
+    + '<div class="caixa-card-tit" style="color:#c62828;">↑ Saídas Fixas Pendentes</div>';
+  if (!saidasFixas.length) {
+    html += '<div style="font-size:11px;color:var(--g400);">Nenhuma despesa pendente nos próximos 30 dias.</div>';
+  } else {
+    saidasFixas.slice(0,5).forEach(function(d) {
+      var dt = d.data ? new Date(d.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}) : '—';
+      html += '<div class="caixa-row"><span class="caixa-row-lbl">' + dt + ' · ' + (d.descricao||d.categoria||'—') + '</span>'
+        + '<span class="caixa-row-val neg">' + fmt(d.valor) + '</span></div>';
+    });
+    if (saidasFixas.length > 5) html += '<div style="font-size:10px;color:var(--g400);padding-top:4px;">+ '+(saidasFixas.length-5)+' mais</div>';
+  }
+  html += '<div class="caixa-saldo"><span class="caixa-saldo-lbl">Total</span>'
+    + '<span class="caixa-saldo-val neg">' + fmt(totalSaidasFixas) + '</span></div>';
+  html += '</div>';
+
+  // Card saldo líquido
+  var saldoCls = saldo >= 0 ? 'pos' : 'neg';
+  html += '<div class="caixa-card" style="border-color:' + (saldo>=0?'var(--ga)':'var(--red)') + ';">'
+    + '<div class="caixa-card-tit">Saldo Projetado 30d</div>'
+    + '<div style="text-align:center;padding:18px 0;">'
+    + '<div style="font-family:'DM Mono',monospace;font-size:26px;font-weight:600;" class="' + saldoCls + '">' + fmt(saldo) + '</div>'
+    + '<div style="font-size:10px;color:var(--g400);margin-top:6px;">Entradas previstas − despesas pendentes</div>'
+    + '</div>';
+  html += '</div>';
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+// ══════════════════════════════════════════════
+// ALERTAS AUTOMÁTICOS
+// ══════════════════════════════════════════════
+function renderAlertas(orcamentos, todasFixas) {
+  var wrap = document.getElementById('alertas-wrap');
+  var alertas = [];
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+
+  // 1. Propostas enviadas há mais de 7 dias sem retorno
+  orcamentos.forEach(function(o) {
+    if ((o.status||'') !== 'Proposta Enviada') return;
+    if (!o.updated_at) return;
+    var diff = Math.floor((hoje - new Date(o.updated_at)) / (1000*60*60*24));
+    if (diff >= 7) {
+      alertas.push({
+        tipo: diff >= 14 ? 'red' : 'ylw',
+        icon: '⏳',
+        titulo: 'Proposta sem retorno — ' + (o.numero||'') + ' · ' + (o.cliente||''),
+        sub: diff + ' dias desde o envio sem mudança de status'
+      });
+    }
+  });
+
+  // 1b. Jobs aprovados sem sinal recebido
+  orcamentos.forEach(function(o){
+    var s=o.status||'';
+    if(['Orçamento Aprovado','Em Produção'].indexOf(s)>=0 && !o.sinal_recebido){
+      alertas.push({tipo:'ylw',icon:'💰',
+        titulo:'Sinal pendente — '+(o.numero||'')+(o.cliente?' · '+o.cliente:''),
+        sub:'Job aprovado/em produção sem confirmação de recebimento do sinal'});
+    }
+  });
+
+  // 2. Margem abaixo de 15% em jobs em andamento
+  _allRows.forEach(function(r) {
+    if (r.margemPct !== null && r.margemPct < 15 && r.venda > 0) {
+      alertas.push({
+        tipo: r.margemPct < 0 ? 'red' : 'ylw',
+        icon: '📉',
+        titulo: 'Margem baixa — ' + r.numero + ' · ' + r.cliente,
+        sub: 'Margem de ' + r.margemPct.toFixed(1) + '% (mínimo sugerido: 15%)'
+      });
+    }
+  });
+
+  // 3. Despesas fixas pendentes vencidas (data passada)
+  todasFixas.forEach(function(d) {
+    if (d.tipo === 'Receita' || d.status !== 'Pendente') return;
+    if (!d.data) return;
+    var dt = new Date(d.data + 'T00:00:00');
+    var diff = Math.floor((hoje - dt) / (1000*60*60*24));
+    if (diff > 0) {
+      alertas.push({
+        tipo: 'red',
+        icon: '💸',
+        titulo: 'Despesa vencida — ' + (d.descricao || d.categoria || '—'),
+        sub: diff + ' dia(s) em atraso · ' + fmt(d.valor)
+      });
+    }
+  });
+
+  // 4. Propostas aprovadas mas sem OS criada
+  orcamentos.forEach(function(o) {
+    if (['Orçamento Aprovado','Em Produção'].indexOf(o.status||'') < 0) return;
+    // se não tem nenhuma OS associada (verificação vai ser feita com todasOs no contexto de carregar)
+    // guardamos para checar lá — aqui é só o trigger
+    if (o._semOS) {
+      alertas.push({
+        tipo: 'ylw',
+        icon: '📋',
+        titulo: 'Aprovado sem OS — ' + (o.numero||'') + ' · ' + (o.cliente||''),
+        sub: 'Proposta aprovada mas nenhuma Ordem de Serviço foi gerada ainda'
+      });
+    }
+  });
+
+  if (!alertas.length) {
+    wrap.innerHTML = '<div class="alert-list"><div class="alert-empty">✓ Nenhum alerta no momento.</div></div>';
+    return;
+  }
+
+  var html = '<div class="alert-list">';
+  // Ordena: red primeiro
+  alertas.sort(function(a,b){ var o={red:0,ylw:1,grn:2}; return (o[a.tipo]||2)-(o[b.tipo]||2); });
+  alertas.forEach(function(a) {
+    html += '<div class="alert-item ' + a.tipo + '">'
+      + '<div class="alert-icon">' + a.icon + '</div>'
+      + '<div class="alert-body"><div class="alert-title">' + a.titulo + '</div>'
+      + '<div class="alert-sub">' + a.sub + '</div></div></div>';
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+
+function renderDRE(orcamentos,todasOs,todosLanc,todasFixas){
+  var wrap=document.getElementById('dre-wrap'); if(!wrap)return;
+  var recBruta=orcamentos.filter(function(o){var s=o.status||'';return s==='Faturado'||s==='Entregue';}).reduce(function(a,o){return a+calcReceitaReal(o);},0);
+  var impostosMes=todasFixas.filter(function(d){return d.categoria==='Impostos'&&d.tipo==='Despesa';}).reduce(function(a,d){return a+(parseFloat(d.valor)||0);},0);
+  var recLiq=recBruta-impostosMes;
+  var cmv=todosLanc.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
+  var lucroBruto=recLiq-cmv;
+  var despFixas=todasFixas.filter(function(d){return d.tipo==='Despesa'&&d.status==='Realizado'&&d.categoria!=='Impostos';}).reduce(function(a,d){return a+(parseFloat(d.valor)||0);},0);
+  var ebitda=lucroBruto-despFixas;
+  function pct(v){return recBruta>0?(v/recBruta*100).toFixed(1)+'%':'—';}
+  function row(lbl,val,cls,indent){
+    return '<div class="dre-row'+(cls?' '+cls:'')+'">'
+      +'<span class="dre-lbl'+(indent?' indent':'')+'>'+lbl+'</span>'
+      +'<span class="dre-pct">'+pct(val)+'</span>'
+      +'<span class="dre-val" style="color:'+(val>=0?'var(--green)':'var(--red)')+'">'+fmt(val)+'</span></div>';
+  }
+  var h='<div class="dre-wrap">'
+    +'<div class="dre-row hd"><span class="dre-lbl">Demonstrativo</span><span class="dre-pct">% RB</span><span class="dre-val">Valor</span></div>'
+    +row('(+) Receita Bruta',recBruta,'subtot')
+    +row('(−) Impostos',-impostosMes,'',true)
+    +row('(=) Receita Líquida',recLiq,'subtot')
+    +row('(−) Custo dos Jobs (CMV)',-cmv,'',true)
+    +row('(=) Lucro Bruto',lucroBruto,'total')
+    +row('(−) Despesas Fixas',-despFixas,'',true)
+    +row('(=) EBITDA',ebitda,'total')
+    +'<div style="font-size:10px;color:var(--g400);padding:8px 12px;">Receita = orçamentos Entregue/Faturado. CMV = todos os lançamentos de custo. Impostos = despesas fixas categoria Impostos.</div>'
+    +'</div>';
+  wrap.innerHTML=h;
+}
+
+function renderFornecedoresFicha(todasOs,todosLanc){
+  var wrap=document.getElementById('forn-ficha-wrap'); if(!wrap)return;
+  var mapa={};
+  function add(nome,val,job){
+    if(!nome||!val)return;
+    if(!mapa[nome])mapa[nome]={nome:nome,volume:0,jobs:{}};
+    mapa[nome].volume+=val;
+    if(job)mapa[nome].jobs[job]=1;
+  }
+  todasOs.forEach(function(os){(os.itens||[]).forEach(function(it){add(it.fornecedor,parseFloat(it.fechado)||0,os.orcamento_numero);});});
+  todosLanc.forEach(function(l){add(l.fornecedor,parseFloat(l.valor)||0,l.orcamento_numero);});
+  var lista=Object.values(mapa).sort(function(a,b){return b.volume-a.volume;});
+  if(!lista.length){wrap.innerHTML='<div class="loading">Nenhum fornecedor com custo registrado.</div>';return;}
+  wrap.innerHTML=lista.map(function(f){
+    var nj=Object.keys(f.jobs).length;
+    return '<div class="forn-card">'
+      +'<div class="forn-card-hd"><span class="forn-nome">'+f.nome+'</span><span class="forn-vol">'+fmt(f.volume)+'</span></div>'
+      +'<div class="forn-stats"><span>Jobs: <span class="forn-stat-val">'+nj+'</span></span>'
+      +'<span>Ticket médio/job: <span class="forn-stat-val">'+fmt(nj>0?f.volume/nj:0)+'</span></span></div></div>';
+  }).join('');
+}
+
+
+// ══════════════════════════════════════
+// CICLO COMERCIAL + REATIVAÇÃO
+// ══════════════════════════════════════
+function renderCicloComercial(orcamentos){
+  var wrap = document.getElementById('ciclo-wrap');
+  if(!wrap) return;
+  var hoje = new Date();
+
+  // Ciclo médio: dias entre created_at e aprovação (Orçamento Aprovado/Em Produção/Entregue/Faturado)
+  var ciclos = [];
+  orcamentos.forEach(function(o){
+    var s = o.status||'';
+    if(['Orçamento Aprovado','Em Produção','Entregue','Faturado'].indexOf(s) < 0) return;
+    if(!o.updated_at) return;
+    // Aproximação: updated_at é a data de mudança de status
+    // Número: SS-2026_06-42 → ano/mês de criação
+    var m = (o.numero||'').match(/SS-(\d{4})_(\d{2})/);
+    if(!m) return;
+    var criacao = new Date(parseInt(m[1]), parseInt(m[2])-1, 1);
+    var aprovacao = new Date(o.updated_at);
+    var diff = Math.floor((aprovacao - criacao)/(1000*60*60*24));
+    if(diff >= 0 && diff <= 180) ciclos.push(diff);
+  });
+  var cicloMedio = ciclos.length ? Math.round(ciclos.reduce(function(a,b){return a+b;},0)/ciclos.length) : null;
+
+  // Propostas enviadas: tempo médio em aberto
+  var emAberto = orcamentos.filter(function(o){ return o.status==='Proposta Enviada'; });
+  var tempoAberto = emAberto.length ? Math.round(
+    emAberto.reduce(function(a,o){
+      return a + Math.floor((hoje - new Date(o.updated_at))/(1000*60*60*24));
+    },0) / emAberto.length
+  ) : null;
+
+  // Taxa de aprovação
+  var totalDecididos = orcamentos.filter(function(o){
+    var s=o.status||'';
+    return ['Orçamento Aprovado','Em Produção','Entregue','Faturado','Orçamento Recusado','Orçamento Vencido','Cancelado'].indexOf(s)>=0;
+  }).length;
+  var totalAprov = orcamentos.filter(function(o){
+    var s=o.status||'';
+    return ['Orçamento Aprovado','Em Produção','Entregue','Faturado'].indexOf(s)>=0;
+  }).length;
+  var txAprov = totalDecididos > 0 ? Math.round(totalAprov/totalDecididos*100) : null;
+
+  // Clientes para reativação: último orçamento há +60 dias, status não está em produção/faturado
+  var clienteMap = {};
+  orcamentos.forEach(function(o){
+    var cli = o.agencia||o.cliente||'—';
+    var dt = new Date(o.updated_at||0);
+    var s = o.status||'';
+    if(!clienteMap[cli] || dt > clienteMap[cli].dt){
+      clienteMap[cli] = {dt:dt, status:s, numero:o.numero};
+    }
+  });
+  var reativacao = Object.entries(clienteMap).filter(function(kv){
+    var dias = Math.floor((hoje - kv[1].dt)/(1000*60*60*24));
+    var s = kv[1].status;
+    return dias >= 60 && ['Em Produção','Orçamento Aprovado'].indexOf(s) < 0;
+  }).map(function(kv){
+    return {
+      nome: kv[0],
+      dias: Math.floor((hoje - kv[1].dt)/(1000*60*60*24)),
+      ultimoOrc: kv[1].numero,
+      status: kv[1].status
+    };
+  }).sort(function(a,b){return b.dias-a.dias;}).slice(0,6);
+
+  var h = '<div class="ciclo-grid">';
+  h += '<div class="ciclo-kpi"><div class="ciclo-kpi-l">Ciclo médio (criação→aprovação)</div>'
+    +'<div class="ciclo-kpi-v" style="color:var(--black);">'+(cicloMedio!==null?cicloMedio+' dias':'—')+'</div></div>';
+  h += '<div class="ciclo-kpi"><div class="ciclo-kpi-l">Tempo médio propostas em aberto</div>'
+    +'<div class="ciclo-kpi-v" style="color:'+(tempoAberto!==null&&tempoAberto>10?'var(--red)':'var(--green)')+';">'+(tempoAberto!==null?tempoAberto+' dias':'—')+'</div></div>';
+  h += '<div class="ciclo-kpi"><div class="ciclo-kpi-l">Taxa de aprovação</div>'
+    +'<div class="ciclo-kpi-v" style="color:'+(txAprov!==null&&txAprov>=50?'var(--green)':'var(--red)')+';">'+(txAprov!==null?txAprov+'%':'—')+'</div></div>';
+  h += '</div>';
+
+  if(reativacao.length){
+    h += '<div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);margin-bottom:8px;">Clientes para reativação (+60 dias sem contato)</div>';
+    h += reativacao.map(function(r){
+      return '<div class="reativ-row">'
+        +'<span class="reativ-nome">'+r.nome+'</span>'
+        +'<span class="reativ-ult">último: '+r.ultimoOrc+' ('+r.status+')</span>'
+        +'<span class="reativ-dias">'+r.dias+'d sem contato</span>'
+        +'</div>';
+    }).join('');
+  } else {
+    h += '<div style="font-size:11px;color:var(--g400);">Nenhum cliente inativo há mais de 60 dias.</div>';
+  }
+
+  wrap.innerHTML = h;
+}
+
+// Receita real: usa valor_nf se preenchido, senão estimativa do orçamento
+function calcReceitaReal(orc){
+  try{
+    if(orc.valor_nf && parseFloat(orc.valor_nf) > 0) return parseFloat(orc.valor_nf);
+    return calcOrcamento(orc).venda;
+  }catch(e){ return 0; }
+}
 async function carregar(){
   var wrap=document.getElementById('tbl-wrap');
   try{
     var [rOrc, rOs, rLanc, rFixas] = await Promise.all([
-      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
+      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,valor_nf,sinal_recebido,sinal_valor,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=data.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}})
@@ -399,7 +973,18 @@ async function carregar(){
     renderRepasse(montarRepasse(todasOs, todosLanc));
     renderFixas(todasFixas);
 
-    var kVendaTotal=0, kCustoRealTotal=0, kMargemTotal=0;
+    // Marcar orcamentos sem OS para alertas
+    orcamentos.forEach(function(o){
+      var osDoJob=todasOs.filter(function(os){return os.orcamento_numero===o.numero;});
+      o._semOS = osDoJob.length === 0;
+    });
+
+    renderPipeline(orcamentos);
+    renderPrevisaoCaixa(orcamentos, todasFixas);
+
+    var kVendaTotal=0, kCustoRealTotal=0, kMargemTotal=0, kPipelineTotal=0;
+    var STATUS_EXEC=['Entregue','Faturado','Em Produção','Orçamento Aprovado'];
+    var STATUS_FATURADO=['Entregue','Faturado'];
 
     var rows=orcamentos.map(function(orc){
       var calc=calcOrcamento(orc);
@@ -409,7 +994,12 @@ async function carregar(){
       var margem = real.temFechado ? (calc.venda-real.fechado) : (calc.venda-calc.custo);
       var margemPct = calc.venda>0 ? (margem/calc.venda*100) : null;
 
-      kVendaTotal+=calc.venda;
+      var orcStatus = orc.status||'Em Orçamento';
+      if(STATUS_FATURADO.indexOf(orcStatus)>=0){
+        kVendaTotal+=calcReceitaReal(orc); // usa valor_nf se disponível
+      } else if(['Proposta Enviada','Orçamento Aprovado','Em Produção','Cotação','Em Orçamento'].indexOf(orcStatus)>=0){
+        kPipelineTotal+=calc.venda;
+      }
       if(real.temFechado){kCustoRealTotal+=real.fechado;kMargemTotal+=margem;}
       else {kMargemTotal+=(calc.venda-calc.custo);}
 
@@ -421,12 +1011,14 @@ async function carregar(){
         numero:orc.numero, cliente:orc.cliente||'—', projeto:orc.projeto||'—',
         custoOrcado:calc.custo, venda:calc.venda,
         custoReal:real.temFechado?real.fechado:null,
-        margem:margem, margemPct:margemPct, statusBadge:statusBadge
+        margem:margem, margemPct:margemPct, statusBadge:statusBadge, orc:orc
       };
     });
 
     document.getElementById('k-count').textContent=orcamentos.length;
     document.getElementById('k-venda').textContent=fmt(kVendaTotal);
+    var kPip=document.getElementById('k-pipeline');
+    if(kPip) kPip.textContent=fmt(kPipelineTotal);
     document.getElementById('k-custo').textContent=fmt(kCustoRealTotal);
     var mEl=document.getElementById('k-margem');
     mEl.textContent=fmt(kMargemTotal);
@@ -441,6 +1033,11 @@ async function carregar(){
       if(!existingClients.includes(c)){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);}
     });
     renderTabela();
+    renderAlertas(orcamentos, todasFixas);
+    renderMetricas(orcamentos);
+    renderCicloComercial(orcamentos);
+    renderDRE(orcamentos,todasOs,todosLanc,todasFixas);
+    renderFornecedoresFicha(todasOs,todosLanc);
   }catch(e){
     wrap.innerHTML='<div class="err">Erro ao carregar: '+e.message+'</div>';
   }
