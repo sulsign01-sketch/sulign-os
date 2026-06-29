@@ -956,7 +956,7 @@ async function carregar(){
   var wrap=document.getElementById('tbl-wrap');
   try{
     var [rOrc, rOs, rLanc, rFixas] = await Promise.all([
-      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,valor_nf,sinal_recebido,sinal_valor,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
+      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}}),
       fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=data.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}})
@@ -1039,7 +1039,13 @@ async function carregar(){
     renderDRE(orcamentos,todasOs,todosLanc,todasFixas);
     renderFornecedoresFicha(todasOs,todosLanc);
   }catch(e){
-    wrap.innerHTML='<div class="err">Erro ao carregar: '+e.message+'</div>';
+    var msg='<div style="color:var(--red);font-size:12px;padding:16px;">⚠ Erro ao carregar dados: '+e.message+'<br><span style="font-size:10px;color:var(--g400);">Verifique a conexão com o Supabase e recarregue a página.</span></div>';
+    wrap.innerHTML=msg;
+    ['metricas-wrap','alertas-wrap','pipeline-wrap','caixa-wrap-sec','ciclo-wrap','dre-wrap','forn-ficha-wrap'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el)el.innerHTML=msg;
+    });
+    console.error('Painel erro:', e);
   }
 }
 carregar();
