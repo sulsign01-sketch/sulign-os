@@ -133,6 +133,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="tab" id="tab-aportes" onclick="setTab('aportes')" style="color:#7e57c2;">💰 Aportes</div>
     <div class="tab" id="tab-pagar" onclick="setTab('pagar')" style="color:#c62828;">📤 A Pagar</div>
     <div class="tab" id="tab-receber" onclick="setTab('receber')" style="color:#2e7d32;">📥 A Receber</div>
+    <div class="tab" id="tab-caixas" onclick="setTab('caixas')" style="color:#ffcc02;">🏗️ Caixas</div>
   </div>
 
   <div id="view-novo" class="sec">
@@ -598,6 +599,47 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   </div>
 
 
+  <!-- CAIXAS DE PRODUÇÃO -->
+  <div id="view-caixas" class="sec" style="display:none;">
+
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e8;margin-bottom:16px;">
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">CAIXAS ATIVOS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#e65100;" id="cx-ativos">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">VERBA TOTAL</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#333;" id="cx-verba">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">SOLICIT. PENDENTES</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#c62828;" id="cx-solic">—</div></div>
+    </div>
+
+    <!-- Alertas de solicitação -->
+    <div id="cx-alertas" style="display:none;margin-bottom:12px;"></div>
+
+    <!-- Form novo caixa -->
+    <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#e65100;margin-bottom:12px;">+ Novo Caixa de Produção</div>
+    <div class="row2">
+      <div class="fl"><label>Job (SS-Número)</label><input type="text" id="cx-job" placeholder="Ex: SS-2026_06-43"></div>
+      <div class="fl"><label>Nome do Job</label><input type="text" id="cx-nome" placeholder="Ex: Festa Junina PRIO"></div>
+    </div>
+    <div class="row2">
+      <div class="fl"><label>Produtor Responsável</label><input type="text" id="cx-prod" placeholder="Nome completo"></div>
+      <div class="fl"><label>Verba Inicial (R$)</label><input type="number" id="cx-verba" step="0.01" placeholder="0,00"></div>
+    </div>
+    <div class="fl"><label>Observação</label><input type="text" id="cx-obs" placeholder="Instruções para o produtor..."></div>
+    <button class="btn" onclick="criarCaixa()" id="btn-cx" style="background:#e65100;border-color:#e65100;">Criar Caixa e Gerar Link</button>
+    <div class="status" id="status-cx">—</div>
+
+    <!-- Link gerado -->
+    <div id="cx-link-box" style="display:none;margin-top:12px;background:#fff8e1;border:1px solid #ffc107;border-radius:4px;padding:12px;">
+      <div style="font-size:10px;font-weight:700;color:#e65100;margin-bottom:6px;">🔗 LINK DO PRODUTOR</div>
+      <div style="font-family:monospace;font-size:11px;background:#fff;border:1px solid #eee;border-radius:3px;padding:8px;word-break:break-all;" id="cx-link-url"></div>
+      <button onclick="copiarLink()" style="margin-top:8px;font-size:11px;padding:4px 12px;background:#e65100;border:none;border-radius:3px;color:#fff;cursor:pointer;font-weight:700;">📋 Copiar Link</button>
+    </div>
+
+    <!-- Lista de caixas -->
+    <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;">
+      <div id="cx-lista"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+
 <script>
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
@@ -609,7 +651,7 @@ var jobSelecionado=null;
 function fmt(v){return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 function setTab(t){
-  ['novo','lista','fixas','impostos','nf','aportes','pagar','receber'].forEach(function(n){
+  ['novo','lista','fixas','impostos','nf','aportes','pagar','receber','caixas'].forEach(function(n){
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('view-'+n).style.display=t===n?'block':'none';
   });
@@ -620,6 +662,7 @@ function setTab(t){
   if(t==='aportes')carregarAportes();
   if(t==='pagar')carregarContasPagar();
   if(t==='receber')carregarContasReceber();
+  if(t==='caixas')carregarCaixas();
 }
 
 // localStorage autocomplete helpers (últimos 8)
@@ -1530,6 +1573,196 @@ async function deletarContaReceber(id,el){
   if(el)el.remove();
   contasReceberCache=contasReceberCache.filter(function(c){return c.id!==id;});
   renderContasReceber();
+}
+
+
+// ══════════════════════════════════════════════════════
+// CAIXAS DE PRODUÇÃO
+// ══════════════════════════════════════════════════════
+var caixasCache=[];
+var BASE_URL = window.location.origin + window.location.pathname.replace('Lancamentos.html','') + 'Caixa_Producao.html';
+
+async function criarCaixa(){
+  var btn=document.getElementById('btn-cx');
+  var st=document.getElementById('status-cx');
+  var job=document.getElementById('cx-job').value.trim();
+  var nome=document.getElementById('cx-nome').value.trim();
+  var prod=document.getElementById('cx-prod').value.trim();
+  var verba=parseFloat(document.getElementById('cx-verba').value)||0;
+  var obs=document.getElementById('cx-obs').value.trim();
+  if(!job||!prod||!verba){st.textContent='✗ Preencha job, produtor e verba.';st.className='status err';return;}
+  btn.disabled=true;st.textContent='Criando...';st.className='status';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_producao',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({job_numero:job,job_nome:nome,produtor_nome:prod,verba_inicial:verba,verba_total:verba,observacao:obs,status:'ativo'})
+    });
+    if(!r.ok)throw new Error('HTTP '+r.status+' — '+await r.text());
+    var data=await r.json();
+    var novo=Array.isArray(data)?data[0]:data;
+    var link=BASE_URL+'?token='+novo.token;
+    document.getElementById('cx-link-url').textContent=link;
+    document.getElementById('cx-link-box').style.display='block';
+    window._ultimoLink=link;
+    st.textContent='✓ Caixa criado! Compartilhe o link com o produtor.';st.className='status ok';
+    ['cx-job','cx-nome','cx-prod','cx-verba','cx-obs'].forEach(function(id){document.getElementById(id).value='';});
+    carregarCaixas();
+  }catch(e){st.textContent='✗ '+e.message;st.className='status err';}
+  btn.disabled=false;
+}
+
+function copiarLink(){
+  var url=document.getElementById('cx-link-url').textContent;
+  navigator.clipboard.writeText(url).then(function(){
+    var btn=event.target;btn.textContent='✓ Copiado!';setTimeout(function(){btn.textContent='📋 Copiar Link';},2000);
+  });
+}
+
+async function carregarCaixas(){
+  var lista=document.getElementById('cx-lista');
+  lista.innerHTML='<div class="empty">Carregando...</div>';
+  try{
+    // Buscar caixas
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_producao?order=criado_em.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    caixasCache=Array.isArray(data)?data:[];
+
+    // Buscar lançamentos de todos os caixas
+    var r2=await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa?select=conta_id,valor',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    var lancs=Array.isArray(await r2.json())?await r2.json():[];
+
+    // Buscar solicitações pendentes
+    var r3=await fetch(SUPA_URL+'/rest/v1/caixa_solicitacoes?status=eq.pendente&select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    var solics=Array.isArray(await r3.json())?await r3.json():[];
+
+    // Rebuild lancs map
+    var lancMap={};
+    lancs.forEach(function(l){if(!lancMap[l.conta_id])lancMap[l.conta_id]=0;lancMap[l.conta_id]+=(parseFloat(l.valor)||0);});
+
+    // KPIs
+    var ativos=caixasCache.filter(function(c){return c.status==='ativo'||c.status==='aguardando_verba';});
+    var verba=caixasCache.reduce(function(a,c){return a+(parseFloat(c.verba_total)||0);},0);
+    document.getElementById('cx-ativos').textContent=ativos.length;
+    document.getElementById('cx-verba').textContent=fmtCx(verba);
+    document.getElementById('cx-solic').textContent=solics.length;
+
+    // Alertas de solicitação
+    var alertas=document.getElementById('cx-alertas');
+    if(solics.length){
+      alertas.style.display='block';
+      alertas.innerHTML=solics.map(function(s){
+        var c=caixasCache.find(function(x){return x.id===s.conta_id;})||{};
+        return '<div style="background:#fff8e1;border:1px solid #ffc107;border-radius:4px;padding:10px 12px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;">'
+          +'<div><div style="font-size:11px;font-weight:700;color:#e65100;">⚠ Solicitação de verba — '+(c.produtor_nome||'—')+'</div>'
+          +'<div style="font-size:11px;color:#555;margin-top:2px;">'+(c.job_numero||'')+(s.justificativa?' · '+s.justificativa:'')+'</div>'
+          +'<div style="font-size:13px;font-weight:700;color:#333;margin-top:4px;">+'+fmtCx(s.valor_solicitado)+'</div></div>'
+          +'<div style="display:flex;gap:6px;flex-shrink:0;">'
+          +'<button onclick="aprovarVerba(''+s.id+'',''+s.conta_id+'','+s.valor_solicitado+')" style="font-size:11px;padding:4px 10px;background:#1b5e20;border:none;border-radius:3px;color:#fff;cursor:pointer;font-weight:700;">✓ Aprovar</button>'
+          +'<button onclick="recusarVerba(''+s.id+'')" style="font-size:11px;padding:4px 10px;background:#c62828;border:none;border-radius:3px;color:#fff;cursor:pointer;">✗</button>'
+          +'</div></div>';
+      }).join('');
+    } else {
+      alertas.style.display='none';
+    }
+
+    // Render lista
+    renderCaixas(lancMap,solics);
+  }catch(e){lista.innerHTML='<div class="empty" style="color:#c62828;">Erro: '+e.message+'</div>';}
+}
+
+function fmtCx(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+function renderCaixas(lancMap,solics){
+  var lista=document.getElementById('cx-lista');
+  if(!caixasCache.length){lista.innerHTML='<div class="empty">Nenhum caixa criado ainda.</div>';return;}
+
+  var STATUS_COR={'ativo':'#2e7d32','aguardando_verba':'#e65100','encerrado':'#9e9e9e'};
+  var STATUS_LBL={'ativo':'● Ativo','aguardando_verba':'⏳ Aguardando Verba','encerrado':'✓ Encerrado'};
+
+  lista.innerHTML=caixasCache.map(function(c){
+    var gasto=lancMap[c.id]||0;
+    var saldo=c.verba_total-gasto;
+    var pct=c.verba_total>0?Math.min(100,(gasto/c.verba_total)*100):0;
+    var cor=STATUS_COR[c.status]||'#9e9e9e';
+    var lbl=STATUS_LBL[c.status]||c.status;
+    var solPend=(solics||[]).filter(function(s){return s.conta_id===c.id;}).length;
+    var link=BASE_URL+'?token='+c.token;
+    var enc=c.status==='encerrado';
+    return '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:6px;padding:14px;margin-bottom:10px;border-left:4px solid '+cor+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:10px;">'
+      +'<div><div style="font-size:12px;font-weight:700;color:#333;">'+c.job_numero+(c.job_nome?' — '+c.job_nome:'')+'</div>'
+      +'<div style="font-size:12px;color:#666;margin-top:2px;">👤 '+c.produtor_nome+'</div>'
+      +(solPend?'<div style="font-size:10px;color:#e65100;font-weight:700;margin-top:2px;">⚠ '+solPend+' solicitação(ões) pendente(s)</div>':'')
+      +'</div>'
+      +'<span style="font-size:10px;font-weight:700;color:'+cor+';white-space:nowrap;">'+lbl+'</span>'
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">'
+      +'<div style="text-align:center;"><div style="font-size:9px;color:#888;margin-bottom:2px;">VERBA</div><div style="font-size:13px;font-weight:700;color:#333;">'+fmtCx(c.verba_total)+'</div></div>'
+      +'<div style="text-align:center;"><div style="font-size:9px;color:#888;margin-bottom:2px;">GASTO</div><div style="font-size:13px;font-weight:700;color:#c62828;">'+fmtCx(gasto)+'</div></div>'
+      +'<div style="text-align:center;"><div style="font-size:9px;color:#888;margin-bottom:2px;">SALDO</div><div style="font-size:13px;font-weight:700;color:'+(saldo<0?'#c62828':saldo<200?'#e65100':'#2e7d32')+';">'+fmtCx(saldo)+'</div></div>'
+      +'</div>'
+      +'<div style="background:#f5f5f5;border-radius:10px;height:4px;overflow:hidden;margin-bottom:10px;">'
+      +'<div style="height:4px;border-radius:10px;background:'+(pct>=90?'#c62828':pct>=70?'e65100':'#2e7d32')+';width:'+pct+'%;"></div>'
+      +'</div>'
+      +'<div style="display:flex;gap:6px;flex-wrap:wrap;">'
+      +'<button onclick="navigator.clipboard.writeText(''+link+'')" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;font-weight:600;">📋 Copiar Link</button>'
+      +'<a href="'+link+'" target="_blank" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;font-weight:600;text-decoration:none;color:#333;">👁 Ver Caixa</a>'
+      +(!enc?'<button onclick="encerrarCaixa(''+c.id+'')" style="font-size:10px;padding:4px 10px;border:1px solid #c62828;border-radius:3px;background:#fff;color:#c62828;cursor:pointer;font-weight:600;">🔒 Encerrar</button>':'')
+      +(!enc?'<button onclick="adicionarVerba(''+c.id+'','+c.verba_total+')" style="font-size:10px;padding:4px 10px;border:1px solid #1565c0;border-radius:3px;background:#fff;color:#1565c0;cursor:pointer;font-weight:600;">+ Verba</button>':'')
+      +(enc?'<button onclick="consolidarCaixa(''+c.id+'',''+c.job_numero+'')" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;font-weight:600;">⬇ Consolidar no Job</button>':'')
+      +'</div>'
+      +'</div>';
+  }).join('');
+}
+
+async function aprovarVerba(solicId, contaId, valor){
+  if(!confirm('Aprovar R$ '+fmtCx(valor)+' de verba adicional?'))return;
+  // Atualizar solicitação
+  await fetch(SUPA_URL+'/rest/v1/caixa_solicitacoes?id=eq.'+solicId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({status:'aprovado',respondido_em:new Date().toISOString()})});
+  // Buscar verba atual
+  var rc=await fetch(SUPA_URL+'/rest/v1/contas_producao?id=eq.'+contaId+'&select=verba_total',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  var cd=await rc.json();
+  var novaVerba=(parseFloat((cd[0]||{}).verba_total)||0)+parseFloat(valor);
+  // Atualizar verba e status
+  await fetch(SUPA_URL+'/rest/v1/contas_producao?id=eq.'+contaId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({verba_total:novaVerba,status:'ativo'})});
+  carregarCaixas();
+}
+
+async function recusarVerba(solicId){
+  await fetch(SUPA_URL+'/rest/v1/caixa_solicitacoes?id=eq.'+solicId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({status:'recusado',respondido_em:new Date().toISOString()})});
+  carregarCaixas();
+}
+
+async function adicionarVerba(contaId, verbaAtual){
+  var v=parseFloat(prompt('Adicionar quanto de verba?'));
+  if(!v||isNaN(v))return;
+  var nova=verbaAtual+v;
+  await fetch(SUPA_URL+'/rest/v1/contas_producao?id=eq.'+contaId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({verba_total:nova})});
+  carregarCaixas();
+}
+
+async function encerrarCaixa(contaId){
+  if(!confirm('Encerrar este caixa? O link do produtor será desativado.'))return;
+  await fetch(SUPA_URL+'/rest/v1/contas_producao?id=eq.'+contaId,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({status:'encerrado',encerrado_em:new Date().toISOString()})});
+  carregarCaixas();
+}
+
+async function consolidarCaixa(contaId, jobNumero){
+  if(!confirm('Consolidar todos os lançamentos deste caixa no job '+jobNumero+'?\n\nEles serão copiados para a tabela de lançamentos do sistema.'))return;
+  try{
+    // Buscar lançamentos do caixa
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa?conta_id=eq.'+contaId+'&select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+    var lancs=await r.json();
+    if(!lancs||!lancs.length){alert('Nenhum lançamento para consolidar.');return;}
+    // Inserir em lancamentos
+    var payload=lancs.map(function(l){return {orcamento_numero:jobNumero,categoria:l.categoria,descricao:'[Caixa] '+l.descricao,valor:l.valor,data:l.data,fornecedor:l.fornecedor||'',tem_nota:l.tem_nota,comprovante:l.comprovante,periodicidade:'unica',tipo_lancamento:'saida'};});
+    var ri=await fetch(SUPA_URL+'/rest/v1/lancamentos',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
+    if(!ri.ok)throw new Error('HTTP '+ri.status);
+    alert('✓ '+lancs.length+' lançamentos consolidados no job '+jobNumero+'!');
+    carregarCaixas();
+  }catch(e){alert('Erro ao consolidar: '+e.message);}
 }
 
 </script>
