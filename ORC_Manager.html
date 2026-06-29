@@ -505,7 +505,7 @@
   <div class="lv-toolbar">
     <input class="lv-search" id="lv-search-inp" type="text" placeholder="Buscar por número, cliente ou projeto...">
   </div>
-  <div class="lv-body" id="lv-body"><div class="lv-empty">Erro ao carregar: _lvTabAtual is not defined</div></div>
+  <div class="lv-body" id="lv-body"><div class="lv-empty">Carregando...</div></div>
   </div>
 </div>
 <div id="editor-view" style="display:none;">
@@ -2329,6 +2329,8 @@ async function carregarOrcamento(id){
 }
 
 // ═══ SUPABASE CONFIG ═══
+var _lvTabAtual='ativos';
+var lvCache=[];
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
 var baseItems=[];  // cache local dos insumos
@@ -3329,8 +3331,6 @@ function voltarLista(){
   showListView();
 }
 
-var lvCache=[];
-var _lvTabAtual='ativos';
 var ARQUIVO_STATUS=['Orçamento Aprovado','Orçamento Recusado','Orçamento Vencido','Entregue','Cancelado'];
 var FATURADO_STATUS=['Faturado'];
 function setLvTab(tab){
