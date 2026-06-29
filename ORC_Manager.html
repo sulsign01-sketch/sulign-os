@@ -3646,11 +3646,11 @@ function renderCronRows(){
   _cronRows.forEach(function(row){
     var vp=vt*(parseFloat(row.pct)||0)/100;
     var div=document.createElement('div');div.className='cron-row';
-    div.innerHTML='<input class="cron-inp" placeholder="Parcela" value="'+row.desc+'" oninput="cronUpdate(''+row.id+'','desc',this.value)" style="width:110px;">'
-      +'<input class="cron-pct" type="number" placeholder="%" value="'+row.pct+'" oninput="cronUpdate(''+row.id+'','pct',this.value)">'
-      +'<input class="cron-inp" type="date" value="'+row.data+'" oninput="cronUpdate(''+row.id+'','data',this.value)" style="width:120px;">'
+    div.innerHTML='<input class="cron-inp" placeholder="Parcela" value="'+row.desc+'" oninput="cronUpdate(\'\'+row.id+\',\'desc\',this.value)" style="width:110px;">'
+      +'<input class="cron-pct" type="number" placeholder="%" value="'+row.pct+'" oninput="cronUpdate(\'\'+row.id+\',\'pct\',this.value)">'
+      +'<input class="cron-inp" type="date" value="'+row.data+'" oninput="cronUpdate(\'\'+row.id+\',\'data\',this.value)" style="width:120px;">'
       +'<span class="cron-val">'+(vp>0?'≈ R$ '+vp.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</span>'
-      +'<span class="cron-del" onclick="cronDelRow(''+row.id+'')">×</span>';
+      +'<span class="cron-del" onclick="cronDelRow(\'\'+row.id+\'\')" >×</span>';
     cont.appendChild(div);
   });
   var tp=_cronRows.reduce(function(a,r){return a+(parseFloat(r.pct)||0);},0);
