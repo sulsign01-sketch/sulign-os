@@ -332,6 +332,193 @@ function renderJobView(){
 }
 
 
+
+// ══════════════════════════════════════════════════════
+// APONTAMENTOS DE PRODUÇÃO — Gestão no OS Manager
+// ══════════════════════════════════════════════════════
+var apontamentosCache = [];
+var BASE_AP_URL = window.location.origin + window.location.pathname.replace('SulSign_OS_Manager.html','') + 'Apontamento_Producao.html';
+
+var DISC_MAP = {
+  FORR:'Forração', SERR:'Serralheria', MARC:'Marcenaria',
+  PINT:'Pintura', APLIC:'Aplicação', ESTR:'Estruturas',
+  DETA:'Detalhamento', ROUTER:'Router CNC', CV:'CV/Impressão',
+  IMP3D:'Impressão 3D', ELET:'Elétrica', MO:'Mão de Obra',
+  LOG:'Logística', ARTPL:'Artes Plásticas', ARQ:'Arquitetura', DESIGN:'Design'
+};
+
+function renderApontamentosView(){
+  var h = '';
+  h += '<div style="padding:16px;">';
+  
+  // KPIs
+  var ativos = apontamentosCache.filter(function(a){return a.status==='ativo';});
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px;">';
+  h += '<div style="background:#f9f9f9;border-radius:6px;padding:12px;border:1px solid #e8e8e8;">'
+    +'<div style="font-size:10px;color:#888;margin-bottom:3px;">ATIVOS</div>'
+    +'<div style="font-size:20px;font-weight:700;color:#333;">'+ativos.length+'</div></div>';
+  h += '<div style="background:#f9f9f9;border-radius:6px;padding:12px;border:1px solid #e8e8e8;">'
+    +'<div style="font-size:10px;color:#888;margin-bottom:3px;">TOTAL</div>'
+    +'<div style="font-size:20px;font-weight:700;color:#333;">'+apontamentosCache.length+'</div></div>';
+  var enc = apontamentosCache.filter(function(a){return a.status==='encerrado';});
+  h += '<div style="background:#f9f9f9;border-radius:6px;padding:12px;border:1px solid #e8e8e8;">'
+    +'<div style="font-size:10px;color:#888;margin-bottom:3px;">ENCERRADOS</div>'
+    +'<div style="font-size:20px;font-weight:700;color:#555;">'+enc.length+'</div></div>';
+  h += '</div>';
+
+  // Form criar apontamento
+  h += '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:16px;margin-bottom:16px;">';
+  h += '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#52b788;margin-bottom:12px;">+ Criar Apontamento</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+  h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Job (SS-Número)</label>'
+    +'<input type="text" id="ap-job" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;" placeholder="SS-2026_06-43"></div>';
+  h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Nome do Job</label>'
+    +'<input type="text" id="ap-job-nome" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;" placeholder="Festa Junina PRIO"></div>';
+  h += '</div>';
+  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+  h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Disciplina</label>'
+    +'<select id="ap-disc" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;">';
+  Object.keys(DISC_MAP).forEach(function(k){
+    h += '<option value="'+k+'">'+DISC_MAP[k]+'</option>';
+  });
+  h += '</select></div>';
+  h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Responsável</label>'
+    +'<input type="text" id="ap-resp" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;" placeholder="Fernando Jovita"></div>';
+  h += '</div>';
+  h += '<button onclick="criarApontamento()" style="background:#52b788;border:none;border-radius:6px;color:#fff;font-weight:700;padding:10px 16px;cursor:pointer;font-size:12px;">Criar e Gerar Link</button>';
+  h += '<div id="ap-link-box" style="display:none;margin-top:10px;background:#f0faf5;border:1px solid #52b788;border-radius:4px;padding:10px;">';
+  h += '<div style="font-size:10px;font-weight:700;color:#52b788;margin-bottom:6px;">🔗 LINK DO PROFISSIONAL</div>';
+  h += '<div id="ap-link-url" style="font-family:monospace;font-size:11px;word-break:break-all;background:#fff;border:1px solid #e8e8e8;border-radius:3px;padding:8px;"></div>';
+  h += '<button onclick="navigator.clipboard.writeText(document.getElementById('ap-link-url').textContent)" style="margin-top:6px;font-size:11px;padding:4px 12px;background:#52b788;border:none;border-radius:3px;color:#fff;cursor:pointer;font-weight:700;">📋 Copiar</button>';
+  h += '</div>';
+  h += '<div id="ap-status" style="font-size:12px;margin-top:8px;"></div>';
+  h += '</div>';
+
+  // Lista
+  if(!apontamentosCache.length){
+    h += '<div style="text-align:center;color:#bbb;padding:30px;">Nenhum apontamento criado ainda.</div>';
+  } else {
+    apontamentosCache.forEach(function(a){
+      var ckDone = a.checklist?a.checklist.filter(function(c){return c.status==='concluido';}).length:0;
+      var ckTotal = a.checklist?a.checklist.length:0;
+      var link = BASE_AP_URL+'?token='+a.token;
+      var enc2 = a.status==='encerrado';
+      h += '<div style="background:#fff;border:1px solid #e8e8e8;border-radius:8px;padding:14px;margin-bottom:10px;border-left:4px solid '+(enc2?'#ccc':'#52b788')+'">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:8px;">';
+      h += '<div><div style="font-size:12px;font-weight:700;color:#333;">'+a.job_numero+(a.job_nome?' — '+a.job_nome:'')+'</div>'
+        +'<div style="font-size:11px;color:#888;margin-top:2px;">🔨 '+(DISC_MAP[a.disciplina_codigo]||a.disciplina)+(a.responsavel?' · '+a.responsavel:'')+'</div>'
+        +(a.observacao?'<div style="font-size:10px;color:#1565c0;margin-top:3px;font-style:italic;">📝 '+a.observacao.substring(0,60)+(a.observacao.length>60?'...':'')+'</div>':'')
+        +'</div>'
+        +'<span style="font-size:10px;font-weight:700;color:'+(enc2?'#999':'#52b788')+';">'+(enc2?'✓ Encerrado':'● Ativo')+'</span>';
+      h += '</div>';
+      // Progresso checklist
+      if(ckTotal>0){
+        var pct = Math.round(ckDone/ckTotal*100);
+        h += '<div style="margin-bottom:8px;">'
+          +'<div style="display:flex;justify-content:space-between;font-size:10px;color:#888;margin-bottom:3px;">'
+          +'<span>Progresso do escopo</span><span>'+ckDone+'/'+ckTotal+' ('+pct+'%)</span></div>'
+          +'<div style="background:#f0f0f0;border-radius:3px;height:4px;">'
+          +'<div style="background:#52b788;height:4px;border-radius:3px;width:'+pct+'%;"></div></div></div>';
+      }
+      // Foto resultado
+      if(a.foto_resultado){
+        h += '<div style="margin-bottom:8px;"><img src="'+a.foto_resultado+'" style="max-width:120px;border-radius:4px;border:1px solid #e8e8e8;"></div>';
+      }
+      h += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
+      h += '<button onclick="navigator.clipboard.writeText(''+link+'')" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;">📋 Copiar Link</button>';
+      h += '<a href="'+link+'" target="_blank" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;text-decoration:none;color:#333;">👁 Ver</a>';
+      if(!enc2) h += '<button onclick="encerrarApontamento(''+a.id+'')" style="font-size:10px;padding:4px 10px;border:1px solid #c62828;border-radius:3px;background:#fff;color:#c62828;cursor:pointer;">🔒 Encerrar</button>';
+      h += '<button onclick="consolidarApontamento(''+a.id+'',''+a.job_numero+'',''+(DISC_MAP[a.disciplina_codigo]||a.disciplina)+'')" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;">⬇ Consolidar</button>';
+      h += '</div></div>';
+    });
+  }
+  h += '</div>';
+  return h;
+}
+
+async function carregarApontamentos(){
+  try{
+    var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao?select=*&order=criado_em.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var data = await r.json();
+    apontamentosCache = Array.isArray(data)?data:[];
+  }catch(e){console.error('apontamentos:',e);}
+}
+
+async function criarApontamento(){
+  var job = document.getElementById('ap-job').value.trim();
+  var nome = document.getElementById('ap-job-nome').value.trim();
+  var discCod = document.getElementById('ap-disc').value;
+  var disc = DISC_MAP[discCod]||discCod;
+  var resp = document.getElementById('ap-resp').value.trim();
+  var st = document.getElementById('ap-status');
+  if(!job){st.textContent='Informe o número do job.';st.style.color='#c62828';return;}
+  st.textContent='Criando...';st.style.color='#888';
+  try{
+    var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify({job_numero:job,job_nome:nome,disciplina:disc,disciplina_codigo:discCod,responsavel:resp,status:'ativo'})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status+' — '+await r.text());
+    var data = await r.json();
+    var novo = Array.isArray(data)?data[0]:data;
+    var link = BASE_AP_URL+'?token='+novo.token;
+    document.getElementById('ap-link-url').textContent = link;
+    document.getElementById('ap-link-box').style.display = 'block';
+    st.textContent='✓ Apontamento criado!';st.style.color='#52b788';
+    ['ap-job','ap-job-nome','ap-resp'].forEach(function(id){document.getElementById(id).value='';});
+    await carregarApontamentos();
+    renderApp();
+  }catch(e){st.textContent='✗ '+e.message;st.style.color='#c62828';}
+}
+
+async function encerrarApontamento(id){
+  if(!confirm('Encerrar este apontamento? O link do profissional será desativado.'))return;
+  await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao?id=eq.'+id,{
+    method:'PATCH',
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify({status:'encerrado',encerrado_em:new Date().toISOString()})
+  });
+  await carregarApontamentos();
+  renderApp();
+}
+
+async function consolidarApontamento(id, jobNumero, discNome){
+  if(!confirm('Consolidar lançamentos de '+discNome+' no job '+jobNumero+'?\n\nSerão copiados para os lançamentos do sistema.'))return;
+  try{
+    var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/lancamentos_apontamento?apontamento_id=eq.'+id+'&select=*',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var lancs = await r.json();
+    if(!lancs||!lancs.length){alert('Nenhum insumo lançado para consolidar.');return;}
+    var payload = lancs.map(function(l){
+      return {
+        orcamento_numero:jobNumero,
+        categoria:l.categoria||'Material',
+        descricao:'['+discNome+'] '+(l.insumo_nome||l.descricao||'—'),
+        valor:l.custo_total||0,
+        data:l.data||new Date().toISOString().split('T')[0],
+        fornecedor:l.fornecedor||'',
+        tem_nota:l.tem_nota!==false,
+        comprovante:l.comprovante||null,
+        periodicidade:'unica',
+        tipo_lancamento:'saida'
+      };
+    });
+    var ri = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/lancamentos',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(!ri.ok) throw new Error('HTTP '+ri.status);
+    alert('✓ '+lancs.length+' insumos consolidados no job '+jobNumero+'!');
+    await carregarApontamentos();
+    renderApp();
+  }catch(e){alert('Erro: '+e.message);}
+}
+
 </script>
 <script>
 // CONFIG
@@ -468,12 +655,14 @@ function render(){
   h+='<div class="hd-nav">';
   h+='<button class="nb'+(view==='lista'?' on':'')+'" data-v="lista">📋 OSs</button>';
   h+='<button class="nb'+(view==='nova'||view==='editar'?' on':'')+'" data-v="nova">+ Nova OS</button>';
+  h+='<button class="nb'+(view==='apontamentos'?' on':'')+'" data-v="apontamentos" style="color:#52b788;">🔨 Apontamentos</button>';
   h+='</div>';
   h+='<span style="font-size:10px;color:var(--g400);font-family:DM Mono,monospace;">Sul Sign · '+new Date().toLocaleDateString('pt-BR')+'</span>';
   h+='</div><div class="ab"></div></div>';
 
   h+='<div class="page">';
-  if(view==='lista'){
+  if(view==='apontamentos'){ h+=renderApontamentosView(); }
+  else if(view==='lista'){
     h+='<div class="kpi-row">';
     h+='<div class="kpi"><div class="kpi-v">'+osList.length+'</div><div class="kpi-l">Total OSs</div></div>';
     h+='<div class="kpi"><div class="kpi-v">'+prod+'</div><div class="kpi-l">Em Produção</div></div>';
@@ -1030,6 +1219,7 @@ function setView(v){
   var jv=document.getElementById('view-job');
   if(jv) jv.style.display=v==='job'?'block':'none';
   if(v==='job'){render();renderJobView();return;}
+  if(v==='apontamentos'){carregarApontamentos().then(function(){render();});return;}
   render();
 }
 
