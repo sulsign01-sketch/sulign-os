@@ -1183,7 +1183,7 @@ function calcLogOp(f){
     pctVal=gl2*opPct/100;
   }
   var total=logOpTotal+pctVal;
-  return {total:total,hasGroups:logOpTotal>=0&&tables.some(function(t){if(t.opcional)return false;var nm=(t.nameEl?t.nameEl.value:'').toLowerCase();var st=(t.setorEl?t.setorEl.value:'').toLowerCase();var _st2=t.setorChks?Object.keys(t.setorChks).filter(function(k){return t.setorChks[k].checked;}):[]; return nm.indexOf('logi')>=0||nm.indexOf('oper')>=0||_st2.indexOf('LOG')>=0;}),hasPct:pctVal>0};
+  return {total:total,pctVal:pctVal,hasGroups:logOpTotal>=0&&tables.some(function(t){if(t.opcional)return false;var nm=(t.nameEl?t.nameEl.value:'').toLowerCase();var st=(t.setorEl?t.setorEl.value:'').toLowerCase();var _st2=t.setorChks?Object.keys(t.setorChks).filter(function(k){return t.setorChks[k].checked;}):[]; return nm.indexOf('logi')>=0||nm.indexOf('oper')>=0||_st2.indexOf('LOG')>=0;}),hasPct:pctVal>0};
 }
 
 function reindexar(){
@@ -1298,15 +1298,15 @@ function renderProposta(f){
   });
   var dv=gT*dp,gl=gT-dv;
   var loRes=calcLogOp(f);
-  var totalGeral=(dp>0?gl:gT)+loRes.total;
+  var totalGeral=(dp>0?gl:gT)+(loRes.hasPct?loRes.pctVal:0);
   if(dp>0){
     var dRow=tbody.insertRow();dRow.className='grand';dRow.insertCell().colSpan=4;dRow.cells[0].innerHTML='<strong>Subtotal Geral</strong>';dRow.insertCell();var dc=dRow.insertCell();dc.className='n';dc.textContent=fmt(gT);
     var discRow=tbody.insertRow();discRow.style.background='#1a1a1a';discRow.insertCell().colSpan=4;discRow.cells[0].innerHTML='<span style="color:#ff8a80;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Desconto ('+g('desc-pct')+'%)</span>';discRow.insertCell();var dc2=discRow.insertCell();dc2.className='n';dc2.style.color='#ff8a80';dc2.style.fontFamily='DM Mono,monospace';dc2.textContent='− '+fmt(dv);
   }
-  if(loRes.hasGroups||loRes.hasPct){
+  if(loRes.hasPct){
     var opRow=tbody.insertRow();opRow.style.background='#f0faf5';opRow.insertCell().colSpan=4;opRow.cells[0].innerHTML='<span style="font-weight:600;">Logística e Operacional</span>';opRow.insertCell();var opC=opRow.insertCell();opC.className='n';opC.style.color='var(--ga)';opC.style.fontWeight='600';opC.textContent=loRes.total>0?fmt(loRes.total):'—';
   }
-  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=4;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var ti=tRow.insertCell();ti.className='imp2';ti.textContent=gI>0?fmt(gI):'—';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt((loRes.hasGroups||loRes.hasPct)?totalGeral:(dp>0?gl:gT));
+  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=4;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var ti=tRow.insertCell();ti.className='imp2';ti.textContent=gI>0?fmt(gI):'—';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt(loRes.hasPct?totalGeral:(dp>0?gl:gT));
   // Opcionais separados
   if(opcionais.length){
     var sepR=tbody.insertRow();sepR.insertCell().colSpan=6;sepR.cells[0].style.cssText='padding:12px 0 4px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);border-top:1px dashed var(--g200);';sepR.cells[0].textContent='Opcionais — não inclusos no total';
@@ -1374,15 +1374,15 @@ function renderBlocado(f){
   });
   var dv=gT*dp,gl=gT-dv;
   var loRes=calcLogOp(f);
-  var totalGeral=(dp>0?gl:gT)+loRes.total;
+  var totalGeral=(dp>0?gl:gT)+(loRes.hasPct?loRes.pctVal:0);
   if(dp>0){
     var dRow=tbody.insertRow();dRow.className='grand';dRow.insertCell().colSpan=2;dRow.cells[0].innerHTML='<strong>Subtotal Geral</strong>';var dc=dRow.insertCell();dc.className='n';dc.textContent=fmt(gT);
     var discRow=tbody.insertRow();discRow.style.background='#1a1a1a';discRow.insertCell().colSpan=2;discRow.cells[0].innerHTML='<span style="color:#ff8a80;font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;">Desconto ('+g('desc-pct')+'%)</span>';var dc2=discRow.insertCell();dc2.className='n';dc2.style.color='#ff8a80';dc2.style.fontFamily='DM Mono,monospace';dc2.textContent='− '+fmt(dv);
   }
-  if(loRes.hasGroups||loRes.hasPct){
+  if(loRes.hasPct){
     var opRow=tbody.insertRow();opRow.style.background='#f0faf5';opRow.insertCell().colSpan=2;opRow.cells[0].innerHTML='<span style="font-weight:600;">Logística e Operacional</span>';var opC=opRow.insertCell();opC.className='n';opC.style.color='var(--ga)';opC.style.fontWeight='600';opC.textContent=loRes.total>0?fmt(loRes.total):'—';
   }
-  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=2;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt((loRes.hasGroups||loRes.hasPct)?totalGeral:(dp>0?gl:gT));
+  var tRow=tbody.insertRow();tRow.className='grand';tRow.insertCell().colSpan=2;tRow.cells[0].innerHTML='<strong>Total Geral</strong>';var tc=tRow.insertCell();tc.className='n';tc.style.color='#52b788';tc.style.fontSize='14px';tc.textContent=fmt(loRes.hasPct?totalGeral:(dp>0?gl:gT));
   // Opcionais separados
   if(opcionais.length){
     var sepR=tbody.insertRow();sepR.insertCell().colSpan=3;sepR.cells[0].style.cssText='padding:12px 0 4px;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);border-top:1px dashed var(--g200);';sepR.cells[0].textContent='Opcionais — não inclusos no total';
@@ -3359,10 +3359,10 @@ function renderEstr(){
   var desconto=gT*dp;
   var gl=gT-desconto;
   var loRes=calcLogOp(f);
-  var totalGeral=gl+loRes.total;
+  var totalGeral=gl+(loRes.hasPct?loRes.pctVal:0);
   document.getElementById('estr-r-custo').textContent=fmt(gT-gI);
   document.getElementById('estr-r-imp').textContent=gI>0?fmt(gI):'—';
-  document.getElementById('estr-r-total').textContent=fmt(loRes.total>0?totalGeral:gl);
+  document.getElementById('estr-r-total').textContent=fmt(loRes.hasPct?totalGeral:gl);
 }
 
 var estrDescricoes={};
