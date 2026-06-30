@@ -1121,7 +1121,7 @@ async function carregar(){
   if(!wrap){console.warn('tbl-wrap não encontrado');return;}
   try{
     var [rOrc, rOs, rLanc, rFixas] = await Promise.all([
-      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,valor_nf,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
       fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
       fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
       fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=created_at.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}})
