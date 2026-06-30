@@ -464,6 +464,10 @@ function fmt(v){
   return v.toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 }
 
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function atualizarBotaoToggle(){
   var btn=document.getElementById('btn-toggle-valores');
   btn.textContent = valoresOcultos ? '🙈 Mostrar valores' : '👁 Ocultar valores';
@@ -646,7 +650,7 @@ function renderTabela(){
   rows.forEach(function(r){
     html+='<tr>'
       +'<td class="num">'+r.numero+'</td>'
-      +'<td>'+r.cliente+'<div class="proj">'+r.projeto+'</div></td>'
+      +'<td>'+esc(r.cliente)+'<div class="proj">'+esc(r.projeto)+'</div></td>'
       +'<td>'+r.statusBadge+'</td>'
       +'<td class="n">'+fmt(r.custoOrcado)+'</td>'
       +'<td class="n">'+(r.orc.valor_nf&&parseFloat(r.orc.valor_nf)>0
@@ -1010,7 +1014,7 @@ function renderFornecedoresFicha(todasOs,todosLanc){
   wrap.innerHTML=lista.map(function(f){
     var nj=Object.keys(f.jobs).length;
     return '<div class="forn-card">'
-      +'<div class="forn-card-hd"><span class="forn-nome">'+f.nome+'</span><span class="forn-vol">'+fmt(f.volume)+'</span></div>'
+      +'<div class="forn-card-hd"><span class="forn-nome">'+esc(f.nome)+'</span><span class="forn-vol">'+fmt(f.volume)+'</span></div>'
       +'<div class="forn-stats"><span>Jobs: <span class="forn-stat-val">'+nj+'</span></span>'
       +'<span>Ticket médio/job: <span class="forn-stat-val">'+fmt(nj>0?f.volume/nj:0)+'</span></span></div></div>';
   }).join('');
@@ -1301,10 +1305,10 @@ function renderTodos(){
     var prazoBadge=t.prazo?'<span class="todo-badge-prazo '+prazoCls+'">'+prazoLabel(t.prazo)+'</span>':'';
     var jobBadge=t.job?'<span class="todo-badge-job">'+t.job+'</span>':'';
     var discBadge=t.disc?'<span class="todo-badge-disc">'+t.disc+'</span>':'';
-    var linkHtml=t.link?'<div class="todo-attach"><a href="'+t.link+'" target="_blank" rel="noopener">Link</a></div>':'';
+    var linkHtml=t.link?'<div class="todo-attach"><a href="'+esc(t.link)+'" target="_blank" rel="noopener">Link</a></div>':'';
     div.innerHTML='<input type="checkbox" class="todo-check" '+(t.done?'checked':'')+'>'
       +'<div class="todo-body pri-'+t.pri+'">'
-      +'<div class="todo-txt'+(t.done?' done':'')+'">'+t.text+'</div>'
+      +'<div class="todo-txt'+(t.done?' done':'')+'">'+esc(t.text)+'</div>'
       +'<div class="todo-meta">'+jobBadge+discBadge+prazoBadge+'</div>'
       +linkHtml
       +'</div>'
@@ -1397,7 +1401,7 @@ function abrirRelatorioJob(numero){
     +'</div>';
   html += '<div class="rep-title-box">'
     +'<div class="rep-job-num">'+orc.numero+'</div>'
-    +'<div class="rep-job-info">'+(orc.cliente||'—')+' · '+(orc.projeto||'—')+(orc.agencia?' · Agência: '+orc.agencia:'')+'</div>'
+    +'<div class="rep-job-info">'+esc(orc.cliente||'—')+' · '+esc(orc.projeto||'—')+(orc.agencia?' · Agência: '+esc(orc.agencia):'')+'</div>'
     +'<div class="rep-job-status">Status: '+(orc.status||'—')+(faturado?' · NF emitida: '+fmt(faturado):' · Sem NF emitida')+'</div>'
     +'</div>';
 
@@ -1455,7 +1459,7 @@ function abrirRelatorioJob(numero){
     html += '<table class="rep-table rep-table-sm"><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Fornecedor</th><th class="n">Valor</th></tr></thead><tbody>';
     lancs.slice().sort(function(a,b){return (a.data||'').localeCompare(b.data||'');}).forEach(function(l){
       var dt = l.data ? new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-      html += '<tr><td>'+dt+'</td><td>'+(l.categoria||'—')+'</td><td>'+(l.descricao||'—')+'</td><td>'+(l.fornecedor||'—')+'</td><td class="n">'+fmt(l.valor)+'</td></tr>';
+      html += '<tr><td>'+dt+'</td><td>'+esc(l.categoria||'—')+'</td><td>'+esc(l.descricao||'—')+'</td><td>'+esc(l.fornecedor||'—')+'</td><td class="n">'+fmt(l.valor)+'</td></tr>';
     });
     html += '</tbody></table>';
   } else {
