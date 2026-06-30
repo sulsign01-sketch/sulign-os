@@ -632,6 +632,7 @@ var H={'apikey':SK,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'appl
 
 // ESTADO
 var osList=[];
+var orcamentosAtivosCache=[]; // [{numero, cliente, projeto}] — orçamentos ativos para vincular OS
 var view='lista';
 var discF='T';
 var search='';
@@ -755,7 +756,27 @@ async function load(){
     osList=d;
     render();
   carregarOrcamentosParaSemaforo();
+  carregarOrcamentosAtivos();
   }catch(e){toast('Erro ao carregar: '+e.message,'err');}
+}
+
+async function carregarOrcamentosAtivos(){
+  try{
+    var STATUS_ATIVOS=['Em Orçamento','Cotação','Proposta Enviada','Orçamento Aprovado','Em Produção'];
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,status&order=numero.desc',{
+      headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken()}
+    });
+    var data=await r.json();
+    orcamentosAtivosCache=(Array.isArray(data)?data:[]).filter(function(o){
+      return STATUS_ATIVOS.indexOf(o.status||'')>=0;
+    });
+    var dl=document.getElementById('orcamentos-ativos-list');
+    if(dl){
+      dl.innerHTML=orcamentosAtivosCache.map(function(o){
+        return '<option value="'+o.numero+'">'+o.numero+' — '+(o.cliente||'')+' / '+(o.projeto||'')+'</option>';
+      }).join('');
+    }
+  }catch(e){console.warn('Erro ao carregar orçamentos ativos:',e);}
 }
 
 // RENDER PRINCIPAL
@@ -907,6 +928,12 @@ function render(){
   if(compradoresList){
     compradoresList.innerHTML=getCompradoresRecentes().map(function(n){return '<option value="'+n+'">';}).join('');
   }
+  var orcList=document.getElementById('orcamentos-ativos-list');
+  if(orcList && orcamentosAtivosCache.length){
+    orcList.innerHTML=orcamentosAtivosCache.map(function(o){
+      return '<option value="'+o.numero+'">'+o.numero+' — '+(o.cliente||'')+' / '+(o.projeto||'')+'</option>';
+    }).join('');
+  }
 }
 
 // FORM
@@ -929,7 +956,7 @@ function renderForm(){
   if(disc==='COMPRAS'){
     h+='<div class="fsec"><div class="fsec-t">Dados Gerais</div><div class="fg fg4">';
     h+='<div class="ff"><label>Data de Entrada</label><input type="date" class="fi mono" id="f-ent" value="'+(os.data_entrada||hoje)+'"></div>';
-    h+='<div class="ff"><label>Nº Orçamento (SS)</label><input class="fi mono" id="f-orc" value="'+(os.orcamento_numero||'')+'" placeholder="SS-2026_06-24"></div>';
+    h+='<div class="ff"><label>Nº Orçamento (SS)</label><input class="fi mono" id="f-orc" list="orcamentos-ativos-list" value="'+(os.orcamento_numero||'')+'" placeholder="Selecione ou digite um SS"><datalist id="orcamentos-ativos-list"></datalist></div>';
     h+='<div class="ff"><label>Nº da OS <em>*</em></label><input class="fi mono" id="f-num" value="'+(os.num||'')+'" placeholder="Auto-gerado" readonly></div>';
     h+='<div class="ff"><label>Prazo para fechar compra</label><input type="date" class="fi" id="f-prazo" value="'+(os.prazo||'')+'"></div>';
   h+='<div class="ff"><label>📅 Entrega prometida ao cliente</label><input type="date" class="fi" id="f-entrega" value="'+(os.data_entrega_prometida||'')+'"></div>';
@@ -944,7 +971,7 @@ function renderForm(){
   } else {
   h+='<div class="fsec"><div class="fsec-t">Dados Gerais</div><div class="fg fg4">';
   h+='<div class="ff"><label>Data de Entrada</label><input type="date" class="fi mono" id="f-ent" value="'+(os.data_entrada||hoje)+'"></div>';
-  h+='<div class="ff"><label>Nº Orçamento (SS)</label><input class="fi mono" id="f-orc" value="'+(os.orcamento_numero||'')+'" placeholder="SS-2026_06-24"></div>';
+  h+='<div class="ff"><label>Nº Orçamento (SS)</label><input class="fi mono" id="f-orc" list="orcamentos-ativos-list" value="'+(os.orcamento_numero||'')+'" placeholder="Selecione ou digite um SS"><datalist id="orcamentos-ativos-list"></datalist></div>';
   h+='<div class="ff"><label>Nº da OS <em>*</em></label><input class="fi mono" id="f-num" value="'+(os.num||'')+'" placeholder="Auto-gerado" readonly></div>';
   h+='<div class="ff"><label>Prazo</label><input type="date" class="fi" id="f-prazo" value="'+(os.prazo||'')+'"></div>';
   h+='<div class="ff"><label>📅 Entrega prometida ao cliente</label><input type="date" class="fi" id="f-entrega" value="'+(os.data_entrega_prometida||'')+'"></div>';
