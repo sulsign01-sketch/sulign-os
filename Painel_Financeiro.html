@@ -1164,17 +1164,22 @@ async function carregar(){
       var margemPct = calc.venda>0 ? (margem/calc.venda*100) : null;
 
       var orcStatus = orc.status||'Em Orçamento';
-      if(STATUS_FATURADO.indexOf(orcStatus)>=0){
-        kVendaTotal+=calcReceitaReal(orc); // usa valor_nf se disponível
-      } else if(['Proposta Enviada','Orçamento Aprovado','Em Produção','Cotação','Em Orçamento'].indexOf(orcStatus)>=0){
-        kPipelineTotal+=calc.venda;
+      var ehTreinamento = orcStatus === 'Treinamento';
+      if(!ehTreinamento){
+        if(STATUS_FATURADO.indexOf(orcStatus)>=0){
+          kVendaTotal+=calcReceitaReal(orc); // usa valor_nf se disponível
+        } else if(['Proposta Enviada','Orçamento Aprovado','Em Produção','Cotação','Em Orçamento'].indexOf(orcStatus)>=0){
+          kPipelineTotal+=calc.venda;
+        }
+        if(real.temFechado){kCustoRealTotal+=real.fechado;kMargemTotal+=margem;}
       }
-      if(real.temFechado){kCustoRealTotal+=real.fechado;kMargemTotal+=margem;}
       else {kMargemTotal+=(calc.venda-calc.custo);}
 
-      var statusBadge = osDoJob.length===0
-        ? '<span class="badge sem">sem OS</span>'
-        : (real.temFechado ? '<span class="badge fec">compras fechadas</span>' : '<span class="badge and">em andamento</span>');
+      var statusBadge = ehTreinamento
+        ? '<span class="badge" style="background:#4a148c;color:#ce93d8;">🎓 TREINO — não é real</span>'
+        : (osDoJob.length===0
+            ? '<span class="badge sem">sem OS</span>'
+            : (real.temFechado ? '<span class="badge fec">compras fechadas</span>' : '<span class="badge and">em andamento</span>'));
 
       return {
         numero:orc.numero, cliente:orc.cliente||'—', projeto:orc.projeto||'—',
