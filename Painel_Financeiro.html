@@ -161,9 +161,67 @@ tr:hover td{background:var(--g100)}
 .err{text-align:center;padding:40px;color:var(--red)}
 .foot{padding:12px 24px;font-size:10px;color:var(--g400);border-top:1px solid var(--g200)}
 @media(max-width:700px){.kpis{grid-template-columns:repeat(2,1fr)}.hd-nav{display:none}table{font-size:10px}th,td{padding:6px}}
+
+.rep-btn{background:none;border:1px solid var(--g200);border-radius:4px;cursor:pointer;font-size:13px;padding:3px 7px;transition:all .15s;}
+.rep-btn:hover{background:var(--g100);border-color:var(--ga);}
+
+#rep-modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:2000;align-items:flex-start;justify-content:center;overflow-y:auto;padding:30px 16px;}
+#rep-modal-overlay.open{display:flex;}
+.rep-modal-box{background:#fff;border-radius:8px;max-width:780px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);}
+.rep-modal-hd{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-bottom:1px solid var(--g200);position:sticky;top:0;background:#fff;border-radius:8px 8px 0 0;}
+.rep-modal-actions{display:flex;gap:8px;}
+.rep-modal-btn{font-size:12px;padding:6px 14px;border-radius:4px;cursor:pointer;font-weight:600;border:none;}
+.rep-modal-btn.print{background:var(--ga);color:#fff;}
+.rep-modal-btn.close{background:var(--g100);color:var(--black);}
+
+.rep-doc{padding:24px 28px;font-size:13px;}
+.rep-hd{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px;padding-bottom:14px;border-bottom:2px solid var(--black);}
+.rep-logo{font-weight:800;font-size:16px;letter-spacing:1px;}
+.rep-sub{font-size:11px;color:var(--g400);text-transform:uppercase;letter-spacing:1px;margin-top:2px;}
+.rep-meta{font-size:11px;color:var(--g400);}
+.rep-title-box{background:var(--g100);border-radius:6px;padding:14px 16px;margin-bottom:18px;}
+.rep-job-num{font-family:'DM Mono',monospace;font-size:18px;font-weight:700;color:var(--ga);}
+.rep-job-info{font-size:13px;margin-top:4px;}
+.rep-job-status{font-size:11px;color:var(--g400);margin-top:4px;}
+.rep-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--g200);margin-bottom:14px;border-radius:6px;overflow:hidden;}
+.rep-kpi{background:#fff;padding:12px 14px;}
+.rep-kpi-l{font-size:9px;color:var(--g400);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.rep-kpi-v{font-family:'DM Mono',monospace;font-size:15px;font-weight:700;}
+.rep-variacao{font-size:12px;font-weight:600;margin-bottom:20px;padding:8px 12px;background:var(--g100);border-radius:4px;}
+.rep-sec-title{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--ga);margin:18px 0 8px;border-bottom:1px solid var(--g200);padding-bottom:6px;}
+.rep-table{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}
+.rep-table th{text-align:left;padding:6px 8px;font-size:10px;color:var(--g400);text-transform:uppercase;border-bottom:1px solid var(--g200);}
+.rep-table td{padding:6px 8px;border-bottom:1px solid var(--g100);}
+.rep-table .n{text-align:right;font-family:'DM Mono',monospace;}
+.rep-table-sm td,.rep-table-sm th{font-size:11px;padding:5px 6px;}
+.rep-tot-row{font-weight:700;background:var(--g100);}
+.rep-empty{font-size:11px;color:var(--g400);padding:10px 0;}
+.rep-footer{margin-top:24px;padding-top:12px;border-top:1px solid var(--g200);font-size:10px;color:var(--g400);text-align:center;}
+
+@media print{
+  body *{visibility:hidden;}
+  #rep-modal-overlay,#rep-modal-overlay *{visibility:visible;}
+  #rep-modal-overlay{position:absolute;inset:0;background:#fff;padding:0;display:block;}
+  .rep-modal-box{box-shadow:none;max-width:100%;}
+  .rep-modal-hd{display:none;}
+}
 </style>
 </head>
 <body>
+<!-- MODAL RELATÓRIO POR JOB -->
+<div id="rep-modal-overlay">
+  <div class="rep-modal-box">
+    <div class="rep-modal-hd">
+      <strong style="font-size:13px;">Relatório do Job</strong>
+      <div class="rep-modal-actions">
+        <button class="rep-modal-btn print" onclick="imprimirRelatorioJob()">🖨 Exportar PDF</button>
+        <button class="rep-modal-btn close" onclick="fecharRelatorioJob()">Fechar</button>
+      </div>
+    </div>
+    <div id="rep-modal-body"></div>
+  </div>
+</div>
+
 <div class="page">
   <div class="hd">
     <div class="hd-top">
@@ -481,7 +539,7 @@ function renderTabela(){
     return;
   }
 
-  var html='<table><thead><tr><th>Número</th><th>Cliente / Projeto</th><th>Status</th><th class="n">Custo Orçado</th><th class="n">Venda (c/NF)</th><th class="n">Custo Realizado</th><th class="n">Margem</th><th class="n">Margem %</th></tr></thead><tbody>';
+  var html='<table><thead><tr><th>Número</th><th>Cliente / Projeto</th><th>Status</th><th class="n">Custo Orçado</th><th class="n">Venda (c/NF)</th><th class="n">Custo Realizado</th><th class="n">Margem</th><th class="n">Margem %</th><th></th></tr></thead><tbody>';
   rows.forEach(function(r){
     html+='<tr>'
       +'<td class="num">'+r.numero+'</td>'
@@ -494,6 +552,7 @@ function renderTabela(){
       +'<td class="n">'+(r.custoReal===null?'<span class="muted">—</span>':fmt(r.custoReal))+'</td>'
       +'<td class="n '+(r.margem>=0?'pos':'neg')+'">'+fmt(r.margem)+'</td>'
       +'<td class="n '+(r.margemPct>=0?'pos':'neg')+'">'+(r.margemPct===null?'—':r.margemPct.toFixed(1)+'%')+'</td>'
+      +'<td><button class="rep-btn" onclick="abrirRelatorioJob(\''+r.numero+'\')" title="Relatório detalhado do job">📄</button></td>'
       +'</tr>';
   });
   html+='</tbody></table>';
@@ -805,6 +864,7 @@ function renderDRE(orcamentos,todasOs,todosLanc,todasFixas){
   var wrap=document.getElementById('dre-wrap'); if(!wrap)return;
   var recBruta=orcamentos.filter(function(o){var s=o.status||'';return s==='Faturado'||s==='Entregue';}).reduce(function(a,o){return a+calcReceitaReal(o);},0);
   var impostosMes=todasFixas.filter(function(d){return d.categoria==='Impostos'&&d.tipo==='Despesa';}).reduce(function(a,d){return a+(parseFloat(d.valor)||0);},0);
+  impostosMes+=todosLanc.filter(function(l){return (l.categoria||'').toLowerCase()==='imposto';}).reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
   var recLiq=recBruta-impostosMes;
   var cmv=todosLanc.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
   var lucroBruto=recLiq-cmv;
@@ -1013,7 +1073,7 @@ async function carregar(){
         numero:orc.numero, cliente:orc.cliente||'—', projeto:orc.projeto||'—',
         custoOrcado:calc.custo, venda:calc.venda,
         custoReal:real.temFechado?real.fechado:null,
-        margem:margem, margemPct:margemPct, statusBadge:statusBadge, orc:orc
+        margem:margem, margemPct:margemPct, statusBadge:statusBadge, orc:orc, lancDoJob:lancDoJob
       };
     });
 
@@ -1172,6 +1232,138 @@ function adicionarTodo(){
 }
 document.getElementById('todo-inp').addEventListener('keydown',function(e){if(e.key==='Enter')adicionarTodo();});
 renderTodos();
+
+// ══════════════════════════════════════════════════════
+// RELATÓRIO DETALHADO POR JOB
+// ══════════════════════════════════════════════════════
+var DISC_LABELS = {
+  FORR:'Forração', SERR:'Serralheria', MARC:'Marcenaria', PINT:'Pintura',
+  APLIC:'Aplicação', ESTR:'Estruturas', DETA:'Detalhamento', ROUTER:'Router CNC',
+  CV:'CV/Impressão', IMP3D:'Impressão 3D', ELET:'Elétrica', MO:'Mão de Obra',
+  LOG:'Logística', ARTPL:'Artes Plásticas', ARQ:'Arquitetura', DESIGN:'Design'
+};
+
+function abrirRelatorioJob(numero){
+  var row = _allRows.find(function(r){return r.numero===numero;});
+  if(!row){alert('Job não encontrado.');return;}
+  var orc = row.orc;
+  var grupos = orc.grupos||[];
+  var lancs = row.lancDoJob||[];
+
+  // ── Orçado por disciplina (a partir dos grupos do memorial) ──
+  var orcadoPorDisc = {};
+  grupos.forEach(function(gr){
+    var custoGrupo = (gr.linhas||[]).reduce(function(a,ln){
+      var q=parseFloat(ln.qtd)||0, u=parseFloat(ln.unit)||0;
+      return a+(q*u);
+    },0);
+    var sets = (gr.setores&&gr.setores.length) ? gr.setores : ['(sem disciplina)'];
+    var fracao = custoGrupo / sets.length;
+    sets.forEach(function(s){
+      var label = DISC_LABELS[s] || s;
+      if(!orcadoPorDisc[label]) orcadoPorDisc[label]=0;
+      orcadoPorDisc[label]+=fracao;
+    });
+  });
+  var totalOrcado = Object.values(orcadoPorDisc).reduce(function(a,v){return a+v;},0);
+
+  // ── Real por categoria ──
+  var realPorCat = {};
+  lancs.forEach(function(l){
+    var cat = l.categoria || 'Outros';
+    if(!realPorCat[cat]) realPorCat[cat]=0;
+    realPorCat[cat]+=parseFloat(l.valor)||0;
+  });
+  var totalReal = Object.values(realPorCat).reduce(function(a,v){return a+v;},0);
+
+  // ── Receita / margem ──
+  var receita = (orc.valor_nf && parseFloat(orc.valor_nf)>0) ? parseFloat(orc.valor_nf) : row.venda;
+  var margemReal = receita - totalReal;
+  var margemPct = receita>0 ? (margemReal/receita*100) : 0;
+  var variacao = totalReal - totalOrcado;
+
+  var hoje = new Date().toLocaleDateString('pt-BR');
+
+  var html = '<div class="rep-doc">';
+  html += '<div class="rep-hd">'
+    +'<div><div class="rep-logo">SULSIGN GROUP</div><div class="rep-sub">Relatório Gerencial de Job</div></div>'
+    +'<div class="rep-meta">Emitido em '+hoje+'</div>'
+    +'</div>';
+  html += '<div class="rep-title-box">'
+    +'<div class="rep-job-num">'+orc.numero+'</div>'
+    +'<div class="rep-job-info">'+(orc.cliente||'—')+' · '+(orc.projeto||'—')+(orc.agencia?' · Agência: '+orc.agencia:'')+'</div>'
+    +'<div class="rep-job-status">Status: '+(orc.status||'—')+'</div>'
+    +'</div>';
+
+  // KPIs consolidados
+  html += '<div class="rep-kpis">'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Receita</div><div class="rep-kpi-v" style="color:#2d6a4f;">'+fmt(receita)+'</div></div>'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Custo Orçado</div><div class="rep-kpi-v">'+fmt(totalOrcado)+'</div></div>'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Custo Real</div><div class="rep-kpi-v" style="color:#c62828;">'+fmt(totalReal)+'</div></div>'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Margem Real</div><div class="rep-kpi-v" style="color:'+(margemPct>=25?'#2d6a4f':margemPct>=15?'#e65100':'#c62828')+';">'+fmt(margemReal)+' ('+margemPct.toFixed(1)+'%)</div></div>'
+    +'</div>';
+
+  // Variação orçado x real
+  html += '<div class="rep-variacao" style="color:'+(variacao>0?'#c62828':'#2d6a4f')+';">'
+    +'Variação Orçado × Real: '+(variacao>=0?'+':'')+fmt(variacao)+(totalOrcado>0?' ('+((variacao/totalOrcado)*100).toFixed(1)+'%)':'')
+    +(variacao>0?' — custo acima do orçado':' — custo dentro ou abaixo do orçado')
+    +'</div>';
+
+  // Tabela: Custo Orçado por Disciplina
+  html += '<div class="rep-sec-title">Custo Orçado por Disciplina (Memorial)</div>';
+  if(Object.keys(orcadoPorDisc).length){
+    html += '<table class="rep-table"><thead><tr><th>Disciplina</th><th class="n">Custo Orçado</th><th class="n">%</th></tr></thead><tbody>';
+    Object.keys(orcadoPorDisc).sort(function(a,b){return orcadoPorDisc[b]-orcadoPorDisc[a];}).forEach(function(d){
+      var pct = totalOrcado>0 ? (orcadoPorDisc[d]/totalOrcado*100) : 0;
+      html += '<tr><td>'+d+'</td><td class="n">'+fmt(orcadoPorDisc[d])+'</td><td class="n">'+pct.toFixed(1)+'%</td></tr>';
+    });
+    html += '<tr class="rep-tot-row"><td>TOTAL</td><td class="n">'+fmt(totalOrcado)+'</td><td></td></tr>';
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="rep-empty">Nenhum grupo com disciplina marcada no memorial.</div>';
+  }
+
+  // Tabela: Custo Real por Categoria
+  html += '<div class="rep-sec-title">Custo Real por Categoria (Lançamentos)</div>';
+  if(Object.keys(realPorCat).length){
+    html += '<table class="rep-table"><thead><tr><th>Categoria</th><th class="n">Custo Real</th><th class="n">%</th></tr></thead><tbody>';
+    Object.keys(realPorCat).sort(function(a,b){return realPorCat[b]-realPorCat[a];}).forEach(function(c){
+      var pct = totalReal>0 ? (realPorCat[c]/totalReal*100) : 0;
+      html += '<tr><td>'+c+'</td><td class="n">'+fmt(realPorCat[c])+'</td><td class="n">'+pct.toFixed(1)+'%</td></tr>';
+    });
+    html += '<tr class="rep-tot-row"><td>TOTAL</td><td class="n">'+fmt(totalReal)+'</td><td></td></tr>';
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="rep-empty">Nenhum custo real lançado para este job ainda.</div>';
+  }
+
+  // Tabela: Lançamentos detalhados
+  html += '<div class="rep-sec-title">Lançamentos Detalhados</div>';
+  if(lancs.length){
+    html += '<table class="rep-table rep-table-sm"><thead><tr><th>Data</th><th>Categoria</th><th>Descrição</th><th>Fornecedor</th><th class="n">Valor</th></tr></thead><tbody>';
+    lancs.slice().sort(function(a,b){return (a.data||'').localeCompare(b.data||'');}).forEach(function(l){
+      var dt = l.data ? new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      html += '<tr><td>'+dt+'</td><td>'+(l.categoria||'—')+'</td><td>'+(l.descricao||'—')+'</td><td>'+(l.fornecedor||'—')+'</td><td class="n">'+fmt(l.valor)+'</td></tr>';
+    });
+    html += '</tbody></table>';
+  } else {
+    html += '<div class="rep-empty">Sem lançamentos registrados.</div>';
+  }
+
+  html += '<div class="rep-footer">Sul Sign Group · CNPJ 03.952.317/0001-16 · Relatório gerado automaticamente pelo SulSign OS</div>';
+  html += '</div>';
+
+  document.getElementById('rep-modal-body').innerHTML = html;
+  document.getElementById('rep-modal-overlay').classList.add('open');
+}
+
+function fecharRelatorioJob(){
+  document.getElementById('rep-modal-overlay').classList.remove('open');
+}
+
+function imprimirRelatorioJob(){
+  window.print();
+}
 
 </script>
 </body>
