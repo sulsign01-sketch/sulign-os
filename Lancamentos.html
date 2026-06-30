@@ -2059,6 +2059,11 @@ async function carregarFluxo(){
 }
 
 function renderFluxo(lancs, aportes, saldoInicial, de, ate){
+  // Guardar dados brutos para a visão detalhada (linha a linha)
+  window._fluxoLancsCache = lancs;
+  window._fluxoAportesCache = aportes;
+  window._fluxoSaldoInicial = saldoInicial;
+
   // Montar lista de meses no range
   var meses = [];
   var [anoI,mesI] = de.split('-').map(Number);
@@ -2101,10 +2106,11 @@ function renderFluxo(lancs, aportes, saldoInicial, de, ate){
   elSaldo.style.color = saldoPeriodo>=0?'#2e7d32':'#c62828';
   document.getElementById('fx-acumulado').textContent = fmt(saldoFinal);
 
-  // Tabela mensal
+  // Tabela mensal — cada linha é clicável para expandir o detalhado
   var acumulado = saldoInicial;
   var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;">';
   html += '<thead><tr style="border-bottom:2px solid #e8e8e8;">'
+    +'<th style="text-align:left;padding:8px 6px;color:#888;font-size:10px;text-transform:uppercase;"></th>'
     +'<th style="text-align:left;padding:8px 6px;color:#888;font-size:10px;text-transform:uppercase;">Mês</th>'
     +'<th style="text-align:right;padding:8px 6px;color:#888;font-size:10px;text-transform:uppercase;">Entradas</th>'
     +'<th style="text-align:right;padding:8px 6px;color:#888;font-size:10px;text-transform:uppercase;">Saídas</th>'
@@ -2118,16 +2124,117 @@ function renderFluxo(lancs, aportes, saldoInicial, de, ate){
     acumulado += saldoMes;
     var [ano,mes] = m.split('-');
     var nomeMes = new Date(parseInt(ano),parseInt(mes)-1,1).toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
-    html += '<tr style="border-bottom:1px solid #f0f0f0;">'
+    html += '<tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="toggleFluxoDetalhe(\''+m+'\')" id="fx-row-'+m+'">'
+      +'<td style="padding:8px 6px;width:18px;color:#0d47a1;" id="fx-arrow-'+m+'">▸</td>'
       +'<td style="padding:8px 6px;font-weight:600;text-transform:capitalize;">'+nomeMes+'</td>'
       +'<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:#2e7d32;">'+fmt(d.entradas)+'</td>'
       +'<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:#c62828;">'+fmt(d.saidas)+'</td>'
       +'<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;font-weight:700;color:'+(saldoMes>=0?'#2e7d32':'#c62828')+';">'+(saldoMes>=0?'+':'')+fmt(saldoMes)+'</td>'
       +'<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;font-weight:700;color:#0d47a1;">'+fmt(acumulado)+'</td>'
-      +'</tr>';
+      +'</tr>'
+      +'<tr id="fx-detalhe-'+m+'" style="display:none;"><td colspan="6" style="padding:0;background:#fafafa;"><div id="fx-detalhe-body-'+m+'"></div></td></tr>';
   });
   html += '</tbody></table>';
   document.getElementById('fx-tabela').innerHTML = html;
+}
+
+// ── Detalhado linha a linha (igual extrato) ──
+var _fluxoMesAberto = null;
+
+function toggleFluxoDetalhe(mes){
+  var row = document.getElementById('fx-detalhe-'+mes);
+  var arrow = document.getElementById('fx-arrow-'+mes);
+  var jaAberto = row.style.display !== 'none';
+
+  // Fecha o mês anterior aberto (acordeão, só um por vez)
+  if(_fluxoMesAberto && _fluxoMesAberto !== mes){
+    var prevRow = document.getElementById('fx-detalhe-'+_fluxoMesAberto);
+    var prevArrow = document.getElementById('fx-arrow-'+_fluxoMesAberto);
+    if(prevRow) prevRow.style.display = 'none';
+    if(prevArrow) prevArrow.textContent = '▸';
+  }
+
+  if(jaAberto){
+    row.style.display = 'none';
+    arrow.textContent = '▸';
+    _fluxoMesAberto = null;
+    return;
+  }
+
+  row.style.display = 'table-row';
+  arrow.textContent = '▾';
+  _fluxoMesAberto = mes;
+  renderFluxoDetalheMes(mes);
+}
+
+function renderFluxoDetalheMes(mes){
+  var saidasAportesTipos = ['Retirada de Sócio','Devolução de Empréstimo'];
+  var itens = [];
+
+  (window._fluxoLancsCache||[]).forEach(function(l){
+    if((l.data||'').substring(0,7) !== mes) return;
+    itens.push({
+      data: l.data, desc: l.descricao||'—', tipo: l.tipo_lancamento,
+      valor: parseFloat(l.valor)||0, cat: l.categoria||'—',
+      job: l.orcamento_numero, forn: l.fornecedor||'', origem: 'lancamento',
+      conciliado: l.conciliado
+    });
+  });
+  (window._fluxoAportesCache||[]).forEach(function(a){
+    if((a.data||'').substring(0,7) !== mes) return;
+    var ehSaida = saidasAportesTipos.indexOf(a.tipo)>=0;
+    itens.push({
+      data: a.data, desc: (a.descricao||a.tipo||'Aporte'), tipo: ehSaida?'saida':'entrada',
+      valor: parseFloat(a.valor)||0, cat: a.tipo||'Aporte',
+      job: null, forn: a.origem||'', origem: 'aporte', conciliado: null
+    });
+  });
+
+  itens.sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); });
+
+  // Saldo corrente dentro do mês, partindo do saldo acumulado até o início deste mês
+  var saldoAteAqui = window._fluxoSaldoInicial || 0;
+  (window._fluxoLancsCache||[]).forEach(function(l){
+    if((l.data||'') >= mes+'-01') return;
+    var v = parseFloat(l.valor)||0;
+    saldoAteAqui += (l.tipo_lancamento==='entrada') ? v : -v;
+  });
+  (window._fluxoAportesCache||[]).forEach(function(a){
+    if((a.data||'') >= mes+'-01') return;
+    var v = parseFloat(a.valor)||0;
+    saldoAteAqui += (saidasAportesTipos.indexOf(a.tipo)>=0) ? -v : v;
+  });
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+  html += '<thead><tr style="border-bottom:1px solid #e0e0e0;">'
+    +'<th style="text-align:left;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Data</th>'
+    +'<th style="text-align:left;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Descrição</th>'
+    +'<th style="text-align:left;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Categoria</th>'
+    +'<th style="text-align:left;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Job</th>'
+    +'<th style="text-align:right;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Valor</th>'
+    +'<th style="text-align:right;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Saldo</th>'
+    +'</tr></thead><tbody>';
+
+  if(!itens.length){
+    html += '<tr><td colspan="6" style="padding:14px 10px;color:#999;text-align:center;">Nenhum lançamento neste mês.</td></tr>';
+  }
+
+  itens.forEach(function(it){
+    var v = it.tipo==='entrada' ? it.valor : -it.valor;
+    saldoAteAqui += v;
+    var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+    var jobLabel = it.job && it.job!=='SEM-JOB' ? it.job : '<span style="color:#ccc;">—</span>';
+    html += '<tr style="border-bottom:1px solid #f2f2f2;">'
+      +'<td style="padding:6px 10px;font-family:DM Mono,monospace;color:#666;">'+dt+'</td>'
+      +'<td style="padding:6px 10px;">'+it.desc+(it.forn?' <span style="color:#aaa;">· '+it.forn+'</span>':'')+'</td>'
+      +'<td style="padding:6px 10px;color:#888;">'+it.cat+'</td>'
+      +'<td style="padding:6px 10px;font-family:DM Mono,monospace;font-size:10px;">'+jobLabel+'</td>'
+      +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+(it.tipo==='entrada'?'#2e7d32':'#c62828')+';">'+(it.tipo==='entrada'?'+':'-')+fmt(it.valor)+'</td>'
+      +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;color:#555;">'+fmt(saldoAteAqui)+'</td>'
+      +'</tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('fx-detalhe-body-'+mes).innerHTML = html;
 }
 
 async function salvarFluxo(){
