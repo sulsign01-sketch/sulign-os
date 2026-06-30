@@ -301,7 +301,8 @@
   .bc-sync-btn{padding:4px 10px;font-size:10px;font-weight:600;background:var(--green);color:var(--white);border:none;border-radius:2px;cursor:pointer;margin-top:8px;}
   .bc-sync-btn:hover{background:var(--gl);}
 
-  .memo-only{}.prop-only{display:none;}.desc-only{display:none;}.bloc-only{display:none;}.base-only{display:none;}
+  .memo-only{}.prop-only{display:none;}.desc-only{display:none;}.bloc-only{display:none;}.base-only{display:none;}.margem-only{display:none;}
+body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
   body.prop .memo-only{display:none;}body.prop .prop-only{display:block;}
   body.desc .memo-only{display:none;}body.desc .desc-only{display:block;}
   body.bloc .memo-only{display:none;}body.bloc .bloc-only{display:block;}
@@ -665,6 +666,7 @@
       <button class="save-btn" onclick="abrirGerarOSSetorial()" style="background:#4a148c;" title="Gerar OS por setor: Forração, Serralheria, Marcenaria, Pintura...">🏭 OS Setorial</button>
       <button id="btn-add-fotos" onclick="toggleFotosSec()" style="display:none;align-items:center;gap:4px;background:#1565c0;color:#fff;border:none;border-radius:2px;padding:5px 10px;font-size:11px;cursor:pointer;font-family:inherit;">🖼 Fotos de layout</button>
       <div style="width:1px;background:var(--g200);height:20px;margin:0 4px;"></div>
+      <button class="save-btn" onclick="abrirCustoReal()" style="background:#e65100;" title="Lançar custo real vinculado a este job">💸 + Custo Real</button>
       <button class="save-btn" onclick="excluirOrcamentoAtual()" style="background:#c62828;" title="Excluir este orçamento permanentemente">🗑 Excluir</button>
       <span class="save-status" id="save-status">—</span>
     </div>
@@ -675,6 +677,7 @@
         <button class="mbtn" onclick="setModo(&#39;descritivo&#39;,event)">Descritivo</button>
         <button class="mbtn" onclick="setModo(&#39;blocado&#39;,event)">Blocado</button>
         <button class="mbtn" onclick="setModo(&#39;estr&#39;,event)">✦ Estratificado</button>
+        <button class="mbtn" onclick="setModo(&#39;margem&#39;,event)" style="background:#0d2b1a;color:#52b788;">📊 Margem</button>
       </div>
       <div id="memorial-extra-btns" style="display:flex;gap:4px;border-left:1px solid var(--g200);padding-left:8px;">
         <button class="tbtn" onclick="setModo(&#39;pecas&#39;,event)" style="font-size:10px;padding:5px 10px;">🧩 Peças</button>
@@ -1052,6 +1055,25 @@
   </div>
 
   <!-- ESTRATIFICADO -->
+
+  <div class="margem-only">
+    <div class="sec">
+      <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>📊 Análise de Margem — Orçado vs Realizado</span>
+        <button class="sync-btn" onclick="carregarAnaliseMargem()" id="btn-refresh-margem">↺ Atualizar</button>
+      </div>
+      <div id="margem-status" style="font-size:11px;color:var(--g400);margin-bottom:12px;">Salve o orçamento antes de analisar a margem.</div>
+      <div id="margem-container"></div>
+    </div>
+    <div class="estr-resumo">
+      <div class="rr"><span class="rl">Receita (Valor de Venda)</span><span class="rv" id="mg-receita">—</span></div>
+      <div class="rr"><span class="rl">Custo Orçado (Memorial)</span><span class="rv" id="mg-orcado">—</span></div>
+      <div class="rr"><span class="rl">Custo Real (Lançamentos)</span><span class="rv" style="color:#ff8a80;" id="mg-real">—</span></div>
+      <div class="rr"><span class="rl">Variação Orçado x Real</span><span class="rv" id="mg-variacao">—</span></div>
+      <div class="rr tot"><span class="rl">Margem de Contribuição Real</span><span class="rv" style="color:var(--ga);font-size:18px;" id="mg-margem">—</span></div>
+    </div>
+  </div>
+
   <div class="estr-only">
     <div class="sec">
       <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -1073,6 +1095,68 @@
     <span contenteditable="true">Benfica, Rio de Janeiro</span>
   </div>
   <div class="pb"><button class="btnp" onclick="window.print()">⬇ Exportar PDF</button></div>
+
+
+  <!-- MODAL CUSTO REAL -->
+  <div class="gos2-modal" id="custo-real-modal">
+    <div class="gos2-box" style="max-width:520px;">
+      <div class="gos2-title">
+        <span>💸 Lançar Custo Real</span>
+        <button class="gos2-close" onclick="fecharCustoReal()">×</button>
+      </div>
+      <div style="padding:16px;">
+        <div style="font-size:11px;color:var(--g400);margin-bottom:14px;">Vinculado ao job <b id="cr-job-label" style="color:var(--ga);">—</b></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Categoria</label>
+            <select id="cr-cat" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;">
+              <option>Material</option><option>Mão de Obra</option><option>Logística</option>
+              <option>Comissão</option><option>Imposto</option><option>Outros</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Data</label>
+            <input type="date" id="cr-data" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;">
+          </div>
+        </div>
+        <div style="margin-bottom:10px;">
+          <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Descrição</label>
+          <input type="text" id="cr-desc" placeholder="Ex: Metalon 20x20 #18 (32,4ml)" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;">
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Qtd</label>
+            <input type="number" id="cr-qtd" step="0.01" value="1" oninput="crCalcTotal()" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Custo Unit.</label>
+            <input type="number" id="cr-unit" step="0.01" placeholder="0,00" oninput="crCalcTotal()" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;">
+          </div>
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Total</label>
+            <input type="number" id="cr-total" step="0.01" placeholder="0,00" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;font-weight:700;color:#c62828;">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+          <div>
+            <label style="font-size:10px;font-weight:600;color:var(--g400);display:block;margin-bottom:4px;">Fornecedor/Pessoa</label>
+            <input type="text" id="cr-forn" placeholder="Ex: Everson, Leroy Merlin" style="width:100%;border:1.5px solid var(--g200);border-radius:4px;padding:8px 10px;font-size:12px;">
+          </div>
+          <div style="display:flex;align-items:flex-end;gap:6px;padding-bottom:9px;">
+            <input type="checkbox" id="cr-nota" style="width:auto;">
+            <label for="cr-nota" style="font-size:11px;color:var(--g600);">Possui nota fiscal</label>
+          </div>
+        </div>
+        <button class="save-btn" onclick="salvarCustoReal()" id="btn-salvar-cr" style="width:100%;background:#e65100;justify-content:center;">Salvar Custo Real</button>
+        <div id="cr-status" style="font-size:11px;margin-top:8px;text-align:center;"></div>
+
+        <div style="margin-top:18px;border-top:1px solid var(--g200);padding-top:12px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--g400);margin-bottom:8px;">Lançados neste job</div>
+          <div id="cr-lista" style="max-height:220px;overflow-y:auto;"><div style="font-size:11px;color:var(--g400);">Carregando...</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL OS SETORIAL -->
   <div class="gos2-modal" id="gos2-modal">
@@ -3504,6 +3588,7 @@ function setModo(m,e){
   else if(m==='base'){document.body.classList.add('base');if(dt)dt.textContent='BASE DE CUSTO';}
   else if(m==='pecas'){document.body.classList.add('pecas');if(dt)dt.textContent='BASE DE PECAS';carregarPecas();}
   else if(m==='estr'){document.body.classList.add('estr');if(dt)dt.textContent='ORÇAMENTO ESTRATIFICADO';renderEstr();}
+  else if(m==='margem'){document.body.classList.add('margem');if(dt)dt.textContent='ANÁLISE DE MARGEM';carregarAnaliseMargem();}
   else{if(dt)dt.textContent='MEMORIAL DE CUSTO';}
   // Painel de faturamento e cronograma: só no memorial
   var fp=document.getElementById('fat-panel');
@@ -4029,10 +4114,244 @@ function cronInit(){
   else renderCronRows();
 }
 
+// ══════════════════════════════════════════════════════
+// ANÁLISE DE MARGEM — Orçado (memorial) vs Real (lançamentos)
+// ══════════════════════════════════════════════════════
+var _custosReaisCache = [];
+
+function fmtMg(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+
+async function carregarAnaliseMargem(){
+  var numero=_numeroSalvoAtual;
+  var statusEl=document.getElementById('margem-status');
+  var cont=document.getElementById('margem-container');
+  if(!numero){
+    statusEl.textContent='Salve o orçamento antes de analisar a margem.';
+    statusEl.style.color='#c62828';
+    cont.innerHTML='';
+    ['mg-receita','mg-orcado','mg-real','mg-variacao','mg-margem'].forEach(function(id){document.getElementById(id).textContent='—';});
+    return;
+  }
+  statusEl.textContent='Carregando lançamentos reais de '+numero+'...';
+  statusEl.style.color='var(--g400)';
+  cont.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&order=data.asc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var data=await r.json();
+    _custosReaisCache=Array.isArray(data)?data:[];
+    statusEl.textContent=_custosReaisCache.length+' lançamento(s) real(is) encontrado(s) para este job.';
+    statusEl.style.color='var(--ga)';
+    renderAnaliseMargem();
+  }catch(e){
+    statusEl.textContent='Erro ao carregar: '+e.message;
+    statusEl.style.color='#c62828';
+    cont.innerHTML='';
+  }
+}
+
+function renderAnaliseMargem(){
+  var cont=document.getElementById('margem-container');
+
+  // 1. Receita de venda (total geral com BDI aplicado, igual ao calcAll)
+  var f=getBDI();
+  var gT=0;
+  tables.forEach(function(t){
+    if(t.opcional) return;
+    t.rows.forEach(function(row){
+      var q=parseFloat(row.qEl.value)||0, u=parseFloat(row.uEl.value)||0;
+      var custo=q*u;
+      var r=calcRow(custo,f);
+      gT += r.total;
+    });
+  });
+  var dp=(g('desc-pct')||0)/100;
+  var loRes=calcLogOp(f);
+  var receita = gT*(1-dp) + (loRes&&loRes.hasPct?loRes.pctVal:0);
+
+  // 2. Orçado por grupo (custo direto, sem BDI — para comparar com custo real)
+  var gruposOrcado = tables.filter(function(t){return !t.opcional;}).map(function(t){
+    var custoOrcado = t.rows.reduce(function(a,row){
+      var q=parseFloat(row.qEl.value)||0, u=parseFloat(row.uEl.value)||0;
+      return a + (q*u);
+    },0);
+    return {nome: t.nameEl?t.nameEl.value:'—', orcado: custoOrcado};
+  });
+  var totalOrcado = gruposOrcado.reduce(function(a,gr){return a+gr.orcado;},0);
+
+  // 3. Real por categoria
+  var realPorCat={};
+  _custosReaisCache.forEach(function(l){
+    var cat=l.categoria||'Outros';
+    if(!realPorCat[cat]) realPorCat[cat]=0;
+    realPorCat[cat]+=parseFloat(l.valor)||0;
+  });
+  var totalReal=_custosReaisCache.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
+
+  // 4. Render tabela comparativa por grupo orçado
+  var html='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">';
+  html+='<thead><tr style="border-bottom:2px solid var(--g200);">'
+    +'<th style="text-align:left;padding:8px 6px;color:var(--g400);font-size:10px;text-transform:uppercase;">Grupo (Memorial)</th>'
+    +'<th style="text-align:right;padding:8px 6px;color:var(--g400);font-size:10px;text-transform:uppercase;">Orçado</th>'
+    +'</tr></thead><tbody>';
+  gruposOrcado.forEach(function(g){
+    html+='<tr style="border-bottom:1px solid var(--g100);"><td style="padding:7px 6px;">'+g.nome+'</td>'
+      +'<td style="padding:7px 6px;text-align:right;font-family:DM Mono,monospace;">'+fmtMg(g.orcado)+'</td></tr>';
+  });
+  html+='<tr style="font-weight:700;background:var(--g100);"><td style="padding:8px 6px;">TOTAL ORÇADO</td>'
+    +'<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;">'+fmtMg(totalOrcado)+'</td></tr>';
+  html+='</tbody></table>';
+
+  // 5. Tabela de custos reais por categoria
+  html+='<table style="width:100%;border-collapse:collapse;font-size:12px;margin-bottom:20px;">';
+  html+='<thead><tr style="border-bottom:2px solid var(--g200);">'
+    +'<th style="text-align:left;padding:8px 6px;color:var(--g400);font-size:10px;text-transform:uppercase;">Categoria (Real)</th>'
+    +'<th style="text-align:right;padding:8px 6px;color:var(--g400);font-size:10px;text-transform:uppercase;">Custo Real</th>'
+    +'<th style="text-align:right;padding:8px 6px;color:var(--g400);font-size:10px;text-transform:uppercase;">%</th>'
+    +'</tr></thead><tbody>';
+  Object.keys(realPorCat).sort(function(a,b){return realPorCat[b]-realPorCat[a];}).forEach(function(cat){
+    var pct=totalReal>0?(realPorCat[cat]/totalReal*100):0;
+    html+='<tr style="border-bottom:1px solid var(--g100);"><td style="padding:7px 6px;">'+cat+'</td>'
+      +'<td style="padding:7px 6px;text-align:right;font-family:DM Mono,monospace;color:#c62828;">'+fmtMg(realPorCat[cat])+'</td>'
+      +'<td style="padding:7px 6px;text-align:right;color:var(--g400);">'+pct.toFixed(1)+'%</td></tr>';
+  });
+  html+='<tr style="font-weight:700;background:var(--g100);"><td style="padding:8px 6px;">TOTAL REAL</td>'
+    +'<td style="padding:8px 6px;text-align:right;font-family:DM Mono,monospace;color:#c62828;">'+fmtMg(totalReal)+'</td><td></td></tr>';
+  html+='</tbody></table>';
+
+  // 6. Lista detalhada de lançamentos reais
+  if(_custosReaisCache.length){
+    html+='<div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--g400);margin-bottom:8px;">Lançamentos Detalhados</div>';
+    html+='<div style="max-height:300px;overflow-y:auto;">';
+    _custosReaisCache.forEach(function(l){
+      var dt=l.data?new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+      html+='<div style="display:flex;justify-content:space-between;padding:6px 4px;border-bottom:1px solid var(--g100);font-size:11px;">'
+        +'<div><b>'+(l.categoria||'—')+'</b> · '+(l.descricao||'—')+(l.fornecedor?' · '+l.fornecedor:'')+'</div>'
+        +'<div style="text-align:right;white-space:nowrap;margin-left:10px;"><span style="font-family:DM Mono,monospace;color:#c62828;">'+fmtMg(l.valor)+'</span><br><span style="color:var(--g400);font-size:9px;">'+dt+'</span></div>'
+        +'</div>';
+    });
+    html+='</div>';
+  } else {
+    html+='<div style="text-align:center;padding:20px;color:var(--g400);font-size:12px;">Nenhum custo real lançado ainda. Use o botão "💸 + Custo Real" na toolbar.</div>';
+  }
+
+  document.getElementById('margem-container').innerHTML=html;
+
+  // 7. Resumo final
+  var variacao = totalReal - totalOrcado;
+  var margemReal = receita - totalReal;
+  var margemPct = receita>0?(margemReal/receita*100):0;
+
+  document.getElementById('mg-receita').textContent=fmtMg(receita);
+  document.getElementById('mg-orcado').textContent=fmtMg(totalOrcado);
+  document.getElementById('mg-real').textContent=fmtMg(totalReal);
+  var varEl=document.getElementById('mg-variacao');
+  varEl.textContent=(variacao>=0?'+':'')+fmtMg(variacao)+(totalOrcado>0?' ('+((variacao/totalOrcado)*100).toFixed(1)+'%)':'');
+  varEl.style.color=variacao>0?'#c62828':'#52b788';
+  var mgEl=document.getElementById('mg-margem');
+  mgEl.textContent=fmtMg(margemReal)+' ('+margemPct.toFixed(1)+'%)';
+  mgEl.style.color=margemPct>=25?'#52b788':margemPct>=15?'#ffc107':'#ef5350';
+}
+
+// ══════════════════════════════════════════════════════
+// MODAL CUSTO REAL — lançar gasto vinculado ao job
+// ══════════════════════════════════════════════════════
+function abrirCustoReal(){
+  var numero=_numeroSalvoAtual;
+  if(!numero){
+    showToast('Salve o orçamento antes de lançar custos reais.','err');
+    return;
+  }
+  document.getElementById('cr-job-label').textContent=numero;
+  document.getElementById('custo-real-modal').classList.add('open');
+  var di=document.getElementById('cr-data');
+  if(!di.value) di.valueAsDate=new Date();
+  carregarListaCustosReais(numero);
+}
+
+function fecharCustoReal(){
+  document.getElementById('custo-real-modal').classList.remove('open');
+}
+
+function crCalcTotal(){
+  var qtd=parseFloat(document.getElementById('cr-qtd').value)||0;
+  var unit=parseFloat(document.getElementById('cr-unit').value)||0;
+  document.getElementById('cr-total').value=(qtd*unit).toFixed(2);
+}
+
+async function salvarCustoReal(){
+  var numero=_numeroSalvoAtual;
+  var btn=document.getElementById('btn-salvar-cr');
+  var st=document.getElementById('cr-status');
+  var cat=document.getElementById('cr-cat').value;
+  var data=document.getElementById('cr-data').value;
+  var desc=document.getElementById('cr-desc').value.trim();
+  var qtd=parseFloat(document.getElementById('cr-qtd').value)||1;
+  var unit=parseFloat(document.getElementById('cr-unit').value)||0;
+  var total=parseFloat(document.getElementById('cr-total').value)||(qtd*unit);
+  var forn=document.getElementById('cr-forn').value.trim();
+  var nota=document.getElementById('cr-nota').checked;
+
+  if(!desc){st.textContent='✗ Informe a descrição.';st.style.color='#c62828';return;}
+  if(!total){st.textContent='✗ Informe o valor.';st.style.color='#c62828';return;}
+
+  btn.disabled=true;st.textContent='Salvando...';st.style.color='var(--g400)';
+  try{
+    var payload={
+      orcamento_numero:numero,categoria:cat,descricao:desc+(qtd!==1?' ('+qtd+'x '+fmtMg(unit)+')':''),
+      valor:total,data:data,fornecedor:forn,pessoa:'Eduardo Ponde',
+      tem_nota:nota,tipo_lancamento:'saida',periodicidade:'unica'
+    };
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status+' — '+await r.text());
+    st.textContent='✓ Custo lançado!';st.style.color='var(--ga)';
+    ['cr-desc','cr-qtd','cr-unit','cr-total','cr-forn'].forEach(function(id){
+      var el=document.getElementById(id);
+      if(el) el.value = id==='cr-qtd' ? '1' : '';
+    });
+    document.getElementById('cr-nota').checked=false;
+    await carregarListaCustosReais(numero);
+  }catch(e){
+    st.textContent='✗ '+e.message;st.style.color='#c62828';
+  }
+  btn.disabled=false;
+}
+
+async function carregarListaCustosReais(numero){
+  var lista=document.getElementById('cr-lista');
+  lista.innerHTML='<div style="font-size:11px;color:var(--g400);">Carregando...</div>';
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&order=data.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var data=await r.json();
+    var itens=Array.isArray(data)?data:[];
+    if(!itens.length){lista.innerHTML='<div style="font-size:11px;color:var(--g400);">Nenhum custo lançado ainda.</div>';return;}
+    var total=itens.reduce(function(a,l){return a+(parseFloat(l.valor)||0);},0);
+    lista.innerHTML='<div style="font-size:11px;font-weight:700;margin-bottom:8px;color:var(--ga);">Total: '+fmtMg(total)+' ('+itens.length+' itens)</div>'
+      +itens.map(function(l){
+        var dt=l.data?new Date(l.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+        return '<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--g100);font-size:11px;">'
+          +'<div style="flex:1;min-width:0;"><b>'+(l.categoria||'—')+'</b> · '+(l.descricao||'—')+'</div>'
+          +'<div style="text-align:right;white-space:nowrap;margin-left:8px;color:#c62828;font-family:DM Mono,monospace;">'+fmtMg(l.valor)+'</div>'
+          +'</div>';
+      }).join('');
+  }catch(e){
+    lista.innerHTML='<div style="font-size:11px;color:#c62828;">Erro: '+e.message+'</div>';
+  }
+}
+
 </script>
 <!-- LOG DE CONTATO -->
 <div class="log-modal-overlay" id="log-modal-overlay">
   <div class="log-modal">
+
     <h3>📞 Registrar Contato</h3>
     <div id="log-orc-info" style="font-size:11px;color:#9e9e9e;margin-bottom:12px;font-family:\'DM Mono\',monospace;"></div>
     <div class="log-fl">
