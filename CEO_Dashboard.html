@@ -245,6 +245,37 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:var(--white);min-
     </div>
   </div>
 
+  <!-- Linha 4: Fluxo de Caixa -->
+  <div style="margin-bottom:16px;">
+    <div class="card">
+      <div class="card-tit">💵 Fluxo de Caixa — Extrato Conciliado</div>
+
+      <!-- Filtro período -->
+      <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);margin-bottom:5px;">De</div>
+          <input type="month" id="inv-fx-de" style="background:#0a0a0a;border:1.5px solid #1e1e1e;border-radius:2px;padding:7px 10px;color:var(--white);font-family:inherit;font-size:13px;outline:none;">
+        </div>
+        <div>
+          <div style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);margin-bottom:5px;">Até</div>
+          <input type="month" id="inv-fx-ate" style="background:#0a0a0a;border:1.5px solid #1e1e1e;border-radius:2px;padding:7px 10px;color:var(--white);font-family:inherit;font-size:13px;outline:none;">
+        </div>
+        <button onclick="carregarFluxoInv()" style="background:#1a3a2e;border:1px solid var(--ga);color:var(--ga);padding:7px 16px;border-radius:2px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:inherit;">Aplicar</button>
+      </div>
+
+      <!-- KPIs do período -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#1a1a1a;border-radius:2px;overflow:hidden;margin-bottom:16px;">
+        <div style="background:#111;padding:14px 16px;"><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:6px;">ENTRADAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:var(--ga);" id="inv-fx-entradas">—</div></div>
+        <div style="background:#111;padding:14px 16px;"><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:6px;">SAÍDAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:var(--red);" id="inv-fx-saidas">—</div></div>
+        <div style="background:#111;padding:14px 16px;"><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:6px;">SALDO DO PERÍODO</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;" id="inv-fx-saldo">—</div></div>
+        <div style="background:#111;padding:14px 16px;"><div style="font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:6px;">SALDO ACUMULADO</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#64b5f6;" id="inv-fx-acumulado">—</div></div>
+      </div>
+
+      <!-- Tabela mensal -->
+      <div id="inv-fx-tabela"><div style="text-align:center;padding:30px;color:var(--g400);font-size:12px;">Carregando...</div></div>
+    </div>
+  </div>
+
   <div class="ts" id="ts">—</div>
 </div>
 
@@ -344,6 +375,7 @@ async function carregar(){
 
     renderDash(orcs,todasOs,todosLanc,todasFixas);
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
+    carregarFluxoInv();
   }catch(e){
     document.getElementById('kpi-grid').innerHTML='<div style="padding:20px;color:var(--red);font-size:12px;">Erro ao carregar dados: '+e.message+'</div>';
   }
@@ -644,6 +676,200 @@ function renderBreakEven(totalFixo,receita,margemBrutaPct){
     +(ok?'✓ Empresa cobriu o break-even':'✗ Abaixo do break-even — estrutura não está sendo paga')
     +'</div>';
 }
+
+// ══════════════════════════════════
+// FLUXO DE CAIXA — INVESTIDOR
+// ══════════════════════════════════
+function mesAtualInv(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');
+}
+
+async function carregarFluxoInv(){
+  var de=document.getElementById('inv-fx-de').value||'2026-01';
+  var ate=document.getElementById('inv-fx-ate').value||mesAtualInv();
+  if(!document.getElementById('inv-fx-de').value) document.getElementById('inv-fx-de').value=de;
+  if(!document.getElementById('inv-fx-ate').value) document.getElementById('inv-fx-ate').value=ate;
+
+  document.getElementById('inv-fx-tabela').innerHTML='<div style="text-align:center;padding:30px;color:var(--g400);font-size:12px;">Carregando...</div>';
+
+  try{
+    var dataIni=de+'-01';
+    var partesFim=ate.split('-');
+    var ultDia=new Date(parseInt(partesFim[0]),parseInt(partesFim[1]),0).getDate();
+    var dataFim=ate+'-'+String(ultDia).padStart(2,'0');
+
+    var r1=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var lancs=await r1.json();
+    lancs=Array.isArray(lancs)?lancs:[];
+
+    var r2=await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var aportes=await r2.json();
+    aportes=Array.isArray(aportes)?aportes:[];
+
+    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&conciliado=eq.true',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var lancsAntes=await r3.json();
+    lancsAntes=Array.isArray(lancsAntes)?lancsAntes:[];
+
+    var r4=await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.'+dataIni,{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    });
+    var aportesAntes=await r4.json();
+    aportesAntes=Array.isArray(aportesAntes)?aportesAntes:[];
+
+    var saidasAporteTipos=['Retirada de Sócio','Devolução de Empréstimo'];
+    var saldoInicial=0;
+    lancsAntes.forEach(function(l){ var v=parseFloat(l.valor)||0; saldoInicial+=(l.tipo_lancamento==='entrada'?v:-v); });
+    aportesAntes.forEach(function(a){ var v=parseFloat(a.valor)||0; saldoInicial+=(saidasAporteTipos.indexOf(a.tipo)>=0?-v:v); });
+
+    window._invFxLancs=lancs;
+    window._invFxAportes=aportes;
+    window._invFxSaldoInicial=saldoInicial;
+
+    renderFluxoInv(lancs,aportes,saldoInicial,de,ate);
+  }catch(e){
+    document.getElementById('inv-fx-tabela').innerHTML='<div style="text-align:center;padding:20px;color:var(--red);font-size:12px;">Erro: '+e.message+'</div>';
+  }
+}
+
+function renderFluxoInv(lancs,aportes,saldoInicial,de,ate){
+  var saidasAporteTipos=['Retirada de Sócio','Devolução de Empréstimo'];
+  var meses={};
+  lancs.forEach(function(l){
+    var m=(l.data||'').substring(0,7);
+    if(!meses[m]) meses[m]={e:0,s:0};
+    var v=parseFloat(l.valor)||0;
+    if(l.tipo_lancamento==='entrada') meses[m].e+=v; else meses[m].s+=v;
+  });
+  aportes.forEach(function(a){
+    var m=(a.data||'').substring(0,7);
+    if(!meses[m]) meses[m]={e:0,s:0};
+    var v=parseFloat(a.valor)||0;
+    if(saidasAporteTipos.indexOf(a.tipo)>=0) meses[m].s+=v; else meses[m].e+=v;
+  });
+
+  var totalE=0,totalS=0;
+  Object.keys(meses).forEach(function(m){ totalE+=meses[m].e; totalS+=meses[m].s; });
+  var saldoPer=totalE-totalS;
+  var saldoAcum=saldoInicial+saldoPer;
+
+  var el=document.getElementById('inv-fx-entradas');
+  el.textContent=fmtK(totalE);
+  document.getElementById('inv-fx-saidas').textContent=fmtK(totalS);
+  var elS=document.getElementById('inv-fx-saldo');
+  elS.textContent=(saldoPer>=0?'+':'')+fmtK(saldoPer);
+  elS.style.color=saldoPer>=0?'var(--ga)':'var(--red)';
+  document.getElementById('inv-fx-acumulado').textContent=fmtK(saldoAcum);
+
+  var keys=Object.keys(meses).sort();
+  if(!keys.length){
+    document.getElementById('inv-fx-tabela').innerHTML='<div style="text-align:center;padding:30px;color:var(--g400);font-size:12px;">Nenhum lançamento neste período.</div>';
+    return;
+  }
+
+  var nomesMes=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  var acum=saldoInicial;
+  var html='<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<thead><tr style="border-bottom:1px solid #222;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);font-weight:600;">Mês</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);font-weight:600;">Entradas</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);font-weight:600;">Saídas</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);font-weight:600;">Saldo Mês</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);font-weight:600;">Acumulado</th>'
+    +'<th style="padding:8px 10px;width:24px;"></th>'
+    +'</tr></thead><tbody>';
+
+  keys.forEach(function(m){
+    var d=meses[m];
+    var saldoM=d.e-d.s;
+    acum+=saldoM;
+    var partes=m.split('-');
+    var nomeMes=nomesMes[parseInt(partes[1])-1]+' De '+partes[0];
+    var cor=saldoM>=0?'var(--ga)':'var(--red)';
+    html+='<tr style="border-bottom:1px solid #181818;cursor:pointer;" onclick="toggleFluxoInvDetalhe(\''+m+'\')">'
+      +'<td style="padding:10px 10px;color:var(--white);font-weight:600;">'
+        +'<span id="inv-fx-arrow-'+m+'" style="font-size:10px;color:var(--g400);margin-right:6px;">▸</span>'+nomeMes+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;color:var(--ga);">'+fmtK(d.e)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;color:var(--red);">'+fmtK(d.s)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+cor+';">'+(saldoM>=0?'+':'')+fmtK(saldoM)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;color:#64b5f6;">'+fmtK(acum)+'</td>'
+      +'<td></td>'
+      +'</tr>'
+      +'<tr id="inv-fx-det-'+m+'" style="display:none;">'
+        +'<td colspan="6" style="padding:0;background:#0a0a0a;">'
+          +'<div id="inv-fx-det-body-'+m+'"></div>'
+        +'</td>'
+      +'</tr>';
+  });
+
+  html+='</tbody></table>';
+  document.getElementById('inv-fx-tabela').innerHTML=html;
+}
+
+function toggleFluxoInvDetalhe(mes){
+  var row=document.getElementById('inv-fx-det-'+mes);
+  var arrow=document.getElementById('inv-fx-arrow-'+mes);
+  if(row.style.display!=='none'){ row.style.display='none'; arrow.textContent='▸'; return; }
+  row.style.display='table-row';
+  arrow.textContent='▾';
+  renderFluxoInvDetMes(mes);
+}
+
+function renderFluxoInvDetMes(mes){
+  var saidasAporteTipos=['Retirada de Sócio','Devolução de Empréstimo'];
+  var itens=[];
+  (window._invFxLancs||[]).forEach(function(l){
+    if((l.data||'').substring(0,7)!==mes) return;
+    itens.push({data:l.data,desc:l.descricao||'—',tipo:l.tipo_lancamento,valor:parseFloat(l.valor)||0,cat:l.categoria||'—',job:l.orcamento_numero,forn:l.fornecedor||''});
+  });
+  (window._invFxAportes||[]).forEach(function(a){
+    if((a.data||'').substring(0,7)!==mes) return;
+    var ehSaida=saidasAporteTipos.indexOf(a.tipo)>=0;
+    itens.push({data:a.data,desc:a.descricao||a.tipo||'Aporte',tipo:ehSaida?'saida':'entrada',valor:parseFloat(a.valor)||0,cat:a.tipo||'Aporte',job:null,forn:a.origem||''});
+  });
+  itens.sort(function(a,b){return (a.data||'').localeCompare(b.data||'');});
+
+  if(!itens.length){
+    document.getElementById('inv-fx-det-body-'+mes).innerHTML='<div style="padding:12px 20px;color:var(--g400);font-size:11px;">Sem lançamentos detalhados.</div>';
+    return;
+  }
+
+  var html='<table style="width:100%;border-collapse:collapse;font-size:11px;">'
+    +'<thead><tr style="background:#0f0f0f;">'
+    +'<th style="padding:6px 10px;text-align:left;color:var(--g400);font-weight:600;font-size:9px;letter-spacing:1px;text-transform:uppercase;">Data</th>'
+    +'<th style="padding:6px 10px;text-align:left;color:var(--g400);font-weight:600;font-size:9px;letter-spacing:1px;text-transform:uppercase;">Descrição</th>'
+    +'<th style="padding:6px 10px;text-align:left;color:var(--g400);font-weight:600;font-size:9px;letter-spacing:1px;text-transform:uppercase;">Categoria</th>'
+    +'<th style="padding:6px 10px;text-align:right;color:var(--g400);font-weight:600;font-size:9px;letter-spacing:1px;text-transform:uppercase;">Valor</th>'
+    +'</tr></thead><tbody>';
+
+  itens.forEach(function(it){
+    var dt=it.data?new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+    var cor=it.tipo==='entrada'?'var(--ga)':'var(--red)';
+    html+='<tr style="border-bottom:1px solid #141414;">'
+      +'<td style="padding:6px 10px;font-family:DM Mono,monospace;color:var(--g400);">'+dt+'</td>'
+      +'<td style="padding:6px 10px;color:var(--white);">'+esc(it.desc)+(it.forn?'<span style="color:#444;"> · '+esc(it.forn)+'</span>':'')+'</td>'
+      +'<td style="padding:6px 10px;color:var(--g400);">'+esc(it.cat)+'</td>'
+      +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+cor+';">'+(it.tipo==='entrada'?'+':'-')+fmtK(it.valor)+'</td>'
+      +'</tr>';
+  });
+
+  html+='</tbody></table>';
+  document.getElementById('inv-fx-det-body-'+mes).innerHTML=html;
+}
+
+// Inicializa filtro e carrega fluxo junto com o resto
+(function(){
+  var d=new Date();
+  var anoAtual=d.getFullYear();
+  document.getElementById('inv-fx-de').value=anoAtual+'-01';
+  document.getElementById('inv-fx-ate').value=anoAtual+'-'+String(d.getMonth()+1).padStart(2,'0');
+})();
 
 // ── Auto-login se sessão ativa ──
 document.addEventListener('keydown',function(e){
