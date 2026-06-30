@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual Operacional · SulSign OS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM%20Mono:wght@400;500&family=DM%20Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--black:#0f0f0f;--green:#2d6a4f;--ga:#52b788;--g100:#f5f5f5;--g200:#e8e8e8;--g400:#9e9e9e;--g600:#5a5a5a;--white:#fff;--red:#c62828;--ylw:#fff8e1;--ylwb:#ffc107;--roxo:#6a1b9a;--roxoBg:#f3e5f5;--azul:#1565c0;--azulBg:#e3f2fd;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);font-size:14px;line-height:1.6;}
+.hd{background:var(--black);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.hd-left{display:flex;align-items:center;gap:14px;}
+.hd-logo{width:34px;height:34px;background:var(--ga);border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--black);font-size:16px;}
+.hd-title{color:#fff;font-size:14px;font-weight:700;}
+.hd-sub{color:var(--g400);font-size:9px;letter-spacing:2px;text-transform:uppercase;margin-top:1px;}
+.hd-search{background:#1a1a1a;border:1px solid #2a2a2a;border-radius:6px;padding:8px 14px;color:#fff;font-size:12px;width:260px;outline:none;}
+.hd-search::placeholder{color:#666;}
+
+.layout{display:flex;max-width:1280px;margin:0 auto;}
+
+.sidebar{width:280px;flex-shrink:0;background:#fff;border-right:1px solid var(--g200);min-height:calc(100vh - 67px);position:sticky;top:67px;align-self:flex-start;overflow-y:auto;max-height:calc(100vh - 67px);}
+.side-sec{padding:14px 18px 6px;font-size:9px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);}
+.side-link{display:block;padding:9px 18px;font-size:12.5px;color:var(--black);text-decoration:none;border-left:3px solid transparent;cursor:pointer;transition:all .15s;}
+.side-link:hover{background:var(--g100);}
+.side-link.active{border-left-color:var(--ga);background:#eafaf1;color:var(--green);font-weight:600;}
+.side-link .badge-mini{font-size:8px;padding:1px 5px;border-radius:2px;margin-left:6px;font-weight:700;vertical-align:middle;}
+
+.content{flex:1;padding:32px 48px;max-width:880px;}
+.section{display:none;}
+.section.active{display:block;}
+
+h1{font-size:24px;font-weight:700;margin-bottom:6px;border-bottom:3px solid var(--green);padding-bottom:14px;}
+h2{font-size:18px;font-weight:700;color:var(--green);margin:28px 0 12px;}
+h3{font-size:15px;font-weight:700;color:var(--g600);margin:20px 0 8px;}
+p{margin-bottom:14px;font-size:13.5px;}
+ul,ol{margin:0 0 16px 22px;}
+li{margin-bottom:6px;font-size:13.5px;}
+
+.publico-badge{display:inline-flex;align-items:center;gap:6px;background:var(--g100);padding:8px 14px;border-radius:6px;font-size:11px;font-weight:700;color:var(--black);margin-bottom:20px;}
+
+.callout{border-radius:8px;padding:16px 18px;margin:18px 0;border-left:4px solid;}
+.callout-title{font-weight:700;font-size:12.5px;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+.callout.demo{background:var(--roxoBg);border-color:var(--roxo);}
+.callout.demo .callout-title{color:var(--roxo);}
+.callout.warn{background:#ffebee;border-color:var(--red);}
+.callout.warn .callout-title{color:var(--red);}
+.callout.info{background:var(--azulBg);border-color:var(--azul);}
+.callout.info .callout-title{color:var(--azul);}
+
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:12.5px;}
+th{background:var(--black);color:#fff;text-align:left;padding:9px 12px;font-size:11px;text-transform:uppercase;letter-spacing:.5px;}
+td{padding:8px 12px;border-bottom:1px solid var(--g200);}
+tr:nth-child(even) td{background:var(--g100);}
+
+.crumb{font-size:11px;color:var(--g400);margin-bottom:10px;}
+.kbd{background:var(--g100);border:1px solid var(--g200);border-radius:3px;padding:1px 6px;font-family:'DM Mono',monospace;font-size:11px;}
+
+@media print{ .sidebar,.hd{display:none;} .content{max-width:100%;} .section{display:block !important;page-break-after:always;} }
+
+@media(max-width:900px){
+  .sidebar{position:fixed;left:-280px;transition:left .2s;z-index:200;background:#fff;}
+  .sidebar.open{left:0;box-shadow:4px 0 20px rgba(0,0,0,.2);}
+  .content{padding:20px;}
+  .hd-search{width:140px;}
+  .menu-btn{display:block;background:none;border:none;color:#fff;font-size:20px;cursor:pointer;}
+}
+.menu-btn{display:none;}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div class="hd-left">
+    <button class="menu-btn" onclick="document.querySelector('.sidebar').classList.toggle('open')">☰</button>
+    <div class="hd-logo">S</div>
+    <div>
+      <div class="hd-title">Manual Operacional</div>
+      <div class="hd-sub">SulSign OS</div>
+    </div>
+  </div>
+  <input type="text" class="hd-search" id="busca" placeholder="🔍 Buscar no manual..." oninput="buscar(this.value)">
+</div>
+
+<div class="layout">
+  <div class="sidebar" id="sidebar"></div>
+  <div class="content" id="content"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// CONTEÚDO DO MANUAL
+// ══════════════════════════════════════════════════════
+var SECOES = [
+  { grupo: "Início", id: "visao-geral", titulo: "Visão Geral do Sistema", publico: "Todos os perfis", corPublico: "g600",
+    html: `
+      <p>O SulSign OS é o sistema interno de gestão da Sul Sign Group. Ele cobre todo o ciclo de um job — desde o orçamento até o faturamento — e organiza a produção, o financeiro e a comunicação com produtores e profissionais de campo.</p>
+      <p>O sistema é dividido em módulos independentes, cada um acessível por uma URL própria. Alguns exigem login (dados sensíveis), outros são acessados por link único sem senha (fluxo de campo).</p>
+      <h2>Mapa dos Módulos</h2>
+      <table>
+        <tr><th>Módulo</th><th>Arquivo</th><th>Acesso</th><th>Quem usa</th></tr>
+        <tr><td>Orçamentos</td><td>ORC_Manager.html</td><td>Login obrigatório</td><td>Gestor / Comercial</td></tr>
+        <tr><td>Ordens de Serviço</td><td>SulSign_OS_Manager.html</td><td>Login obrigatório</td><td>Gestor / Produção</td></tr>
+        <tr><td>Lançamentos Financeiros</td><td>Lancamentos.html</td><td>Login obrigatório</td><td>Financeiro / Gestor</td></tr>
+        <tr><td>Painel Financeiro</td><td>Painel_Financeiro.html</td><td>Login obrigatório</td><td>Gestor / Financeiro</td></tr>
+        <tr><td>Painel do Investidor</td><td>CEO_Dashboard.html</td><td>Login obrigatório</td><td>Sócio investidor</td></tr>
+        <tr><td>Caixa de Produção</td><td>Caixa_Producao.html</td><td>Link com token</td><td>Produtor de campo</td></tr>
+        <tr><td>Apontamento de Produção</td><td>Apontamento_Producao.html</td><td>Link com token</td><td>Profissional de disciplina</td></tr>
+      </table>
+      <h2>Fluxo de um Job</h2>
+      <ol>
+        <li>Orçamento criado no ORC_Manager — memorial de custo, proposta, BDI</li>
+        <li>Orçamento aprovado pelo cliente → status muda para "Orçamento Aprovado"</li>
+        <li>Ordens de Serviço (OS) são geradas a partir do orçamento, por disciplina</li>
+        <li>Produção acontece — registrada via OS, Caixa de Produção e/ou Apontamentos</li>
+        <li>Custos reais são lançados (direto em Lançamentos, ou consolidados de Caixa/Apontamentos)</li>
+        <li>Nota Fiscal é emitida → orçamento muda para "Faturado"</li>
+        <li>Job aparece no Painel Financeiro e no Painel do Investidor com margem real</li>
+      </ol>
+      <div class="callout demo"><div class="callout-title">🎓 Exemplo prático neste manual</div>
+        Acompanhe o job <b>SS-TREINO-2026_06-99</b> em cada módulo deste manual. Ele percorre exatamente este fluxo completo, com dados fictícios, e está marcado com status "Treinamento" para nunca contaminar relatórios reais.</div>
+    `
+  },
+  { grupo: "Início", id: "glossario", titulo: "Glossário de Termos", publico: "Todos os perfis", corPublico: "g600",
+    html: `
+      <p>Termos usados de forma específica na Sul Sign Group — vale a leitura mesmo para quem já conhece os termos do mercado, porque o sentido aqui pode ser mais restrito.</p>
+      <h2>Disciplinas de Produção</h2>
+      <table>
+        <tr><th>Disciplina</th><th>O que é, no contexto Sul Sign</th></tr>
+        <tr><td><b>Estruturas</b></td><td>Treliças e praticáveis de palco fabricados e montados pela própria Sul Sign. Não inclui estruturas de terceiros — essas são sempre fornecidas pelo cliente.</td></tr>
+        <tr><td><b>Serralheria</b></td><td>Todo o restante de trabalho metálico: metalon, solda, montagens diversas que não são treliça/praticável.</td></tr>
+        <tr><td>Marcenaria</td><td>Trabalho em madeira/compensado — tablados, móveis cenográficos, painéis.</td></tr>
+        <tr><td>Forração</td><td>Revestimento têxtil — napa, bagum, tecido.</td></tr>
+        <tr><td>Pintura</td><td>Preparação de superfície, primer, pintura, acabamento/verniz.</td></tr>
+        <tr><td>Aplicação</td><td>Aplicação de adesivos, vinis, materiais sobre superfícies prontas.</td></tr>
+        <tr><td>Router CNC</td><td>Corte e usinagem de chapas (PVC, MDF, acrílico) em máquina CNC.</td></tr>
+        <tr><td>Impressão 3D</td><td>Peças fabricadas em impressora 3D.</td></tr>
+        <tr><td>CV / Impressão</td><td>Comunicação visual impressa — lonas, adesivos, banners.</td></tr>
+        <tr><td>Elétrica</td><td>Instalações elétricas — iluminação, fiação, comissionamento.</td></tr>
+        <tr><td>Artes Plásticas</td><td>Modelagem, escultura, elementos cenográficos esculpidos.</td></tr>
+        <tr><td>Arquitetura / Design</td><td>Projeto, briefing, conceito visual — fase de concepção, não de fabricação.</td></tr>
+        <tr><td>Mão de Obra</td><td>Categoria de custo que cobre diárias e horas de equipe, sem ser uma disciplina de fabricação específica.</td></tr>
+        <tr><td>Logística</td><td>Frete, deslocamento, combustível, operacional de transporte.</td></tr>
+      </table>
+      <h2>Status de Orçamento</h2>
+      <table>
+        <tr><th>Status</th><th>Significado</th></tr>
+        <tr><td>Cotação / Em Orçamento</td><td>Orçamento em elaboração, ainda não enviado ao cliente.</td></tr>
+        <tr><td>Proposta Enviada</td><td>Já está com o cliente, aguardando resposta.</td></tr>
+        <tr><td>Orçamento Aprovado</td><td>Cliente aprovou — pode iniciar produção.</td></tr>
+        <tr><td>Em Produção</td><td>Trabalho em execução.</td></tr>
+        <tr><td>Entregue</td><td>Trabalho fisicamente entregue ao cliente.</td></tr>
+        <tr><td>Faturado</td><td>Nota Fiscal emitida — conta como receita real nos painéis.</td></tr>
+        <tr><td>Orçamento Recusado</td><td>Cliente recusou a proposta.</td></tr>
+        <tr><td>Orçamento Vencido</td><td>Validade da proposta expirou sem resposta.</td></tr>
+        <tr><td>Treinamento</td><td>Job fictício de demonstração/treino — isolado de todos os KPIs financeiros reais.</td></tr>
+      </table>
+    `
+  },
+  { grupo: "Comercial / Produção", id: "orcamentos", titulo: "Orçamentos (ORC_Manager)", publico: "Gestor / Comercial", corPublico: "azul",
+    html: `
+      <p>O ORC_Manager é onde todo orçamento nasce. Ele organiza o memorial de custo, calcula a venda com BDI, e gera as visualizações para enviar ao cliente (Proposta, Descritivo) e para a equipe interna (Blocado, Estratificado).</p>
+      <h2>Criar um Orçamento Novo</h2>
+      <ol>
+        <li>Abra o ORC_Manager e clique em "+ Novo Orçamento"</li>
+        <li>Preencha o cabeçalho: Cliente, Agência, Atendimento, Projeto, Ref.</li>
+        <li>O número SS é gerado automaticamente (formato <span class="kbd">SS-AAAA_MM-NN</span>)</li>
+        <li>Escreva o Escopo do Projeto — aparece em todas as visualizações</li>
+      </ol>
+      <h2>Memorial de Custo — Grupos e Disciplinas</h2>
+      <p>O memorial é organizado em grupos. Cada grupo tem linhas de custo e pode ser marcado com uma ou mais disciplinas via checkbox.</p>
+      <div class="callout warn"><div class="callout-title">⚠️ Sempre marque a disciplina certa</div>
+        Isso alimenta automaticamente: a geração de OS Setorial, o relatório de margem por disciplina, e os Apontamentos de Produção. Um grupo sem disciplina marcada fica invisível para essas funcionalidades.</div>
+      <h2>BDI — Como a Venda é Calculada</h2>
+      <table>
+        <tr><th>Campo</th><th>Significado</th></tr>
+        <tr><td>AC</td><td>Administração Central (%)</td></tr>
+        <tr><td>DF</td><td>Despesas Financeiras (%)</td></tr>
+        <tr><td>RI</td><td>Riscos (%)</td></tr>
+        <tr><td>Lucro</td><td>Margem de lucro desejada (%)</td></tr>
+        <tr><td>Impostos</td><td>Alíquota de impostos sobre a venda (%)</td></tr>
+        <tr><td>BV / Comissão</td><td>Comissão de agência, quando aplicável (%)</td></tr>
+      </table>
+      <h2>Visualizações do Orçamento</h2>
+      <table>
+        <tr><th>Visualização</th><th>Para quem</th><th>O que mostra</th></tr>
+        <tr><td>Memorial</td><td>Uso interno</td><td>Custo detalhado com BDI visível</td></tr>
+        <tr><td>Proposta</td><td>Cliente</td><td>Valores de venda, sem detalhe de custo</td></tr>
+        <tr><td>Descritivo</td><td>Cliente</td><td>Apenas descrição técnica, sem valores</td></tr>
+        <tr><td>Blocado</td><td>Cliente (alt.)</td><td>Valores agrupados por bloco</td></tr>
+        <tr><td>Estratificado</td><td>Uso interno/cliente</td><td>Cada grupo com foto e descrição automática</td></tr>
+      </table>
+      <h2>Revisões</h2>
+      <p>Use "↑ Rev." na toolbar para criar uma nova revisão preservando o histórico. "📋 Hist." mostra todas as revisões já criadas.</p>
+      <h2>Gerar Ordens de Serviço</h2>
+      <ul>
+        <li><b>⚙ Gerar OS CV</b> — OS única, disciplina detectada automaticamente</li>
+        <li><b>🏭 OS Setorial</b> — uma OS por disciplina marcada nos checkboxes (recomendado para jobs multi-disciplina)</li>
+      </ul>
+      <h2>Análise de Margem (Orçado × Real)</h2>
+      <p>Aba "📊 Margem" compara planejado vs. gasto real, por categoria e disciplina. O botão "💸 + Custo Real" lança um gasto direto vinculado ao job.</p>
+      <div class="callout demo"><div class="callout-title">🎓 Exemplo no job de treinamento</div>
+        Abra <b>SS-TREINO-2026_06-99</b> no ORC_Manager. Tem 5 grupos cobrindo Serralheria, Marcenaria, Pintura, Logística e Estruturas. Abra a aba Margem para ver o comparativo já populado.</div>
+    `
+  },
+  { grupo: "Comercial / Produção", id: "ordens-servico", titulo: "Ordens de Serviço", publico: "Gestor / Produção", corPublico: "azul",
+    html: `
+      <p>O OS Manager controla a execução prática de cada disciplina de um job — quem faz, prazo, status de tramitação, e o documento que acompanha a peça na bancada.</p>
+      <h2>Criar uma Nova OS Manualmente</h2>
+      <ol>
+        <li>Clique em "+ Nova OS"</li>
+        <li>No campo "Nº Orçamento", selecione o job na lista (ou digite, se arquivado)</li>
+        <li>Escolha a Disciplina — define as etapas de tramitação disponíveis</li>
+        <li>Preencha Responsável, Operador, Prazo, Dimensões, Acabamento</li>
+        <li>Adicione os itens (descrição, dimensões, quantidade, material, acabamento)</li>
+        <li>Opcional: cole/arraste uma imagem de referência</li>
+      </ol>
+      <h2>Tramitação</h2>
+      <p>Cada disciplina tem etapas próprias. Avance o status na tela de detalhe — cada mudança fica registrada no histórico com responsável e data.</p>
+      <h2>Visão "Por Job"</h2>
+      <p>Agrupa todas as OS de um mesmo orçamento — útil para jobs com múltiplas disciplinas.</p>
+      <h2>Impressão</h2>
+      <p>Gera documento formatado para a bancada, com itens, dimensões, acabamento e a imagem de referência (se houver).</p>
+      <div class="callout demo"><div class="callout-title">🎓 Exemplo no job de treinamento</div>
+        OS-TREINO-001 (Serralheria) e OS-TREINO-002 (Marcenaria) já estão criadas e vinculadas ao SS-TREINO-2026_06-99.</div>
+    `
+  },
+  { grupo: "Financeiro", id: "lancamentos", titulo: "Lançamentos Financeiros", publico: "Financeiro / Gestor", corPublico: "ga",
+    html: `
+      <p>Módulo mais amplo do sistema — reúne lançamentos de custo, despesas fixas, aportes, contas a pagar/receber, conciliação bancária, notas fiscais emitidas, e os links de Caixa de Produção e Apontamentos.</p>
+      <h2>Aba Lançamentos — Custos Diretos por Job</h2>
+      <ol>
+        <li>Selecione o job na busca</li>
+        <li>Preencha categoria, data, fornecedor, descrição, valor</li>
+        <li>Marque se possui nota fiscal e anexe o comprovante</li>
+        <li>Defina tipo (Saída/Entrada) e periodicidade, se recorrente</li>
+      </ol>
+      <h2>Conciliação Bancária</h2>
+      <p>Cada lançamento tem status ⏳ Pendente ou ✓ Conciliado. Abra o extrato ao lado e marque conforme bate com cada movimentação real.</p>
+      <h2>Despesas Fixas</h2>
+      <p>Custos recorrentes (contador, aluguel, assinaturas) — cadastre com periodicidade mensal. Alimenta a projeção de fluxo de caixa e o EBITDA real.</p>
+      <h2>Contas a Pagar / Receber</h2>
+      <p>Compromissos futuros — vencimento, favorecido, categoria. KPIs mostram o que vence em 7 e 30 dias.</p>
+      <div class="callout info"><div class="callout-title">ℹ️ Importante</div>
+        Ao marcar uma Conta a Pagar como "Pago", o sistema cria automaticamente um lançamento de despesa real correspondente — garante que apareça no DRE.</div>
+      <h2>Aba Caixas — Gestão de Caixa de Produção</h2>
+      <p>Crie um caixa para um produtor de campo: job, nome, verba inicial. O sistema gera um link único — copie e envie.</p>
+      <ul>
+        <li>Produtor acessa sem login</li>
+        <li>Registra gastos, vê saldo em tempo real, pode pedir mais verba</li>
+        <li>Você aprova/recusa solicitações direto nesta aba</li>
+        <li>Ao final, "Encerrar" e depois "Consolidar no Job" — copia os gastos para os Lançamentos</li>
+      </ul>
+      <h2>Aba Apontamentos — Gestão de Apontamentos</h2>
+      <p>Análogo ao Caixa de Produção, mas para insumos e progresso de uma disciplina. O checklist vem dos grupos do orçamento marcados com aquela disciplina.</p>
+      <h2>NF Emitidas</h2>
+      <p>Lista de notas fiscais emitidas, vinculadas ao número do orçamento — alimenta a receita real do Painel Financeiro e do Painel do Investidor.</p>
+      <div class="callout demo"><div class="callout-title">🎓 Exemplo no job de treinamento</div>
+        SS-TREINO-2026_06-99 já tem 5 lançamentos (R$ 1.120,00), um Caixa de Produção ativo com R$ 500,00, e um Apontamento de Pintura com checklist.</div>
+    `
+  },
+  { grupo: "Financeiro", id: "painel-financeiro", titulo: "Painel Financeiro", publico: "Gestor / Financeiro", corPublico: "ga",
+    html: `
+      <p>Visão consolidada de todos os orçamentos, com métricas, DRE, fluxo de caixa projetado, e o relatório detalhado por job.</p>
+      <h2>Tabela de Orçamentos</h2>
+      <p>Lista todos os jobs com custo orçado, venda (considerando NF quando emitida), custo realizado e margem. Use os filtros de status, cliente e busca.</p>
+      <h2>Relatório Detalhado por Job</h2>
+      <p>Clique no ícone 📄 ao lado de qualquer job para abrir:</p>
+      <ul>
+        <li>Faturado (valor da NF) e Imposto Real estimado (alíquota efetiva do Simples)</li>
+        <li>Custo orçado por disciplina, vindo dos grupos do memorial</li>
+        <li>Custo real por categoria, vindo dos lançamentos</li>
+        <li>Lista detalhada de todos os lançamentos</li>
+        <li>Botão "🖨 Exportar PDF"</li>
+      </ul>
+      <h2>DRE, Previsão de Caixa e Alertas</h2>
+      <p>O painel calcula automaticamente a DRE do período, projeta o caixa considerando contas a pagar/receber, e gera alertas (propostas paradas, sinal pendente, jobs sem custo lançado).</p>
+      <div class="callout demo"><div class="callout-title">🎓 Exemplo no job de treinamento</div>
+        Busque SS-TREINO na tabela — aparece com badge roxo "🎓 TREINO — não é real", e seus valores NÃO entram em nenhum KPI de receita, pipeline ou margem total. Você pode abrir o relatório normalmente.</div>
+    `
+  },
+  { grupo: "Sócios", id: "painel-investidor", titulo: "Painel do Investidor", publico: "Sócio Investidor", corPublico: "ylwb",
+    html: `
+      <p>Visão executiva e simplificada da saúde financeira da empresa, sem acesso aos detalhes operacionais de produção. Pensado para consulta rápida.</p>
+      <h2>O que aparece</h2>
+      <ul>
+        <li>Receita executada, EBITDA, margem bruta — valores completos</li>
+        <li>Evolução mensal de receita vs. EBITDA em gráfico</li>
+        <li>Alertas críticos (propostas paradas, jobs sem custo, sinal pendente)</li>
+        <li>Top jobs executados e em produção</li>
+        <li>Saúde financeira: Receita Bruta → Impostos → CMV → Lucro Bruto → Despesas Fixas → EBITDA</li>
+        <li>Pipeline comercial potencial</li>
+      </ul>
+      <h2>O que NÃO aparece</h2>
+      <p>Por design, não há acesso a edição de orçamentos, lançamentos individuais detalhados, ou qualquer ação que altere dados. É somente leitura.</p>
+      <div class="callout demo"><div class="callout-title">🎓 Exemplo no job de treinamento</div>
+        SS-TREINO-2026_06-99 está corretamente AUSENTE de todos os números — como deveria estar qualquer job não faturado ou marcado como treinamento.</div>
+    `
+  },
+  { grupo: "Campo", id: "campo", titulo: "Caixa de Produção e Apontamentos", publico: "Produtores e Profissionais", corPublico: "roxo",
+    html: `
+      <p>Estas duas ferramentas são acessadas por um link único, enviado pelo gestor — não exigem login. A interface foi desenhada para uso no celular, no chão de fábrica ou no local do evento.</p>
+      <h2>Caixa de Produção — para quem recebe verba</h2>
+      <ol>
+        <li>Abra o link no celular</li>
+        <li>Veja o saldo disponível no topo da tela</li>
+        <li>Toque em "+ Novo Gasto" para registrar cada compra</li>
+        <li>Tire foto do comprovante e anexe</li>
+        <li>Se o saldo não bastar, toque em "Solicitar Verba Adicional"</li>
+        <li>Você pode editar um lançamento, mas toda edição fica registrada</li>
+      </ol>
+      <h2>Apontamento de Produção — para quem executa uma disciplina</h2>
+      <ol>
+        <li>Veja o Checklist — itens vêm direto do orçamento daquela disciplina</li>
+        <li>Marque cada item: Não iniciado, Em andamento, Concluído ou Impedido</li>
+        <li>Na aba Insumos, registre os materiais usados</li>
+        <li>Anexe foto do resultado final</li>
+      </ol>
+      <div class="callout info"><div class="callout-title">📋 Onde conseguir o link</div>
+        Os links são gerados pelo gestor (Lançamentos → aba Caixas, ou OS Manager → aba Apontamentos) e enviados por WhatsApp ou e-mail. Não há forma de acessar essas ferramentas sem o link específico do job.</div>
+    `
+  },
+  { grupo: "Administração", id: "seguranca", titulo: "Segurança e Acessos", publico: "Gestor", corPublico: "g600",
+    html: `
+      <h2>Autenticação</h2>
+      <p>Os módulos administrativos exigem login com e-mail e senha. As contas são gerenciadas no painel do Supabase, em Authentication → Users.</p>
+      <h2>Por que os links de campo não pedem login</h2>
+      <p>Caixa de Produção e Apontamentos são protegidos por um token aleatório de 48 caracteres na URL — impossível de adivinhar. Permite uso por produtores externos sem conta no sistema.</p>
+      <h2>Encerrando o acesso de um link</h2>
+      <p>Ao encerrar um Caixa de Produção ou Apontamento, o link para de aceitar novos lançamentos — uma trava real garantida no banco de dados, não apenas visual.</p>
+    `
+  },
+  { grupo: "Administração", id: "manutencao", titulo: "Manutenção e Backup", publico: "Gestor", corPublico: "g600",
+    html: `
+      <h2>Backup</h2>
+      <p>O sistema roda em plano gratuito do Supabase, sem backup automático. Existe um script de exportação que deve ser rodado periodicamente (recomendação: semanalmente).</p>
+      <h2>Ambiente de Teste</h2>
+      <p>Existe um banco de dados separado, dedicado a testar mudanças antes de irem para produção. Toda alteração relevante deve ser validada lá primeiro, usando a suíte de testes automatizados.</p>
+      <h2>Job de Treinamento</h2>
+      <p>O job SS-TREINO-2026_06-99 deve permanecer no sistema permanentemente como material de referência. Está marcado com status "Treinamento", isolando-o de qualquer soma financeira real.</p>
+    `
+  },
+];
+
+// ══════════════════════════════════════════════════════
+// RENDER
+// ══════════════════════════════════════════════════════
+var corMap = {
+  azul: {bg:'#e3f2fd', fg:'#1565c0'}, ga: {bg:'#eafaf1', fg:'#2d6a4f'},
+  roxo: {bg:'#f3e5f5', fg:'#6a1b9a'}, ylwb: {bg:'#fff8e1', fg:'#8a6d00'}, g600: {bg:'#f5f5f5', fg:'#5a5a5a'}
+};
+
+function renderSidebar(){
+  var grupos = {};
+  SECOES.forEach(function(s){
+    if(!grupos[s.grupo]) grupos[s.grupo] = [];
+    grupos[s.grupo].push(s);
+  });
+  var html = '';
+  Object.keys(grupos).forEach(function(g){
+    html += '<div class="side-sec">' + g + '</div>';
+    grupos[g].forEach(function(s){
+      html += '<a class="side-link" data-id="' + s.id + '" onclick="abrirSecao(\'' + s.id + '\')">' + s.titulo + '</a>';
+    });
+  });
+  document.getElementById('sidebar').innerHTML = html;
+}
+
+function renderContent(){
+  var html = '';
+  SECOES.forEach(function(s, i){
+    var cor = corMap[s.corPublico] || corMap.g600;
+    html += '<div class="section" id="sec-' + s.id + '">';
+    html += '<div class="crumb">Manual Operacional / ' + s.grupo + '</div>';
+    html += '<h1>' + s.titulo + '</h1>';
+    html += '<div class="publico-badge" style="background:' + cor.bg + ';color:' + cor.fg + ';">👤 PÚBLICO: ' + s.publico + '</div>';
+    html += s.html;
+    html += '</div>';
+  });
+  document.getElementById('content').innerHTML = html;
+}
+
+function abrirSecao(id){
+  document.querySelectorAll('.section').forEach(function(el){ el.classList.remove('active'); });
+  document.querySelectorAll('.side-link').forEach(function(el){ el.classList.remove('active'); });
+  document.getElementById('sec-' + id).classList.add('active');
+  document.querySelector('.side-link[data-id="' + id + '"]').classList.add('active');
+  window.scrollTo(0,0);
+  document.querySelector('.sidebar').classList.remove('open');
+  history.replaceState(null, '', '#' + id);
+}
+
+function buscar(q){
+  q = q.toLowerCase().trim();
+  if(!q){ document.querySelectorAll('.side-link').forEach(function(el){ el.style.display='block'; }); return; }
+  document.querySelectorAll('.side-link').forEach(function(el){
+    var sec = SECOES.find(function(s){ return s.id === el.dataset.id; });
+    var match = sec.titulo.toLowerCase().includes(q) || sec.html.toLowerCase().includes(q);
+    el.style.display = match ? 'block' : 'none';
+  });
+}
+
+renderSidebar();
+renderContent();
+var hashId = window.location.hash.replace('#','') || 'visao-geral';
+if(!SECOES.find(function(s){return s.id===hashId;})) hashId = 'visao-geral';
+abrirSecao(hashId);
+</script>
+</body>
+</html>
