@@ -1812,7 +1812,10 @@ function renderCaixas(lancMap,solics){
       +'<a href="'+link+'" target="_blank" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;font-weight:600;text-decoration:none;color:#333;">👁 Ver Caixa</a>'
       +(!enc?'<button data-cid="'+c.id+'" onclick="encerrarCaixa(this.dataset.cid)" style="font-size:10px;padding:4px 10px;border:1px solid #c62828;border-radius:3px;background:#fff;color:#c62828;cursor:pointer;font-weight:600;">🔒 Encerrar</button>':'')
       +(!enc?'<button data-cid="'+c.id+'" data-vt="'+c.verba_total+'" onclick="adicionarVerba(this.dataset.cid,parseFloat(this.dataset.vt))" style="font-size:10px;padding:4px 10px;border:1px solid #1565c0;border-radius:3px;background:#fff;color:#1565c0;cursor:pointer;font-weight:600;">+ Verba</button>':'')
-      +(enc?'<button data-cid="'+c.id+'" data-jn="'+c.job_numero+'" onclick="consolidarCaixa(this.dataset.cid,this.dataset.jn)" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;font-weight:600;">⬇ Consolidar no Job</button>':'')
+      +(enc?(c.consolidado_em
+          ?'<span style="font-size:10px;padding:4px 10px;border-radius:3px;background:#1a1a1a;color:#888;font-weight:600;">✓ Consolidado em '+new Date(c.consolidado_em).toLocaleDateString('pt-BR')+'</span>'
+          :'<button data-cid="'+c.id+'" data-jn="'+c.job_numero+'" onclick="consolidarCaixa(this.dataset.cid,this.dataset.jn)" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;font-weight:600;">⬇ Consolidar no Job</button>'
+        ):'')
       +'</div>'
       +'</div>';
   }).join('');
@@ -1851,7 +1854,13 @@ async function encerrarCaixa(contaId){
 }
 
 async function consolidarCaixa(contaId, jobNumero){
-  if(!confirm('Consolidar todos os lançamentos deste caixa no job '+jobNumero+'?\n\nEles serão copiados para a tabela de lançamentos do sistema.'))return;
+  // Checar se já foi consolidado antes (evita duplicar custos no job)
+  var caixaAtual = (caixasCache||[]).find(function(c){return c.id===contaId;});
+  if(caixaAtual && caixaAtual.consolidado_em){
+    alert('Este caixa já foi consolidado em '+new Date(caixaAtual.consolidado_em).toLocaleString('pt-BR')+'.\n\nPara evitar duplicar custos no job, a consolidação só pode ser feita uma vez por caixa.');
+    return;
+  }
+  if(!confirm('Consolidar todos os lançamentos deste caixa no job '+jobNumero+'?\n\nEles serão copiados para a tabela de lançamentos do sistema. Esta ação não pode ser repetida para o mesmo caixa.'))return;
   try{
     // Buscar lançamentos do caixa
     var r=await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa?conta_id=eq.'+contaId+'&select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
@@ -1861,6 +1870,11 @@ async function consolidarCaixa(contaId, jobNumero){
     var payload=lancs.map(function(l){return {orcamento_numero:jobNumero,categoria:l.categoria,descricao:'[Caixa] '+l.descricao,valor:l.valor,data:l.data,fornecedor:l.fornecedor||'',tem_nota:l.tem_nota,comprovante:l.comprovante,periodicidade:'unica',tipo_lancamento:'saida'};});
     var ri=await fetch(SUPA_URL+'/rest/v1/lancamentos',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
     if(!ri.ok)throw new Error('HTTP '+ri.status);
+    // Marcar caixa como consolidado para impedir repetição
+    await fetch(SUPA_URL+'/rest/v1/contas_producao?id=eq.'+contaId,{
+      method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({consolidado_em:new Date().toISOString()})
+    });
     alert('✓ '+lancs.length+' lançamentos consolidados no job '+jobNumero+'!');
     carregarCaixas();
   }catch(e){alert('Erro ao consolidar: '+e.message);}
