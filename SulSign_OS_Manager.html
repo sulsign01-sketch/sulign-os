@@ -665,7 +665,6 @@ var DISCS={
   DESIGN:{l:'Design',steps:['Briefing','Conceito/Rascunho','Arte Final','Aprovação Cliente','Concluído']}
 };
 var RESP=['Fernando Jovita','Everson','Edson','Carlos'];
-var VEND=['Eduardo Pondé','Eduardo Guedes','Carlos Augusto'];
 var LOG=['Cliente Retira','Entrega (frete por conta do cliente)','Entrega inclusa','Montagem inclusa','A combinar'];
 var ACAB={
   ROUTER:['Sem Acabamento','Primer + Pintura PU','Envelopamento Vinil','Laca PU Brilho','Laca PU Fosco','Verniz','Cromado Adesivo'],
@@ -963,7 +962,6 @@ function renderForm(){
     h+='<div class="ff" style="grid-column:span 2"><label>Cliente / Projeto vinculado</label><input class="fi" id="f-cli" value="'+(os.cliente||'')+'" placeholder="Nome do cliente ou projeto"></div>';
     h+='<div class="ff" style="grid-column:span 2"><label>Projeto</label><input class="fi" id="f-proj" value="'+(os.projeto||'')+'" placeholder="Ex: Festa Junina PRIO"></div>';
     h+='<div class="ff"><label>Comprador</label><input class="fi" id="f-resp" list="compradores-list" value="'+(os.responsavel||'')+'" placeholder="Nome de quem está comprando"><datalist id="compradores-list"></datalist></div>';
-    h+='<div class="ff"><label>Contato</label><input class="fi" id="f-cont" value="'+(os.contato||'')+'" placeholder="Nome/telefone"></div>';
     h+='<div class="ff" style="grid-column:span 2"><label>Logística</label><select class="fi" id="f-log">';
     LOG.forEach(function(l){h+='<option value="'+l+'"'+(os.logistica===l?' selected':'')+'>'+l+'</option>';});
     h+='</select></div>';
@@ -981,10 +979,6 @@ function renderForm(){
   RESP.forEach(function(r){h+='<option'+(os.responsavel===r?' selected':'')+'>'+r+'</option>';});
   h+='</select></div>';
   h+='<div class="ff"><label>Operador</label><input class="fi" id="f-op" value="'+(os.operador||'')+'" placeholder="Nome do operador"></div>';
-  h+='<div class="ff"><label>Vendedor</label><select class="fi" id="f-vend"><option value="">— selecionar —</option>';
-  VEND.forEach(function(v){h+='<option'+(os.vendedor===v?' selected':'')+'>'+v+'</option>';});
-  h+='</select></div>';
-  h+='<div class="ff"><label>Contato</label><input class="fi" id="f-cont" value="'+(os.contato||'')+'" placeholder="Nome/telefone"></div>';
   h+='<div class="ff" style="grid-column:span 2"><label>Dimensões da peça</label><input class="fi mono" id="f-dim" value="'+(os.dimensoes||'')+'" placeholder="Ex: 410×160cm — 01 un"></div>';
   h+='<div class="ff" style="grid-column:span 2"><label>Logística</label><select class="fi" id="f-log">';
   LOG.forEach(function(l){h+='<option value="'+l+'"'+(os.logistica===l?' selected':'')+'>'+l+'</option>';});
@@ -1176,8 +1170,6 @@ async function salvar(){
     projeto:(document.getElementById('f-proj')||{}).value||'',
     responsavel:respVal,
     operador:(document.getElementById('f-op')||{}).value||'',
-    vendedor:(document.getElementById('f-vend')||{}).value||'',
-    contato:(document.getElementById('f-cont')||{}).value||'',
     prazo:(document.getElementById('f-prazo')||{}).value||null,
     data_entrega_prometida:(document.getElementById('f-entrega')||{}).value||null,
     data_entrada:(document.getElementById('f-ent')||{}).value||new Date().toISOString().split('T')[0],
