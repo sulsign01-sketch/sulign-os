@@ -172,6 +172,23 @@ body{font-family:'DM Sans',system-ui,sans-serif;background:#0a0a0a;color:#e0e0e0
   </div>
 </div>
 
+<!-- MODAL EDITAR LANÇAMENTO -->
+<div id="edit-modal-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;align-items:flex-end;justify-content:center;">
+  <div style="background:#111;border-radius:14px 14px 0 0;width:100%;max-width:420px;padding:20px;border-top:2px solid #52b788;">
+    <div style="font-size:13px;font-weight:700;color:#52b788;margin-bottom:14px;">✎ Editar Lançamento</div>
+    <div class="fl"><label>Descrição</label><input type="text" id="edit-desc"></div>
+    <div class="row2">
+      <div class="fl"><label>Quantidade</label><input type="number" id="edit-qtd" step="0.01"></div>
+      <div class="fl"><label>Custo Unit.</label><input type="number" id="edit-unit" step="0.01" oninput="editCalcTotal()"></div>
+    </div>
+    <div class="fl"><label>Custo Total</label><input type="number" id="edit-total" step="0.01" readonly style="color:#ef9a9a;font-family:'DM Mono',monospace;font-weight:700;"></div>
+    <div class="fl"><label>Fornecedor</label><input type="text" id="edit-forn"></div>
+    <button class="btn-main" onclick="confirmarEdicao()" id="btn-edit-confirm">Salvar Alteração</button>
+    <button onclick="fecharEdicao()" style="width:100%;margin-top:8px;padding:11px;background:transparent;border:1px solid #2a2a2a;border-radius:8px;color:#888;font-size:13px;cursor:pointer;">Cancelar</button>
+    <div id="edit-st" class="st" style="margin-top:10px;"></div>
+  </div>
+</div>
+
 <script>
 var SUPA_URL = 'https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
@@ -240,10 +257,17 @@ async function init(){
     // Buscar apontamentos já lançados
     await carregarApontamentos();
 
-    // Restaurar checklist salvo
+    // Restaurar checklist salvo — casa por NOME do grupo, não por posição
+    // (posição quebra se o orçamento for editado depois e a ordem/quantidade de grupos mudar)
     if(APOINT.checklist&&APOINT.checklist.length){
-      APOINT.checklist.forEach(function(ck,i){
-        if(CHECKLIST[i]) CHECKLIST[i].status = ck.status||'nao_iniciado';
+      var statusPorNome = {};
+      APOINT.checklist.forEach(function(ck){
+        if(ck.nome) statusPorNome[ck.nome] = ck.status||'nao_iniciado';
+      });
+      CHECKLIST.forEach(function(item){
+        if(statusPorNome.hasOwnProperty(item.nome)){
+          item.status = statusPorNome[item.nome];
+        }
       });
     }
 
@@ -588,13 +612,19 @@ function buscarInsumo(q){
     return (i.nome||'').toLowerCase().indexOf(q.toLowerCase())>=0;
   }).slice(0,10);
   if(!filtrados.length){dd.style.display='none';return;}
-  dd.innerHTML = filtrados.map(function(i){
-    return '<div class="insumo-opt" onclick="selecionarInsumo('+JSON.stringify(i).replace(/"/g,'&quot;')+')">'
+  window._insumosFiltrados = filtrados; // guarda referência para seleção segura por índice
+  dd.innerHTML = filtrados.map(function(i,idx){
+    return '<div class="insumo-opt" data-idx="'+idx+'" onclick="selecionarInsumoPorIndice(this.dataset.idx)">'
       +'<div class="opt-nome">'+esc(i.nome)+'</div>'
       +'<div class="opt-meta">'+(i.unidade||'')+(i.preco_unit?' · '+fmt(i.preco_unit)+'/'+i.unidade:'')+'</div>'
       +'</div>';
   }).join('');
   dd.style.display='block';
+}
+
+function selecionarInsumoPorIndice(idx){
+  var ins = (window._insumosFiltrados||[])[parseInt(idx)];
+  if(ins) selecionarInsumo(ins);
 }
 
 function selecionarInsumo(ins){
@@ -617,19 +647,84 @@ function calcTotal(){
 }
 
 // ── SALVAR INSUMO ──
+// ── Detecção de insumo parecido (normaliza case/acentos/espaços) ──
+function normalizarNome(s){
+  return String(s||'')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'') // remove acentos
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function encontrarInsumoParecido(nomeDigitado){
+  var alvo = normalizarNome(nomeDigitado);
+  if(alvo.length<3) return null;
+  var melhor=null, melhorScore=0;
+  INSUMOS_BASE.forEach(function(ins){
+    var cand = normalizarNome(ins.nome);
+    if(cand===alvo){ melhor=ins; melhorScore=1; return; }
+    // similaridade simples: uma string contém a outra, ou distância de Levenshtein pequena
+    if(melhorScore<1 && (cand.indexOf(alvo)>=0 || alvo.indexOf(cand)>=0) && Math.abs(cand.length-alvo.length)<=4){
+      melhor=ins; melhorScore=0.8;
+    } else if(melhorScore<0.8){
+      var dist = levenshtein(alvo,cand);
+      var limiar = Math.max(2, Math.floor(alvo.length*0.2));
+      if(dist<=limiar && dist<99){
+        melhor=ins; melhorScore=0.6;
+      }
+    }
+  });
+  return melhor;
+}
+
+function levenshtein(a,b){
+  if(a===b) return 0;
+  if(!a.length) return b.length;
+  if(!b.length) return a.length;
+  var matrix=[];
+  for(var i=0;i<=b.length;i++) matrix[i]=[i];
+  for(var j=0;j<=a.length;j++) matrix[0][j]=j;
+  for(i=1;i<=b.length;i++){
+    for(j=1;j<=a.length;j++){
+      if(b.charAt(i-1)===a.charAt(j-1)) matrix[i][j]=matrix[i-1][j-1];
+      else matrix[i][j]=Math.min(matrix[i-1][j-1]+1,matrix[i][j-1]+1,matrix[i-1][j]+1);
+    }
+  }
+  return matrix[b.length][a.length];
+}
+
 async function salvarInsumo(){
   var btn = document.getElementById('btn-ins');
   var nome = document.getElementById('ins-busca').value.trim();
   var qtd = parseFloat(document.getElementById('ins-qtd').value)||1;
   var un = document.getElementById('ins-un').value;
   var cu = parseFloat(document.getElementById('ins-custo').value)||0;
-  var total = qtd*cu;
   var cat = document.getElementById('ins-cat').value;
   var forn = document.getElementById('ins-forn').value.trim();
   var obs = document.getElementById('ins-obs').value.trim();
   var nota = document.getElementById('ins-nota').checked;
   if(!nome){showSt('st-ins','✗ Informe o insumo/material.','err');return;}
+
+  // Checagem de duplicata — só quando é insumo novo (não veio do autocomplete)
+  if(!window._insSelId){
+    var parecido = encontrarInsumoParecido(nome);
+    if(parecido){
+      var usar = confirm(
+        'Já existe um insumo parecido na base:\n\n"'+parecido.nome+'"'+
+        (parecido.preco_unit?' — '+fmt(parecido.preco_unit)+'/'+parecido.unidade:'')+
+        '\n\nDeseja usar esse insumo existente em vez de criar um novo?\n\n'+
+        '[OK] = usar "'+parecido.nome+'"\n[Cancelar] = manter "'+nome+'" como novo insumo'
+      );
+      if(usar){
+        selecionarInsumo(parecido);
+        nome = parecido.nome;
+        if(parecido.preco_unit) cu = parecido.preco_unit;
+      }
+    }
+  }
+
   btn.disabled=true;showSt('st-ins','Salvando...','info');
+  var total = qtd*cu;
 
   var ip='';try{var ir=await fetch('https://api.ipify.org?format=json');var id=await ir.json();ip=id.ip||'';}catch(e){}
 
@@ -695,22 +790,68 @@ function previewFoto(input){
 }
 
 // ── EDITAR APONTAMENTO ──
-async function editarApontamento(id){
+var _editandoId = null;
+
+function editarApontamento(id){
   var a = APONTAMENTOS.find(function(x){return x.id===id;});
   if(!a) return;
-  var novoDesc = prompt('Descrição:',a.insumo_nome||a.descricao||'');
-  if(novoDesc===null) return;
-  var novoVal = parseFloat(prompt('Custo total:',a.custo_total||0));
-  if(isNaN(novoVal)) return;
+  _editandoId = id;
+  document.getElementById('edit-desc').value = a.insumo_nome||a.descricao||'';
+  document.getElementById('edit-qtd').value = a.quantidade||1;
+  document.getElementById('edit-unit').value = a.custo_unit||0;
+  document.getElementById('edit-total').value = a.custo_total||0;
+  document.getElementById('edit-forn').value = a.fornecedor||'';
+  document.getElementById('edit-st').className = 'st';
+  document.getElementById('edit-st').textContent = '';
+  document.getElementById('edit-modal-overlay').style.display='flex';
+}
+
+function fecharEdicao(){
+  document.getElementById('edit-modal-overlay').style.display='none';
+  _editandoId = null;
+}
+
+function editCalcTotal(){
+  var qtd = parseFloat(document.getElementById('edit-qtd').value)||0;
+  var unit = parseFloat(document.getElementById('edit-unit').value)||0;
+  document.getElementById('edit-total').value = (qtd*unit).toFixed(2);
+}
+document.getElementById('edit-qtd') && document.getElementById('edit-qtd').addEventListener('input', editCalcTotal);
+
+async function confirmarEdicao(){
+  if(!_editandoId) return;
+  var a = APONTAMENTOS.find(function(x){return x.id===_editandoId;});
+  if(!a) return;
+  var novoDesc = document.getElementById('edit-desc').value.trim();
+  var novoQtd = parseFloat(document.getElementById('edit-qtd').value)||1;
+  var novoUnit = parseFloat(document.getElementById('edit-unit').value)||0;
+  var novoTotal = parseFloat(document.getElementById('edit-total').value)||(novoQtd*novoUnit);
+  var novoForn = document.getElementById('edit-forn').value.trim();
+  if(!novoDesc){
+    var st=document.getElementById('edit-st'); st.className='st err'; st.textContent='Informe a descrição.';
+    return;
+  }
+  var btn = document.getElementById('btn-edit-confirm');
+  btn.disabled = true;
   var ip='';try{var ir=await fetch('https://api.ipify.org?format=json');var id2=await ir.json();ip=id2.ip||'';}catch(e){}
-  var snap = {descricao:a.insumo_nome,custo_total:a.custo_total};
-  var r = await fetch(SUPA_URL+'/rest/v1/lancamentos_apontamento?id=eq.'+id,{
-    method:'PATCH',headers:H,
-    body:JSON.stringify({insumo_nome:novoDesc,descricao:novoDesc,custo_total:novoVal,editado_em:new Date().toISOString(),editado_de:snap,ip_edicao:ip})
-  });
-  if(!r.ok){alert('Erro ao editar.');return;}
-  await carregarApontamentos();
-  renderPage();
+  var snap = {descricao:a.insumo_nome,quantidade:a.quantidade,custo_unit:a.custo_unit,custo_total:a.custo_total,fornecedor:a.fornecedor};
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos_apontamento?id=eq.'+_editandoId,{
+      method:'PATCH',headers:H,
+      body:JSON.stringify({
+        insumo_nome:novoDesc,descricao:novoDesc,quantidade:novoQtd,custo_unit:novoUnit,
+        custo_total:novoTotal,fornecedor:novoForn,
+        editado_em:new Date().toISOString(),editado_de:snap,ip_edicao:ip
+      })
+    });
+    if(!r.ok) throw new Error('Erro ao salvar');
+    fecharEdicao();
+    await carregarApontamentos();
+    renderPage();
+  }catch(e){
+    var st=document.getElementById('edit-st'); st.className='st err'; st.textContent='✗ '+e.message;
+  }
+  btn.disabled = false;
 }
 
 // ── UTILS ──
