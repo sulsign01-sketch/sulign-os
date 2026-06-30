@@ -52,6 +52,16 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 .totbar{padding:10px 20px;background:var(--black);color:var(--white);display:flex;justify-content:space-between;font-size:12px}
 .totbar b{color:var(--ga);font-family:'DM Mono',monospace}
 
+/* Impressão — esconde navegação e formulário, mostra só filtro/KPIs/tabela */
+@media print{
+  body{background:#fff}
+  .page{max-width:100%;margin:0}
+  .hd,.ab,.tabs,.li-edit,.li-del,#fx-edit-overlay,
+  #fx-form-rapido,#fx-filtro-periodo{display:none !important;}
+  .sec{padding:0 8px}
+  #view-fluxo{display:block !important;padding:0 8px}
+}
+
 /* Filtros lista */
 .filt{display:flex;gap:8px;padding:12px 20px;background:#f5f5f5;flex-wrap:wrap;align-items:center;}
 .filt select,.filt input{border:1.5px solid #e8e8e8;border-radius:2px;padding:5px 8px;font-size:12px;font-family:'DM Sans',sans-serif;background:#fff;outline:none;}
@@ -742,7 +752,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   <div id="view-fluxo" class="sec" style="display:none;">
 
     <!-- Filtro de período -->
-    <div style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+    <div id="fx-filtro-periodo" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
       <div class="fl" style="margin:0;"><label>De</label><input type="month" id="fx-de" style="max-width:140px;"></div>
       <div class="fl" style="margin:0;"><label>Até</label><input type="month" id="fx-ate" style="max-width:140px;"></div>
       <button class="btn" onclick="carregarFluxo()" style="background:#0d47a1;padding:9px 16px;">Aplicar Período</button>
@@ -757,6 +767,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
 
     <!-- Form lançamento rápido -->
+    <div id="fx-form-rapido">
     <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#0d47a1;margin-bottom:12px;">+ Lançamento Rápido</div>
     <div class="row2">
       <div class="fl">
@@ -791,6 +802,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
     <button class="btn" onclick="salvarFluxo()" style="background:#0d47a1;">Salvar Lançamento</button>
     <div class="status" id="status-fx">—</div>
+    </div>
 
     <!-- Tabela mensal agregada -->
     <div style="margin-top:24px;border-top:1px solid #e8e8e8;padding-top:16px;">
@@ -2307,7 +2319,7 @@ async function salvarFluxo(){
 var _fxEditandoId = null;
 
 function abrirEdicaoFluxo(id){
-  var item = (window._fluxoLancsCache||[]).find(function(l){ return String(l.id) === String(id); });
+  var item = (window._fluxoLancsCache||[]).find(function(l){ return l.id === id; });
   if(!item){ alert('Lançamento não encontrado.'); return; }
   _fxEditandoId = id;
 
