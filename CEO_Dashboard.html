@@ -740,35 +740,47 @@ async function carregarFluxoInv(){
 
 function renderFluxoInv(lancs,aportes,saldoInicial,de,ate){
   var saidasAporteTipos=['Retirada de Sócio','Devolução de Empréstimo'];
-  var meses={};
+
+  // Gera todos os meses do range (igual ao Lancamentos.html)
+  var meses=[];
+  var anoI=parseInt(de.split('-')[0]), mesI=parseInt(de.split('-')[1]);
+  var anoF=parseInt(ate.split('-')[0]), mesF=parseInt(ate.split('-')[1]);
+  var cursor=new Date(anoI,mesI-1,1);
+  var fim=new Date(anoF,mesF-1,1);
+  while(cursor<=fim){
+    meses.push(cursor.getFullYear()+'-'+String(cursor.getMonth()+1).padStart(2,'0'));
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+
+  var porMes={};
+  meses.forEach(function(m){ porMes[m]={e:0,s:0}; });
+
   lancs.forEach(function(l){
     var m=(l.data||'').substring(0,7);
-    if(!meses[m]) meses[m]={e:0,s:0};
+    if(!porMes[m]) return;
     var v=parseFloat(l.valor)||0;
-    if(l.tipo_lancamento==='entrada') meses[m].e+=v; else meses[m].s+=v;
+    if(l.tipo_lancamento==='entrada') porMes[m].e+=v; else porMes[m].s+=v;
   });
   aportes.forEach(function(a){
     var m=(a.data||'').substring(0,7);
-    if(!meses[m]) meses[m]={e:0,s:0};
+    if(!porMes[m]) return;
     var v=parseFloat(a.valor)||0;
-    if(saidasAporteTipos.indexOf(a.tipo)>=0) meses[m].s+=v; else meses[m].e+=v;
+    if(saidasAporteTipos.indexOf(a.tipo)>=0) porMes[m].s+=v; else porMes[m].e+=v;
   });
 
   var totalE=0,totalS=0;
-  Object.keys(meses).forEach(function(m){ totalE+=meses[m].e; totalS+=meses[m].s; });
+  meses.forEach(function(m){ totalE+=porMes[m].e; totalS+=porMes[m].s; });
   var saldoPer=totalE-totalS;
   var saldoAcum=saldoInicial+saldoPer;
 
-  var el=document.getElementById('inv-fx-entradas');
-  el.textContent=fmtK(totalE);
+  document.getElementById('inv-fx-entradas').textContent=fmtK(totalE);
   document.getElementById('inv-fx-saidas').textContent=fmtK(totalS);
   var elS=document.getElementById('inv-fx-saldo');
   elS.textContent=(saldoPer>=0?'+':'')+fmtK(saldoPer);
   elS.style.color=saldoPer>=0?'var(--ga)':'var(--red)';
   document.getElementById('inv-fx-acumulado').textContent=fmtK(saldoAcum);
 
-  var keys=Object.keys(meses).sort();
-  if(!keys.length){
+  if(!meses.length){
     document.getElementById('inv-fx-tabela').innerHTML='<div style="text-align:center;padding:30px;color:var(--g400);font-size:12px;">Nenhum lançamento neste período.</div>';
     return;
   }
@@ -785,8 +797,8 @@ function renderFluxoInv(lancs,aportes,saldoInicial,de,ate){
     +'<th style="padding:8px 10px;width:24px;"></th>'
     +'</tr></thead><tbody>';
 
-  keys.forEach(function(m){
-    var d=meses[m];
+  meses.forEach(function(m){
+    var d=porMes[m];
     var saldoM=d.e-d.s;
     acum+=saldoM;
     var partes=m.split('-');
