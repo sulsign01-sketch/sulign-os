@@ -273,7 +273,7 @@ function renderLancItem(l, i, enc){
     html += '<button class="lanc-edit-btn" onclick="toggleEdit(\''+l.id+'\')">✎ Editar</button>';
     html += '<div class="edit-form" id="ef-'+l.id+'">';
     html += '<div class="row2"><div class="fl"><label>Descrição</label><input type="text" id="ed-desc-'+l.id+'" value="'+escAttr(l.descricao||'')+'"></div>';
-    html += '<div class="fl"><label>Valor</label><input type="number" id="ed-val-'+l.id+'" step="0.01" value="'+l.valor+'"></div></div>';
+    html += '<div class="fl"><label>Valor</label><input type="number" id="ed-val-'+l.id+'" step="0.01" value="'+escAttr(l.valor)+'"></div></div>';
     html += '<div class="row2"><div class="fl"><label>Categoria</label><select id="ed-cat-'+l.id+'">';
     ['Material','Mão de Obra','Logística','Alimentação','Transporte','Ferramenta','Imprevisto','Outros'].forEach(function(c){
       html += '<option'+(c===l.categoria?' selected':'')+'>'+c+'</option>';
@@ -352,6 +352,15 @@ async function salvarEdicao(id, idx){
   var novoCat = document.getElementById('ed-cat-'+id).value;
   var novoForn = document.getElementById('ed-forn-'+id).value.trim();
   if(!novoDesc||!novoVal){alert('Preencha descrição e valor.');return;}
+
+  // Verificar saldo — desconta o valor ANTIGO deste item antes de checar o novo
+  var s = calcSaldo();
+  var saldoSemEsteItem = s.saldo + (parseFloat(snap.valor)||0);
+  if(novoVal > saldoSemEsteItem+0.01){
+    alert('Valor ultrapassa o saldo disponível ('+fmt(saldoSemEsteItem)+'). Solicite mais verba antes de aumentar este gasto.');
+    return;
+  }
+
   var ip='';try{var ir=await fetch('https://api.ipify.org?format=json');var id2=await ir.json();ip=id2.ip||'';}catch(e){}
   var editadoDe = {descricao:snap.descricao,valor:snap.valor,categoria:snap.categoria,fornecedor:snap.fornecedor};
   var r = await fetch(SUPA_URL+'/rest/v1/lancamentos_caixa?id=eq.'+id,{
