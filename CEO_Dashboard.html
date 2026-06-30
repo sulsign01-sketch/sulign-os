@@ -263,6 +263,9 @@ function fmtKShort(v){
   return Math.abs(v)>=1000?'R$ '+(v/1000).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0})+'k':'R$ '+parseFloat(v).toLocaleString('pt-BR',{minimumFractionDigits:0,maximumFractionDigits:0});
 }
 function pct(v,total){return total>0?(v/total*100).toFixed(1)+'%':'—';}
+function esc(s){
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 function calcOrcamento(orc){
   var bdi=orc.bdi||{};
@@ -474,7 +477,7 @@ function renderAlertasInv(orcs,todosLanc,todasFixas,ebitda,margemPct){
     return diff>=10;
   });
   if(paradas.length){
-    alertas.push({tipo:'warn',icon:'⏳',txt:'<strong>'+paradas.length+' proposta(s) sem retorno há +10 dias:</strong> '+paradas.map(function(o){return o.numero+' ('+( o.agencia||o.cliente||'—')+')'; }).join(', ')+'.'});
+    alertas.push({tipo:'warn',icon:'⏳',txt:'<strong>'+paradas.length+' proposta(s) sem retorno há +10 dias:</strong> '+paradas.map(function(o){return esc(o.numero)+' ('+esc(o.agencia||o.cliente||'—')+')'; }).join(', ')+'.'});
   }
 
   // Jobs aprovados sem sinal recebido
@@ -482,7 +485,7 @@ function renderAlertasInv(orcs,todosLanc,todasFixas,ebitda,margemPct){
     var s=o.status||'';
     if(['Orçamento Aprovado','Em Produção'].indexOf(s)>=0 && !o.sinal_recebido){
       alertas.push({tipo:'warn',icon:'💰',
-        titulo:'Sinal pendente — '+(o.numero||'')+(o.cliente?' · '+o.cliente:''),
+        titulo:'Sinal pendente — '+esc(o.numero||'')+(o.cliente?' · '+esc(o.cliente):''),
         sub:'Job em produção sem confirmação de recebimento do sinal de entrada'});
     }
   });
@@ -527,8 +530,8 @@ function renderTopJobs(jobs){
     var mgCls=j.margem===null?'':'ok';
     if(j.margem!==null){mgCls=j.margem>=20?'ok':j.margem>=10?'warn':'bad';}
     return '<div class="job-row">'
-      +'<span class="job-num">'+j.numero+'</span>'
-      +'<span class="job-nome" title="'+j.cliente+' — '+j.projeto+'">'+j.cliente+'</span>'
+      +'<span class="job-num">'+esc(j.numero)+'</span>'
+      +'<span class="job-nome" title="'+esc(j.cliente)+' — '+esc(j.projeto)+'">'+esc(j.cliente)+'</span>'
       +'<span class="job-val">'+fmtK(j.venda)+'</span>'
       +(j.margem!==null?'<span class="job-mg '+mgCls+'">'+j.margem.toFixed(0)+'%</span>':'')
       +'</div>';
