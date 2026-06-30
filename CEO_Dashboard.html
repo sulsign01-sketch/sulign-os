@@ -356,6 +356,12 @@ function renderDash(orcs,todasOs,todosLanc,todasFixas){
       else despFixed+=(parseFloat(d.valor)||0);
     }
   });
+  // Impostos lançados avulsos (tabela lancamentos, categoria 'Imposto')
+  todosLanc.forEach(function(l){
+    if((l.categoria||'').toLowerCase()==='imposto'){
+      impostos+=(parseFloat(l.valor)||0);
+    }
+  });
 
   var recLiq=receitaTotal-impostos;
   var lucroBruto=recLiq-cmv;
