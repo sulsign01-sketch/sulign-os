@@ -650,7 +650,18 @@ var DISCS={
   SERR:{l:'Serralheria',steps:['Arte/Arquivo','Corte/Dobra','Solda/Montagem','Acabamento/Pintura','Concluído']},
   IMPRE:{l:'Impressão',steps:['Arte/Arquivo','Impressão','Acabamento','Concluído']},
   PLOTAGEM:{l:'Plotagem',steps:['Arte/Arquivo','Plotagem/Recorte','Acabamento','Concluído']},
-  COMPRAS:{l:'Compras',steps:['Cotação','Aprovação','Pedido Feito','Recebido']}
+  COMPRAS:{l:'Compras',steps:['Cotação','Aprovação','Pedido Feito','Recebido']},
+  FORR:{l:'Forração',steps:['Arte/Arquivo','Corte de Material','Forração','Acabamento','Concluído']},
+  PINT:{l:'Pintura',steps:['Preparação','Aplicação Primer','Pintura','Acabamento/Verniz','Concluído']},
+  APLIC:{l:'Aplicação',steps:['Arte/Arquivo','Preparação Superfície','Aplicação','Concluído']},
+  ESTR:{l:'Estruturas',steps:['Projeto/Cálculo','Corte/Montagem','Solda/Fixação','Acabamento','Concluído']},
+  DETA:{l:'Detalhamento',steps:['Arte/Arquivo','Detalhamento','Acabamento','Concluído']},
+  CV:{l:'CV/Impressão',steps:['Arte/Arquivo','Impressão','Laminação/Acabamento','Concluído']},
+  IMP3D:{l:'Impressão 3D',steps:['Arquivo 3D','Fatiamento','Impressão','Pós-Processamento','Concluído']},
+  ELET:{l:'Elétrica',steps:['Projeto Elétrico','Material','Instalação','Teste/Comissionamento','Concluído']},
+  ARTPL:{l:'Artes Plásticas',steps:['Conceito','Modelagem/Escultura','Acabamento','Concluído']},
+  ARQ:{l:'Arquitetura',steps:['Briefing','Projeto','Detalhamento Técnico','Aprovação','Concluído']},
+  DESIGN:{l:'Design',steps:['Briefing','Conceito/Rascunho','Arte Final','Aprovação Cliente','Concluído']}
 };
 var RESP=['Fernando Jovita','Everson','Edson','Carlos'];
 var VEND=['Eduardo Pondé','Eduardo Guedes','Carlos Augusto'];
@@ -661,7 +672,12 @@ var ACAB={
   MARC:['Sem Acabamento','Primer + Pintura PU','Verniz PU','Laminado Fórmica','Envelopamento Vinil'],
   SERR:['Sem Acabamento','Pintado Automotivo','Escovado','Galvanizado','Cromado'],
   IMPRE:['Sem Acabamento','Laminação Brilho','Laminação Fosco','Fita Dupla Face','Fita VHB'],
-  PLOTAGEM:['Sem Acabamento','Laminação Fria','Primer Prata','Fita Dupla Face']
+  PLOTAGEM:['Sem Acabamento','Laminação Fria','Primer Prata','Fita Dupla Face'],
+  FORR:['Sem Acabamento','Napa','Bagum','Tecido','Courino'],
+  PINT:['Fosco','Brilhante','Acetinado','Texturizado','Metálico'],
+  APLIC:['Sem Acabamento','Verniz Proteção','Laminação'],
+  ESTR:['Sem Acabamento','Pintura Eletrostática','Galvanizado','Cromado','Escovado'],
+  CV:['Sem Acabamento','Laminação Brilho','Laminação Fosco','Fita Dupla Face']
 };
 
 // COMPRADORES RECENTES (autocomplete)
