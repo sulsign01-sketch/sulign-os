@@ -2319,7 +2319,7 @@ async function salvarFluxo(){
 var _fxEditandoId = null;
 
 function abrirEdicaoFluxo(id){
-  var item = (window._fluxoLancsCache||[]).find(function(l){ return l.id === id; });
+  var item = (window._fluxoLancsCache||[]).find(function(l){ return String(l.id) === String(id); });
   if(!item){ alert('Lançamento não encontrado.'); return; }
   _fxEditandoId = id;
 
