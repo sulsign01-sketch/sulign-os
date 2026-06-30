@@ -530,7 +530,9 @@ function renderApontamentosView(){
       h += '<button data-link="'+link+'" onclick="navigator.clipboard.writeText(this.dataset.link)" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;">📋 Copiar Link</button>';
       h += '<a href="'+link+'" target="_blank" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;text-decoration:none;color:#333;">👁 Ver</a>';
       if(!enc2) h += '<button data-aid="'+a.id+'" onclick="encerrarApontamento(this.dataset.aid)" style="font-size:10px;padding:4px 10px;border:1px solid #c62828;border-radius:3px;background:#fff;color:#c62828;cursor:pointer;">🔒 Encerrar</button>';
-      h += '<button data-aid="'+a.id+'" data-jn="'+a.job_numero+'" data-disc="'+(DISC_MAP[a.disciplina_codigo]||a.disciplina)+'" onclick="consolidarApontamento(this.dataset.aid,this.dataset.jn,this.dataset.disc)" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;">⬇ Consolidar</button>';
+      h += a.consolidado_em
+        ? '<span style="font-size:10px;padding:4px 10px;border-radius:3px;background:#1a1a1a;color:#888;">✓ Consolidado em '+new Date(a.consolidado_em).toLocaleDateString('pt-BR')+'</span>'
+        : '<button data-aid="'+a.id+'" data-jn="'+a.job_numero+'" data-disc="'+(DISC_MAP[a.disciplina_codigo]||a.disciplina)+'" onclick="consolidarApontamento(this.dataset.aid,this.dataset.jn,this.dataset.disc)" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;">⬇ Consolidar</button>';
       h += '</div></div>';
     });
   }
@@ -588,7 +590,13 @@ async function encerrarApontamento(id){
 }
 
 async function consolidarApontamento(id, jobNumero, discNome){
-  if(!confirm('Consolidar lançamentos de '+discNome+' no job '+jobNumero+'?\n\nSerão copiados para os lançamentos do sistema.'))return;
+  // Checar se já foi consolidado antes (evita duplicar custos no job)
+  var apontAtual = (apontamentosCache||[]).find(function(a){return a.id===id;});
+  if(apontAtual && apontAtual.consolidado_em){
+    alert('Este apontamento já foi consolidado em '+new Date(apontAtual.consolidado_em).toLocaleString('pt-BR')+'.\n\nPara evitar duplicar custos no job, a consolidação só pode ser feita uma vez por apontamento.');
+    return;
+  }
+  if(!confirm('Consolidar lançamentos de '+discNome+' no job '+jobNumero+'?\n\nSerão copiados para os lançamentos do sistema. Esta ação não pode ser repetida para este apontamento.'))return;
   try{
     var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/lancamentos_apontamento?apontamento_id=eq.'+id+'&select=*',{
       headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken()}
@@ -615,6 +623,11 @@ async function consolidarApontamento(id, jobNumero, discNome){
       body:JSON.stringify(payload)
     });
     if(!ri.ok) throw new Error('HTTP '+ri.status);
+    // Marcar apontamento como consolidado para impedir repetição
+    await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao?id=eq.'+id,{
+      method:'PATCH',headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({consolidado_em:new Date().toISOString()})
+    });
     alert('✓ '+lancs.length+' insumos consolidados no job '+jobNumero+'!');
     await carregarApontamentos();
     renderApp();
