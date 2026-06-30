@@ -505,6 +505,108 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
 </style>
 </head>
 <body class="">
+<!-- ═══════════════════════════════════════════════════════════
+     SULSIGN OS — AUTENTICAÇÃO (cole logo após <body>)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="sulsign-auth-gate" style="position:fixed;inset:0;background:#0a0a0a;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',system-ui,sans-serif;">
+  <div style="width:100%;max-width:340px;padding:32px 28px;background:#111;border-radius:12px;border:1px solid #1a1a1a;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="width:48px;height:48px;background:#52b788;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#0a0a0a;margin:0 auto 12px;">S</div>
+      <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:.5px;">SUL SIGN GROUP</div>
+      <div style="font-size:10px;color:#52b788;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;">Acesso Restrito</div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">E-mail</label>
+      <input type="email" id="sulsign-auth-email" style="width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;" placeholder="seu@email.com">
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="display:block;font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Senha</label>
+      <input type="password" id="sulsign-auth-senha" style="width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;" placeholder="••••••••">
+    </div>
+    <button id="sulsign-auth-btn" style="width:100%;padding:11px;background:#52b788;border:none;border-radius:6px;color:#0a0a0a;font-size:13px;font-weight:700;cursor:pointer;">Entrar</button>
+    <div id="sulsign-auth-erro" style="font-size:11px;color:#ef9a9a;margin-top:10px;text-align:center;display:none;"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SB_AUTH_URL = 'https://obeamqkcuytctfczhook.supabase.co';
+  var SB_AUTH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+  var SESSION_KEY = 'sulsign_session';
+
+  function getStoredSession(){
+    try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; }
+  }
+  function storeSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+  function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+
+  function hideGate(){
+    var g=document.getElementById('sulsign-auth-gate');
+    if(g) g.style.display='none';
+  }
+  function showError(msg){
+    var el=document.getElementById('sulsign-auth-erro');
+    el.textContent=msg; el.style.display='block';
+  }
+
+  async function tentarLogin(){
+    var email=document.getElementById('sulsign-auth-email').value.trim();
+    var senha=document.getElementById('sulsign-auth-senha').value;
+    var btn=document.getElementById('sulsign-auth-btn');
+    if(!email||!senha){showError('Preencha e-mail e senha.');return;}
+    btn.disabled=true; btn.textContent='Entrando...';
+    try{
+      var r = await fetch(SB_AUTH_URL+'/auth/v1/token?grant_type=password',{
+        method:'POST',
+        headers:{'apikey':SB_AUTH_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({email:email,password:senha})
+      });
+      var data = await r.json();
+      if(!r.ok || !data.access_token){
+        showError('E-mail ou senha incorretos.');
+        btn.disabled=false; btn.textContent='Entrar';
+        return;
+      }
+      storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+((data.expires_in||3600)*1000),email:email});
+      window.SULSIGN_ACCESS_TOKEN = data.access_token;
+      hideGate();
+    }catch(e){
+      showError('Erro de conexão: '+e.message);
+      btn.disabled=false; btn.textContent='Entrar';
+    }
+  }
+
+  async function verificarSessao(){
+    var s = getStoredSession();
+    if(!s || !s.access_token || Date.now() > s.expires_at){
+      clearSession();
+      return false;
+    }
+    window.SULSIGN_ACCESS_TOKEN = s.access_token;
+    return true;
+  }
+
+  // Expor função global para logout
+  window.sulsignLogout = function(){
+    clearSession();
+    window.location.reload();
+  };
+
+  // Init
+  verificarSessao().then(function(valido){
+    if(valido) hideGate();
+  });
+
+  document.getElementById('sulsign-auth-btn').addEventListener('click', tentarLogin);
+  document.getElementById('sulsign-auth-senha').addEventListener('keydown', function(e){
+    if(e.key==='Enter') tentarLogin();
+  });
+})();
+</script>
+<!-- ═══════════════════════════════════════════════════════════
+     FIM DO BLOCO DE AUTENTICAÇÃO
+     ═══════════════════════════════════════════════════════════ -->
+
 <div id="list-view" style="display: block;">
   <div class="page" style="margin:24px auto;">
   <div class="hd">
@@ -1798,7 +1900,7 @@ async function confirmarGerarOS(){
   var contadores={ROUTER:0,LASER:0,MARC:0,SERR:0,IMPRE:0,PLOTAGEM:0};
   try{
     var exist=await fetch(SUPA_URL+'/rest/v1/ordens_servico?orcamento_numero=eq.'+encodeURIComponent(orcNum)+'&select=numero',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var existData=await exist.json();
     existData.forEach(function(o){
@@ -1874,7 +1976,7 @@ async function confirmarGerarOS(){
     try{
       var r=await fetch(SUPA_URL+'/rest/v1/ordens_servico',{
         method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify(payload)
       });
       if(!r.ok)throw new Error(await r.text());
@@ -2001,7 +2103,7 @@ async function confirmarGerarOSSetorial(){
   var contadores={};
   try{
     var exist=await fetch(SUPA_URL+'/rest/v1/ordens_servico?orcamento_numero=eq.'+encodeURIComponent(orcNum)+'&select=num',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var existData=await exist.json();
     existData.forEach(function(o){
@@ -2067,7 +2169,7 @@ async function confirmarGerarOSSetorial(){
     try{
       var r=await fetch(SUPA_URL+'/rest/v1/ordens_servico',{
         method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify(payload)
       });
       if(!r.ok)throw new Error(await r.text());
@@ -2491,11 +2593,11 @@ async function salvarOrcamento(){
     // Upsert: deleta pelo número ORIGINAL (antes de eventual renomeação), insere com número novo
     var numeroParaDeletar = _numeroSalvoAtual || numero;
     var del=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numeroParaDeletar),{
-      method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos',{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
       body:JSON.stringify(payload)
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -2512,7 +2614,7 @@ async function abrirCarregarOrcamento(){
   lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,rev,rev_historico,updated_at&order=updated_at.desc',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data=await r.json();
     if(!data.length){lista.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Nenhum orçamento salvo ainda.</div>';return;}
@@ -2548,7 +2650,7 @@ async function abrirCarregarOrcamento(){
 
 async function deletarOrcamentoSalvo(id,el){
   await fetch(SUPA_URL+'/rest/v1/orcamentos?id=eq.'+id,{
-    method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
   });
   if(el)el.parentNode.removeChild(el);
 }
@@ -2564,7 +2666,7 @@ async function excluirOrcamentoAtual(){
   setSaveStatus('🗑 Excluindo...', false);
   try{
     var r = await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(_numeroSalvoAtual),{
-      method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
     _numeroSalvoAtual = null;
@@ -2580,7 +2682,7 @@ async function carregarOrcamento(id){
   setSaveStatus('⏳ Carregando...', false);
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?id=eq.'+id,{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data=await r.json();
     if(!data.length)throw new Error('Não encontrado');
@@ -2658,6 +2760,10 @@ var _lvTabAtual='ativos';
 var lvCache=[];
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+// Retorna o token de autorização: usa sessão logada se existir, senão anon (fallback)
+function getAuthToken(){
+  return window.SULSIGN_ACCESS_TOKEN || SUPA_KEY;
+}
 var baseItems=[];  // cache local dos insumos
 
 // ── STATUS ──
@@ -2675,7 +2781,7 @@ async function carregarBase(){
   setStatus('⏳ Carregando base de custo...','info');
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/base_insumos?select=*&order=categoria,nome',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     baseItems=await r.json();
@@ -2756,7 +2862,7 @@ async function adicionarItem(){
     setSyncStatus('💾 Salvando...');
     var r=await fetch(SUPA_URL+'/rest/v1/base_insumos',{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=representation'},
       body:JSON.stringify(payload)
     });
     if(!r.ok)throw new Error(await r.text());
@@ -2773,7 +2879,7 @@ async function deletarItem(id){
   if(!confirm('Remover este insumo da base?'))return;
   await fetch(SUPA_URL+'/rest/v1/base_insumos?id=eq.'+id,{
     method:'DELETE',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
   });
   await carregarBase();
 }
@@ -2854,11 +2960,11 @@ async function sincronizarDrive(){
   try{
     // Limpar registros drive antigos e reinserir
     var del=await fetch(SUPA_URL+'/rest/v1/base_insumos?fonte=in.(drive,mubisys,padrao)',{
-      method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var ins=await fetch(SUPA_URL+'/rest/v1/base_insumos',{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
       body:JSON.stringify(driveData)
     });
     if(!ins.ok)throw new Error(await ins.text());
@@ -2948,7 +3054,7 @@ async function carregarPecas(){
   var el=document.getElementById('pecas-status');
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/base_pecas?select=*,base_peca_componentes(*,base_insumos(nome,preco_unid,unidade))&order=categoria,nome',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     basePecas=await r.json();
@@ -3075,7 +3181,7 @@ async function seedPecasModec(){
   try{
     // Buscar insumos para match por nome
     var r=await fetch(SUPA_URL+'/rest/v1/base_insumos?select=id,nome',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var insumos=await r.json();
 
@@ -3168,7 +3274,7 @@ async function seedPecasModec(){
       var pDef=pecasDef[pi];
       var pr=await fetch(SUPA_URL+'/rest/v1/base_pecas',{
         method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=representation'},
         body:JSON.stringify({nome:pDef.nome,categoria:pDef.categoria,descricao:pDef.descricao})
       });
       var pArr=await pr.json();
@@ -3187,7 +3293,7 @@ async function seedPecasModec(){
       });
       await fetch(SUPA_URL+'/rest/v1/base_peca_componentes',{
         method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify(compsPayload)
       });
       criadas++;
@@ -3268,15 +3374,15 @@ async function salvarPeca(){
   try{
     var pecaId=id;
     if(id){
-      await fetch(SUPA_URL+'/rest/v1/base_pecas?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-      await fetch(SUPA_URL+'/rest/v1/base_peca_componentes?peca_id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+      await fetch(SUPA_URL+'/rest/v1/base_pecas?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json'},body:JSON.stringify(payload)});
+      await fetch(SUPA_URL+'/rest/v1/base_peca_componentes?peca_id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
     } else {
-      var r=await fetch(SUPA_URL+'/rest/v1/base_pecas',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(payload)});
+      var r=await fetch(SUPA_URL+'/rest/v1/base_pecas',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=representation'},body:JSON.stringify(payload)});
       var nova=await r.json();pecaId=nova[0].id;
     }
     if(comps.length&&pecaId){
       comps.forEach(function(c){c.peca_id=pecaId;});
-      await fetch(SUPA_URL+'/rest/v1/base_peca_componentes',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(comps)});
+      await fetch(SUPA_URL+'/rest/v1/base_peca_componentes',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(comps)});
     }
     fecharModal();
     await carregarPecas();
@@ -3285,7 +3391,7 @@ async function salvarPeca(){
 
 async function deletarPeca(id){
   if(!confirm('Remover esta peça da base?'))return;
-  await fetch(SUPA_URL+'/rest/v1/base_pecas?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}});
+  await fetch(SUPA_URL+'/rest/v1/base_pecas?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
   await carregarPecas();
 }
 
@@ -3709,7 +3815,7 @@ async function carregarListaOrcamentos(){
   body.innerHTML='<div class="lv-loading">Carregando...</div>';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?select=id,numero,cliente,projeto,status,rev,rev_historico,updated_at&order=updated_at.desc',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     lvCache=await r.json();
@@ -3888,7 +3994,7 @@ async function gerarProximoNumeroSS(){
   var prefixo='SS-'+hojeD.getFullYear()+'_'+String(hojeD.getMonth()+1).padStart(2,'0')+'-';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=like.'+encodeURIComponent(prefixo+'*')+'&select=numero&order=numero.desc&limit=1',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data=await r.json();
     var n=1;
@@ -3943,7 +4049,7 @@ var _logCountCache = {}; // {numero: count} para exibição na lista
 async function loadLogs(numero){
   try{
     var r = await fetch(SUPA_URL+'/rest/v1/crm_interacoes?orcamento_numero=eq.'+encodeURIComponent(numero)+'&order=criado_em.desc',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok) return [];
     return await r.json();
@@ -3961,7 +4067,7 @@ async function saveLog(numero, log){
   };
   await fetch(SUPA_URL+'/rest/v1/crm_interacoes',{
     method:'POST',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),
              'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify(payload)
   });
@@ -3977,7 +4083,7 @@ function countLogs(numero){
 function preCarregarContagens(numeros){
   if(!numeros||!numeros.length) return;
   fetch(SUPA_URL+'/rest/v1/crm_interacoes?select=orcamento_numero&orcamento_numero=in.('+numeros.map(encodeURIComponent).join(',')+')',{
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
   }).then(function(r){ return r.ok?r.json():[] ;})
     .then(function(rows){
       if(!Array.isArray(rows)) return;
@@ -4137,7 +4243,7 @@ async function carregarAnaliseMargem(){
   cont.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&order=data.asc',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
     var data=await r.json();
@@ -4306,7 +4412,7 @@ async function salvarCustoReal(){
     };
     var r=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
       body:JSON.stringify(payload)
     });
     if(!r.ok) throw new Error('HTTP '+r.status+' — '+await r.text());
@@ -4328,7 +4434,7 @@ async function carregarListaCustosReais(numero){
   lista.innerHTML='<div style="font-size:11px;color:var(--g400);">Carregando...</div>';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&order=data.desc',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data=await r.json();
     var itens=Array.isArray(data)?data:[];
