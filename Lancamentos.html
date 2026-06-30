@@ -2067,7 +2067,7 @@ async function carregarFluxo(){
     var ultimoDia = new Date(parseInt(anoF), parseInt(mesF), 0).getDate();
     var dataFim = ate+'-'+String(ultimoDia).padStart(2,'0');
 
-    var r1 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
+    var r1 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var lancs = await r1.json();
@@ -2080,7 +2080,7 @@ async function carregarFluxo(){
     aportes = Array.isArray(aportes)?aportes:[];
 
     // Saldo acumulado ANTES do período (tudo antes de dataIni)
-    var r3 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni,{
+    var r3 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&conciliado=eq.true',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var lancsAntes = await r3.json();
