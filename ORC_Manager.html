@@ -1876,13 +1876,13 @@ async function confirmarGerarOS(){
   btn.textContent='⏳ Gerando...';btn.disabled=true;
 
   var orcNum=document.querySelector('.doc-num-el')?document.querySelector('.doc-num-el').textContent.trim():'';
+  if(_numeroSalvoAtual && orcNum!==_numeroSalvoAtual){
+    if(!confirm('O número do orçamento foi alterado mas ainda não foi salvo.\n\nSalvo: '+_numeroSalvoAtual+'\nAtual: '+orcNum+'\n\nAs OSs serão vinculadas ao número ATUAL ('+orcNum+'), que pode não existir no sistema ainda. Deseja continuar mesmo assim?\n\n(Recomendado: cancele, salve o orçamento primeiro, depois gere as OSs)')){
+      btn.textContent='⚙ Gerar OSs';btn.disabled=false;
+      return;
+    }
+  }
   var hdVals=document.querySelectorAll('.hd-info-val[contenteditable]');
-  var cliente=hdVals[0]?hdVals[0].textContent.trim():'';
-  var projeto=hdVals[3]?hdVals[3].textContent.trim():'';
-  var resp=document.getElementById('gos-resp').value;
-  var prazo=document.getElementById('gos-prazo').value||null;
-
-  // Agrupar grupos selecionados por disciplina
   var porDisc={};
   var grupos=document.querySelectorAll('#gos-grupos .gos-grupo');
   grupos.forEach(function(grp){
@@ -2080,6 +2080,12 @@ async function confirmarGerarOSSetorial(){
   btn.textContent='⏳ Gerando...';btn.disabled=true;
 
   var orcNum=document.querySelector('.doc-num-el')?document.querySelector('.doc-num-el').textContent.trim():'';
+  if(_numeroSalvoAtual && orcNum!==_numeroSalvoAtual){
+    if(!confirm('O número do orçamento foi alterado mas ainda não foi salvo.\n\nSalvo: '+_numeroSalvoAtual+'\nAtual: '+orcNum+'\n\nAs OSs serão vinculadas ao número ATUAL ('+orcNum+'), que pode não existir no sistema ainda. Deseja continuar mesmo assim?\n\n(Recomendado: cancele, salve o orçamento primeiro, depois gere as OSs)')){
+      btn.textContent='⚙ Gerar OSs Selecionadas';btn.disabled=false;
+      return;
+    }
+  }
   var hdVals=document.querySelectorAll('.hd-info-val[contenteditable]');
   var cliente=hdVals[0]?hdVals[0].textContent.trim():'';
   var projeto=hdVals[3]?hdVals[3].textContent.trim():'';
@@ -2598,17 +2604,43 @@ async function salvarOrcamento(){
     updated_at:new Date().toISOString()
   };
   try{
-    // Upsert: deleta pelo número ORIGINAL (antes de eventual renomeação), insere com número novo
-    var numeroParaDeletar = _numeroSalvoAtual || numero;
-    var del=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numeroParaDeletar),{
-      method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
-    });
-    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos',{
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify(payload)
-    });
-    if(!r.ok)throw new Error('HTTP '+r.status);
+    // Upsert seguro: PATCH se já existe (preserva campos externos como valor_nf,
+    // sinal_recebido, data_proposta que não são gerenciados pelo ORC_Manager),
+    // ou INSERT puro se for novo. Nunca DELETE — evita janela de perda de dados
+    // caso a chamada seguinte falhe por instabilidade de rede.
+    if(_numeroSalvoAtual){
+      // Já existe um registro vinculado a esta sessão de edição — PATCH pelo número
+      // original (mesmo que o usuário tenha renomeado o SS, o payload já traz o novo
+      // valor de "numero" e o PostgREST atualiza a coluna corretamente)
+      var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(_numeroSalvoAtual),{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify(payload)
+      });
+      if(!r.ok)throw new Error('HTTP '+r.status);
+    } else {
+      // Orçamento novo nesta sessão: verificar se já existe um com esse número (ex:
+      // usuário digitou um SS já usado por engano) — se existir, PATCH; senão, INSERT
+      var chk=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numero)+'&select=numero',{
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+      });
+      var existe=await chk.json();
+      if(Array.isArray(existe) && existe.length>0){
+        var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numero),{
+          method:'PATCH',
+          headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+          body:JSON.stringify(payload)
+        });
+        if(!r.ok)throw new Error('HTTP '+r.status);
+      } else {
+        var r=await fetch(SUPA_URL+'/rest/v1/orcamentos',{
+          method:'POST',
+          headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+          body:JSON.stringify(payload)
+        });
+        if(!r.ok)throw new Error('HTTP '+r.status);
+      }
+    }
     _numeroSalvoAtual = numero; // atualiza referência após salvar com sucesso
     setSaveStatus('✓ Salvo — '+new Date().toLocaleTimeString('pt-BR'), true);
   }catch(e){
