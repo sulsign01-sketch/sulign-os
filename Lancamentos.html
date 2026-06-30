@@ -1551,14 +1551,37 @@ function renderContasPagar(){
 }
 
 async function pagarConta(id){
-  if(!confirm('Marcar como Pago?'))return;
-  await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
-    method:'PATCH',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-    body:JSON.stringify({status:'Pago',data_pagamento:new Date().toISOString().split('T')[0]})
-  });
-  contasPagarCache=contasPagarCache.filter(function(c){return c.id!==id;});
-  renderContasPagar();
+  var conta = (contasPagarCache||[]).find(function(c){return c.id===id;});
+  if(!confirm('Marcar como Pago?\n\nIsso também vai registrar um lançamento de despesa real, para refletir corretamente no DRE e nos relatórios financeiros.'))return;
+  try{
+    await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({status:'Pago',data_pagamento:new Date().toISOString().split('T')[0]})
+    });
+    // Criar lançamento real correspondente, para entrar no DRE/relatórios
+    if(conta){
+      await fetch(SUPA_URL+'/rest/v1/lancamentos',{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({
+          orcamento_numero:conta.orcamento_numero||'SEM-JOB',
+          categoria:conta.categoria||'Outros',
+          descricao:'[Conta a Pagar] '+(conta.descricao||'—'),
+          valor:conta.valor||0,
+          data:new Date().toISOString().split('T')[0],
+          fornecedor:conta.favorecido||'',
+          tem_nota:true,
+          periodicidade:'unica',
+          tipo_lancamento:'saida'
+        })
+      });
+    }
+    contasPagarCache=contasPagarCache.filter(function(c){return c.id!==id;});
+    renderContasPagar();
+  }catch(e){
+    alert('Erro ao marcar como pago: '+e.message);
+  }
 }
 
 async function deletarContaPagar(id,el){
