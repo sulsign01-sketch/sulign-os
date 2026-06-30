@@ -799,6 +799,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
   </div>
 
+  <!-- MODAL EDITAR LANÇAMENTO DO FLUXO -->
+  <div id="fx-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
+    <div style="background:#fff;border-radius:8px;max-width:460px;width:92%;padding:20px;">
+      <div style="font-size:13px;font-weight:700;color:#0d47a1;margin-bottom:14px;">✎ Editar Lançamento</div>
+      <div class="row2">
+        <div class="fl">
+          <label>Tipo</label>
+          <select id="fxe-tipo"><option value="saida">💸 Saída</option><option value="entrada">💰 Entrada</option></select>
+        </div>
+        <div class="fl"><label>Data</label><input type="date" id="fxe-data"></div>
+      </div>
+      <div class="fl"><label>Descrição</label><input type="text" id="fxe-desc"></div>
+      <div class="row2">
+        <div class="fl"><label>Valor (R$)</label><input type="number" id="fxe-valor" step="0.01"></div>
+        <div class="fl">
+          <label>Categoria</label>
+          <select id="fxe-cat">
+            <option>Material</option><option>Mão de Obra</option><option>Logística</option>
+            <option>Imposto</option><option>Serviços</option><option>Receita de Job</option>
+            <option>Comissão</option><option>Aporte</option><option>Outros</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fl">
+          <label>Job vinculado</label>
+          <select id="fxe-job"><option value="">— Sem vínculo / avulso —</option></select>
+        </div>
+        <div class="fl"><label>Fornecedor/Origem</label><input type="text" id="fxe-forn"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button class="btn" onclick="confirmarEdicaoFluxo()" style="background:#0d47a1;flex:1;">Salvar Alteração</button>
+        <button onclick="fecharEdicaoFluxo()" style="flex:1;padding:9px;background:#f0f0f0;border:none;border-radius:4px;color:#666;cursor:pointer;font-size:13px;">Cancelar</button>
+      </div>
+      <div class="status" id="fxe-status" style="margin-top:8px;">—</div>
+    </div>
+  </div>
+
 
 <script>
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
@@ -2139,31 +2177,19 @@ function renderFluxo(lancs, aportes, saldoInicial, de, ate){
 }
 
 // ── Detalhado linha a linha (igual extrato) ──
-var _fluxoMesAberto = null;
-
 function toggleFluxoDetalhe(mes){
   var row = document.getElementById('fx-detalhe-'+mes);
   var arrow = document.getElementById('fx-arrow-'+mes);
   var jaAberto = row.style.display !== 'none';
 
-  // Fecha o mês anterior aberto (acordeão, só um por vez)
-  if(_fluxoMesAberto && _fluxoMesAberto !== mes){
-    var prevRow = document.getElementById('fx-detalhe-'+_fluxoMesAberto);
-    var prevArrow = document.getElementById('fx-arrow-'+_fluxoMesAberto);
-    if(prevRow) prevRow.style.display = 'none';
-    if(prevArrow) prevArrow.textContent = '▸';
-  }
-
   if(jaAberto){
     row.style.display = 'none';
     arrow.textContent = '▸';
-    _fluxoMesAberto = null;
     return;
   }
 
   row.style.display = 'table-row';
   arrow.textContent = '▾';
-  _fluxoMesAberto = mes;
   renderFluxoDetalheMes(mes);
 }
 
@@ -2174,7 +2200,7 @@ function renderFluxoDetalheMes(mes){
   (window._fluxoLancsCache||[]).forEach(function(l){
     if((l.data||'').substring(0,7) !== mes) return;
     itens.push({
-      data: l.data, desc: l.descricao||'—', tipo: l.tipo_lancamento,
+      id: l.id, data: l.data, desc: l.descricao||'—', tipo: l.tipo_lancamento,
       valor: parseFloat(l.valor)||0, cat: l.categoria||'—',
       job: l.orcamento_numero, forn: l.fornecedor||'', origem: 'lancamento',
       conciliado: l.conciliado
@@ -2213,10 +2239,11 @@ function renderFluxoDetalheMes(mes){
     +'<th style="text-align:left;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Job</th>'
     +'<th style="text-align:right;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Valor</th>'
     +'<th style="text-align:right;padding:6px 10px;color:#999;font-size:9px;text-transform:uppercase;">Saldo</th>'
+    +'<th style="padding:6px 10px;"></th>'
     +'</tr></thead><tbody>';
 
   if(!itens.length){
-    html += '<tr><td colspan="6" style="padding:14px 10px;color:#999;text-align:center;">Nenhum lançamento neste mês.</td></tr>';
+    html += '<tr><td colspan="7" style="padding:14px 10px;color:#999;text-align:center;">Nenhum lançamento neste mês.</td></tr>';
   }
 
   itens.forEach(function(it){
@@ -2224,6 +2251,9 @@ function renderFluxoDetalheMes(mes){
     saldoAteAqui += v;
     var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var jobLabel = it.job && it.job!=='SEM-JOB' ? it.job : '<span style="color:#ccc;">—</span>';
+    var editBtn = it.origem==='lancamento'
+      ? '<span data-id="'+it.id+'" onclick="abrirEdicaoFluxo(this.dataset.id)" style="cursor:pointer;color:#0d47a1;font-size:13px;" title="Editar">✎</span>'
+      : '<span style="color:#ccc;font-size:10px;" title="Aportes são editados na aba Aportes">—</span>';
     html += '<tr style="border-bottom:1px solid #f2f2f2;">'
       +'<td style="padding:6px 10px;font-family:DM Mono,monospace;color:#666;">'+dt+'</td>'
       +'<td style="padding:6px 10px;">'+it.desc+(it.forn?' <span style="color:#aaa;">· '+it.forn+'</span>':'')+'</td>'
@@ -2231,6 +2261,7 @@ function renderFluxoDetalheMes(mes){
       +'<td style="padding:6px 10px;font-family:DM Mono,monospace;font-size:10px;">'+jobLabel+'</td>'
       +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+(it.tipo==='entrada'?'#2e7d32':'#c62828')+';">'+(it.tipo==='entrada'?'+':'-')+fmt(it.valor)+'</td>'
       +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;color:#555;">'+fmt(saldoAteAqui)+'</td>'
+      +'<td style="padding:6px 10px;text-align:center;">'+editBtn+'</td>'
       +'</tr>';
   });
   html += '</tbody></table>';
@@ -2269,6 +2300,75 @@ async function salvarFluxo(){
     carregarFluxo();
   }catch(e){
     st.textContent='✗ '+e.message;st.className='status err';
+  }
+}
+
+// ── Editar lançamento direto na visão detalhada do Fluxo ──
+var _fxEditandoId = null;
+
+function abrirEdicaoFluxo(id){
+  var item = (window._fluxoLancsCache||[]).find(function(l){ return l.id === id; });
+  if(!item){ alert('Lançamento não encontrado.'); return; }
+  _fxEditandoId = id;
+
+  document.getElementById('fxe-tipo').value = item.tipo_lancamento || 'saida';
+  document.getElementById('fxe-data').value = item.data || '';
+  document.getElementById('fxe-desc').value = item.descricao || '';
+  document.getElementById('fxe-valor').value = item.valor || '';
+  document.getElementById('fxe-cat').value = item.categoria || 'Outros';
+  document.getElementById('fxe-forn').value = item.fornecedor || '';
+
+  // Popula o seletor de job com os ativos + garante que o job atual apareça mesmo se não estiver "ativo"
+  var sel = document.getElementById('fxe-job');
+  var opts = '<option value="">— Sem vínculo / avulso —</option>' +
+    jobsAtivosFluxoCache.map(function(o){ return '<option value="'+o.numero+'">'+o.numero+' — '+(o.cliente||'')+'</option>'; }).join('');
+  var jobAtual = item.orcamento_numero;
+  if(jobAtual && jobAtual !== 'SEM-JOB' && !jobsAtivosFluxoCache.find(function(o){return o.numero===jobAtual;})){
+    opts += '<option value="'+jobAtual+'">'+jobAtual+' (não está mais ativo)</option>';
+  }
+  sel.innerHTML = opts;
+  sel.value = (jobAtual && jobAtual !== 'SEM-JOB') ? jobAtual : '';
+
+  document.getElementById('fxe-status').textContent = '—';
+  document.getElementById('fxe-status').className = 'status';
+  document.getElementById('fx-edit-overlay').style.display = 'flex';
+}
+
+function fecharEdicaoFluxo(){
+  document.getElementById('fx-edit-overlay').style.display = 'none';
+  _fxEditandoId = null;
+}
+
+async function confirmarEdicaoFluxo(){
+  if(!_fxEditandoId) return;
+  var tipo = document.getElementById('fxe-tipo').value;
+  var data = document.getElementById('fxe-data').value;
+  var desc = document.getElementById('fxe-desc').value.trim();
+  var valor = parseFloat(document.getElementById('fxe-valor').value)||0;
+  var cat = document.getElementById('fxe-cat').value;
+  var job = document.getElementById('fxe-job').value;
+  var forn = document.getElementById('fxe-forn').value.trim();
+  var st = document.getElementById('fxe-status');
+
+  if(!data||!desc||!valor){ st.textContent='✗ Preencha data, descrição e valor.'; st.className='status err'; return; }
+
+  st.textContent='Salvando...'; st.className='status';
+  try{
+    var payload = {
+      orcamento_numero: job || 'SEM-JOB',
+      categoria: cat, descricao: desc, valor: valor, data: data,
+      fornecedor: forn, tipo_lancamento: tipo
+    };
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+_fxEditandoId,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(payload)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status+' — '+await r.text());
+    fecharEdicaoFluxo();
+    await carregarFluxo();
+  }catch(e){
+    st.textContent='✗ '+e.message; st.className='status err';
   }
 }
 
