@@ -2006,8 +2006,9 @@ async function confirmarGerarOS(){
 // ═══ GERAR OS SETORIAL ═══
 var SETORES_LABEL={
   FORR:'Forração',SERR:'Serralheria',MARC:'Marcenaria',PINT:'Pintura',
-  DETA:'Detalhamento',ROUTER:'Router CNC',CV:'CV / Impressão',
-  ELET:'Elétrica',MO:'Mão de Obra',LOG:'Logística'
+  APLIC:'Aplicação',ESTR:'Estruturas',DETA:'Detalhamento',ROUTER:'Router CNC',
+  CV:'CV/Impressão',IMP3D:'Impressão 3D',ELET:'Elétrica',MO:'Mão de Obra',
+  LOG:'Logística',ARTPL:'Artes Plásticas',ARQ:'Arquitetura',DESIGN:'Design'
 };
 
 function abrirGerarOSSetorial(){
@@ -2017,19 +2018,23 @@ function abrirGerarOSSetorial(){
   document.getElementById('gos2-btn-gerar').textContent='⚙ Gerar OSs Selecionadas';
   document.getElementById('gos2-btn-gerar').disabled=false;
 
-  // Agrupar grupos por setor
+  // Agrupar grupos por setor — um grupo com múltiplos checkboxes marcados
+  // aparece em cada setor selecionado (a OS é por disciplina, não por grupo)
   var porSetor={};
   tables.forEach(function(tbl){
-    var setor=tbl.setorEl?tbl.setorEl.value:'';
-    if(!setor)return; // ignorar grupos sem setor
-    if(!porSetor[setor])porSetor[setor]=[];
-    porSetor[setor].push(tbl);
+    if(tbl.opcional)return;
+    var setores=tbl.setorChks?Object.keys(tbl.setorChks).filter(function(k){return tbl.setorChks[k].checked;}):[];
+    if(!setores.length)return; // ignorar grupos sem disciplina marcada
+    setores.forEach(function(setor){
+      if(!porSetor[setor])porSetor[setor]=[];
+      porSetor[setor].push(tbl);
+    });
   });
 
   var setoresDetectados=Object.keys(porSetor);
 
   if(setoresDetectados.length===0){
-    cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--g400);font-size:12px;">Nenhum grupo tem setor atribuído.<br>Defina o setor em cada grupo no memorial antes de gerar OSs setoriais.</div>';
+    cont.innerHTML='<div style="text-align:center;padding:24px;color:var(--g400);font-size:12px;">Nenhum grupo tem disciplina marcada.<br>Marque ao menos um checkbox de disciplina em cada grupo no memorial antes de gerar OSs setoriais.</div>';
     document.getElementById('gos2-modal').classList.add('open');
     return;
   }
@@ -2081,13 +2086,16 @@ async function confirmarGerarOSSetorial(){
   var resp=document.getElementById('gos2-resp').value;
   var prazo=document.getElementById('gos2-prazo').value||null;
 
-  // Coletar setores selecionados
+  // Coletar setores selecionados — usando checkboxes reais
   var porSetor={};
   tables.forEach(function(tbl){
-    var setor=tbl.setorEl?tbl.setorEl.value:'';
-    if(!setor)return;
-    if(!porSetor[setor])porSetor[setor]=[];
-    porSetor[setor].push(tbl);
+    if(tbl.opcional)return;
+    var setores=tbl.setorChks?Object.keys(tbl.setorChks).filter(function(k){return tbl.setorChks[k].checked;}):[];
+    if(!setores.length)return;
+    setores.forEach(function(setor){
+      if(!porSetor[setor])porSetor[setor]=[];
+      porSetor[setor].push(tbl);
+    });
   });
 
   // Filtrar apenas setores com checkbox marcado
