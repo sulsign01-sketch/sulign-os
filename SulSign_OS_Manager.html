@@ -183,6 +183,108 @@ select.fi{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.o
 </style>
 </head>
 <body>
+<!-- ═══════════════════════════════════════════════════════════
+     SULSIGN OS — AUTENTICAÇÃO (cole logo após <body>)
+     ═══════════════════════════════════════════════════════════ -->
+<div id="sulsign-auth-gate" style="position:fixed;inset:0;background:#0a0a0a;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',system-ui,sans-serif;">
+  <div style="width:100%;max-width:340px;padding:32px 28px;background:#111;border-radius:12px;border:1px solid #1a1a1a;">
+    <div style="text-align:center;margin-bottom:24px;">
+      <div style="width:48px;height:48px;background:#52b788;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:22px;color:#0a0a0a;margin:0 auto 12px;">S</div>
+      <div style="font-size:14px;font-weight:700;color:#fff;letter-spacing:.5px;">SUL SIGN GROUP</div>
+      <div style="font-size:10px;color:#52b788;text-transform:uppercase;letter-spacing:1.5px;margin-top:2px;">Acesso Restrito</div>
+    </div>
+    <div style="margin-bottom:12px;">
+      <label style="display:block;font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">E-mail</label>
+      <input type="email" id="sulsign-auth-email" style="width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;" placeholder="seu@email.com">
+    </div>
+    <div style="margin-bottom:18px;">
+      <label style="display:block;font-size:10px;font-weight:600;color:#666;text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;">Senha</label>
+      <input type="password" id="sulsign-auth-senha" style="width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;" placeholder="••••••••">
+    </div>
+    <button id="sulsign-auth-btn" style="width:100%;padding:11px;background:#52b788;border:none;border-radius:6px;color:#0a0a0a;font-size:13px;font-weight:700;cursor:pointer;">Entrar</button>
+    <div id="sulsign-auth-erro" style="font-size:11px;color:#ef9a9a;margin-top:10px;text-align:center;display:none;"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var SB_AUTH_URL = 'https://obeamqkcuytctfczhook.supabase.co';
+  var SB_AUTH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+  var SESSION_KEY = 'sulsign_session';
+
+  function getStoredSession(){
+    try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; }
+  }
+  function storeSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+  function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+
+  function hideGate(){
+    var g=document.getElementById('sulsign-auth-gate');
+    if(g) g.style.display='none';
+  }
+  function showError(msg){
+    var el=document.getElementById('sulsign-auth-erro');
+    el.textContent=msg; el.style.display='block';
+  }
+
+  async function tentarLogin(){
+    var email=document.getElementById('sulsign-auth-email').value.trim();
+    var senha=document.getElementById('sulsign-auth-senha').value;
+    var btn=document.getElementById('sulsign-auth-btn');
+    if(!email||!senha){showError('Preencha e-mail e senha.');return;}
+    btn.disabled=true; btn.textContent='Entrando...';
+    try{
+      var r = await fetch(SB_AUTH_URL+'/auth/v1/token?grant_type=password',{
+        method:'POST',
+        headers:{'apikey':SB_AUTH_KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({email:email,password:senha})
+      });
+      var data = await r.json();
+      if(!r.ok || !data.access_token){
+        showError('E-mail ou senha incorretos.');
+        btn.disabled=false; btn.textContent='Entrar';
+        return;
+      }
+      storeSession({access_token:data.access_token,refresh_token:data.refresh_token,expires_at:Date.now()+((data.expires_in||3600)*1000),email:email});
+      window.SULSIGN_ACCESS_TOKEN = data.access_token;
+      hideGate();
+    }catch(e){
+      showError('Erro de conexão: '+e.message);
+      btn.disabled=false; btn.textContent='Entrar';
+    }
+  }
+
+  async function verificarSessao(){
+    var s = getStoredSession();
+    if(!s || !s.access_token || Date.now() > s.expires_at){
+      clearSession();
+      return false;
+    }
+    window.SULSIGN_ACCESS_TOKEN = s.access_token;
+    return true;
+  }
+
+  // Expor função global para logout
+  window.sulsignLogout = function(){
+    clearSession();
+    window.location.reload();
+  };
+
+  // Init
+  verificarSessao().then(function(valido){
+    if(valido) hideGate();
+  });
+
+  document.getElementById('sulsign-auth-btn').addEventListener('click', tentarLogin);
+  document.getElementById('sulsign-auth-senha').addEventListener('keydown', function(e){
+    if(e.key==='Enter') tentarLogin();
+  });
+})();
+</script>
+<!-- ═══════════════════════════════════════════════════════════
+     FIM DO BLOCO DE AUTENTICAÇÃO
+     ═══════════════════════════════════════════════════════════ -->
+
 <div id="app"></div>
 <div class="modal-ov" id="modal-tram">
   <div class="modal">
@@ -233,7 +335,7 @@ var _orcCache={};
 async function carregarOrcamentosParaSemaforo(){
   try{
     var r=await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,bdi,grupos',{
-      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)return;
     (await r.json()).forEach(function(o){_orcCache[o.numero]=o;});
@@ -389,7 +491,7 @@ function renderApontamentosView(){
   h += '<div id="ap-link-box" style="display:none;margin-top:10px;background:#f0faf5;border:1px solid #52b788;border-radius:4px;padding:10px;">';
   h += '<div style="font-size:10px;font-weight:700;color:#52b788;margin-bottom:6px;">🔗 LINK DO PROFISSIONAL</div>';
   h += '<div id="ap-link-url" style="font-family:monospace;font-size:11px;word-break:break-all;background:#fff;border:1px solid #e8e8e8;border-radius:3px;padding:8px;"></div>';
-  h += '<button onclick="navigator.clipboard.writeText(document.getElementById('ap-link-url').textContent)" style="margin-top:6px;font-size:11px;padding:4px 12px;background:#52b788;border:none;border-radius:3px;color:#fff;cursor:pointer;font-weight:700;">📋 Copiar</button>';
+  h += '<button onclick="navigator.clipboard.writeText(document.getElementById(\'ap-link-url\').textContent)" style="margin-top:6px;font-size:11px;padding:4px 12px;background:#52b788;border:none;border-radius:3px;color:#fff;cursor:pointer;font-weight:700;">📋 Copiar</button>';
   h += '</div>';
   h += '<div id="ap-status" style="font-size:12px;margin-top:8px;"></div>';
   h += '</div>';
@@ -425,10 +527,10 @@ function renderApontamentosView(){
         h += '<div style="margin-bottom:8px;"><img src="'+a.foto_resultado+'" style="max-width:120px;border-radius:4px;border:1px solid #e8e8e8;"></div>';
       }
       h += '<div style="display:flex;gap:6px;flex-wrap:wrap;">';
-      h += '<button onclick="navigator.clipboard.writeText(''+link+'')" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;">📋 Copiar Link</button>';
+      h += '<button data-link="'+link+'" onclick="navigator.clipboard.writeText(this.dataset.link)" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;">📋 Copiar Link</button>';
       h += '<a href="'+link+'" target="_blank" style="font-size:10px;padding:4px 10px;border:1px solid #e8e8e8;border-radius:3px;background:#fff;cursor:pointer;text-decoration:none;color:#333;">👁 Ver</a>';
-      if(!enc2) h += '<button onclick="encerrarApontamento(''+a.id+'')" style="font-size:10px;padding:4px 10px;border:1px solid #c62828;border-radius:3px;background:#fff;color:#c62828;cursor:pointer;">🔒 Encerrar</button>';
-      h += '<button onclick="consolidarApontamento(''+a.id+'',''+a.job_numero+'',''+(DISC_MAP[a.disciplina_codigo]||a.disciplina)+'')" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;">⬇ Consolidar</button>';
+      if(!enc2) h += '<button data-aid="'+a.id+'" onclick="encerrarApontamento(this.dataset.aid)" style="font-size:10px;padding:4px 10px;border:1px solid #c62828;border-radius:3px;background:#fff;color:#c62828;cursor:pointer;">🔒 Encerrar</button>';
+      h += '<button data-aid="'+a.id+'" data-jn="'+a.job_numero+'" data-disc="'+(DISC_MAP[a.disciplina_codigo]||a.disciplina)+'" onclick="consolidarApontamento(this.dataset.aid,this.dataset.jn,this.dataset.disc)" style="font-size:10px;padding:4px 10px;border:none;border-radius:3px;background:#1b5e20;color:#fff;cursor:pointer;">⬇ Consolidar</button>';
       h += '</div></div>';
     });
   }
@@ -439,7 +541,7 @@ function renderApontamentosView(){
 async function carregarApontamentos(){
   try{
     var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao?select=*&order=criado_em.desc',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken()}
     });
     var data = await r.json();
     apontamentosCache = Array.isArray(data)?data:[];
@@ -458,7 +560,7 @@ async function criarApontamento(){
   try{
     var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao',{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+      headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=representation'},
       body:JSON.stringify({job_numero:job,job_nome:nome,disciplina:disc,disciplina_codigo:discCod,responsavel:resp,status:'ativo'})
     });
     if(!r.ok) throw new Error('HTTP '+r.status+' — '+await r.text());
@@ -478,7 +580,7 @@ async function encerrarApontamento(id){
   if(!confirm('Encerrar este apontamento? O link do profissional será desativado.'))return;
   await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/apontamentos_producao?id=eq.'+id,{
     method:'PATCH',
-    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+    headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
     body:JSON.stringify({status:'encerrado',encerrado_em:new Date().toISOString()})
   });
   await carregarApontamentos();
@@ -489,7 +591,7 @@ async function consolidarApontamento(id, jobNumero, discNome){
   if(!confirm('Consolidar lançamentos de '+discNome+' no job '+jobNumero+'?\n\nSerão copiados para os lançamentos do sistema.'))return;
   try{
     var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/lancamentos_apontamento?apontamento_id=eq.'+id+'&select=*',{
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
+      headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken()}
     });
     var lancs = await r.json();
     if(!lancs||!lancs.length){alert('Nenhum insumo lançado para consolidar.');return;}
@@ -509,7 +611,7 @@ async function consolidarApontamento(id, jobNumero, discNome){
     });
     var ri = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/lancamentos',{
       method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json','Prefer':'return=minimal'},
+      headers:{'apikey':SK,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
       body:JSON.stringify(payload)
     });
     if(!ri.ok) throw new Error('HTTP '+ri.status);
@@ -525,7 +627,8 @@ async function consolidarApontamento(id, jobNumero, discNome){
 var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
 var SU='https://obeamqkcuytctfczhook.supabase.co';
 var SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
-var H={'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json'};
+function getAuthToken(){ return window.SULSIGN_ACCESS_TOKEN || SK; }
+var H={'apikey':SK,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json'};
 
 // ESTADO
 var osList=[];
@@ -1352,7 +1455,7 @@ var _orcCache={};
 async function carregarOrcamentosParaSemaforo(){
   try{
     var r=await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,bdi,grupos',{
-      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
+      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)return;
     (await r.json()).forEach(function(o){_orcCache[o.numero]=o;});
