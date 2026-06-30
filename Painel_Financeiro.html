@@ -1278,7 +1278,10 @@ function abrirRelatorioJob(numero){
 
   // ── Receita / margem ──
   var receita = (orc.valor_nf && parseFloat(orc.valor_nf)>0) ? parseFloat(orc.valor_nf) : row.venda;
-  var margemReal = receita - totalReal;
+  var faturado = orc.valor_nf ? parseFloat(orc.valor_nf) : null;
+  var ALIQ_SIMPLES = 0.0473; // alíquota efetiva real (DAS R$747,90 / NF R$15.824,02 - confirmada via extrato)
+  var impostoReal = faturado ? faturado*ALIQ_SIMPLES : receita*ALIQ_SIMPLES;
+  var margemReal = receita - totalReal - impostoReal;
   var margemPct = receita>0 ? (margemReal/receita*100) : 0;
   var variacao = totalReal - totalOrcado;
 
@@ -1292,10 +1295,15 @@ function abrirRelatorioJob(numero){
   html += '<div class="rep-title-box">'
     +'<div class="rep-job-num">'+orc.numero+'</div>'
     +'<div class="rep-job-info">'+(orc.cliente||'—')+' · '+(orc.projeto||'—')+(orc.agencia?' · Agência: '+orc.agencia:'')+'</div>'
-    +'<div class="rep-job-status">Status: '+(orc.status||'—')+'</div>'
+    +'<div class="rep-job-status">Status: '+(orc.status||'—')+(faturado?' · NF emitida: '+fmt(faturado):' · Sem NF emitida')+'</div>'
     +'</div>';
 
   // KPIs consolidados
+  html += '<div class="rep-kpis" style="grid-template-columns:repeat(3,1fr);">'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Faturado (NF)</div><div class="rep-kpi-v" style="color:'+(faturado?'#2d6a4f':'#9e9e9e')+';">'+(faturado?fmt(faturado):'— sem NF —')+'</div></div>'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Imposto Real a Pagar</div><div class="rep-kpi-v" style="color:#e65100;">'+fmt(impostoReal)+'<span style="font-size:9px;color:var(--g400);font-weight:400;"> ('+(ALIQ_SIMPLES*100).toFixed(2)+'% Simples)</span></div></div>'
+    +'<div class="rep-kpi"><div class="rep-kpi-l">Margem Real Líquida</div><div class="rep-kpi-v" style="color:'+(margemPct>=25?'#2d6a4f':margemPct>=15?'#e65100':'#c62828')+';">'+fmt(margemReal)+' ('+margemPct.toFixed(1)+'%)</div></div>'
+    +'</div>';
   html += '<div class="rep-kpis">'
     +'<div class="rep-kpi"><div class="rep-kpi-l">Receita</div><div class="rep-kpi-v" style="color:#2d6a4f;">'+fmt(receita)+'</div></div>'
     +'<div class="rep-kpi"><div class="rep-kpi-l">Custo Orçado</div><div class="rep-kpi-v">'+fmt(totalOrcado)+'</div></div>'
@@ -1308,6 +1316,7 @@ function abrirRelatorioJob(numero){
     +'Variação Orçado × Real: '+(variacao>=0?'+':'')+fmt(variacao)+(totalOrcado>0?' ('+((variacao/totalOrcado)*100).toFixed(1)+'%)':'')
     +(variacao>0?' — custo acima do orçado':' — custo dentro ou abaixo do orçado')
     +'</div>';
+  html += '<div style="font-size:10px;color:var(--g400);margin:-12px 0 18px;padding:0 4px;">* Alíquota do Simples Nacional estimada em '+(ALIQ_SIMPLES*100).toFixed(2)+'% — calculada com base no DAS de R$747,90 pago em 19/05/2026 referente à competência de abril (NF Gaia Cenografia R$15.824,02). Ajuste manual pode ser necessário se a faixa do RBT12 mudar.</div>';
 
   // Tabela: Custo Orçado por Disciplina
   html += '<div class="rep-sec-title">Custo Orçado por Disciplina (Memorial)</div>';
