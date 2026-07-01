@@ -1156,7 +1156,10 @@ async function carregar(){
     var STATUS_EXEC=['Entregue','Faturado','Em Produção','Orçamento Aprovado'];
     var STATUS_FATURADO=['Entregue','Faturado'];
 
-    var rows=orcamentos.map(function(orc){
+    var rows=orcamentos.filter(function(orc){
+      var s=orc.status||'Em Orçamento';
+      return STATUS_EXEC.indexOf(s)>=0 || s==='Treinamento';
+    }).map(function(orc){
       var calc=calcOrcamento(orc);
       var osDoJob=todasOs.filter(function(os){return os.orcamento_numero===orc.numero;});
       var lancDoJob=todosLanc.filter(function(l){return l.orcamento_numero===orc.numero;});
