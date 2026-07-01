@@ -641,6 +641,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">TOTAL PENDENTE</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#333;" id="pp-total">—</div></div>
     </div>
     <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#c62828;margin-bottom:12px;">+ Nova Conta a Pagar</div>
+    <div class="fl">
+      <label>Job (opcional — vincula ao Centro de Custo)</label>
+      <select id="pp-job">
+        <option value="">— Sem vínculo / despesa geral —</option>
+      </select>
+    </div>
     <div class="row2">
       <div class="fl"><label>Descrição</label><input type="text" id="pp-desc" placeholder="Ex: Aluguel galpão, DARF, Fornecedor X"></div>
       <div class="fl"><label>Favorecido</label><input type="text" id="pp-fav" placeholder="Ex: Locadora Silva, Receita Federal"></div>
@@ -653,8 +659,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div class="fl">
         <label>Categoria</label>
         <select id="pp-cat">
-          <option>Fornecedor</option><option>Imposto</option><option>Aluguel</option>
-          <option>Serviço</option><option>Folha</option><option>Logística</option><option>Outros</option>
+          <option>Material</option>
+          <option>Mão de Obra</option>
+          <option>Logística</option>
+          <option>Imposto</option>
+          <option>Serviços</option>
+          <option>Comissão</option>
+          <option>Alimentação</option>
+          <option>Verba Produção</option>
+          <option>Aluguel</option>
+          <option>Folha</option>
+          <option>Outros</option>
         </select>
       </div>
       <div class="fl">
@@ -989,6 +1004,13 @@ async function carregarOrcamentos(){
     orcamentosCache.forEach(function(o){
       var op=document.createElement('option');op.value=o.numero;op.textContent=o.numero+' — '+(o.cliente||'—');sel.appendChild(op);
     });
+    var selPP=document.getElementById('pp-job');
+    if(selPP){
+      selPP.innerHTML='<option value="">— Sem vínculo / despesa geral —</option>';
+      orcamentosCache.forEach(function(o){
+        var op=document.createElement('option');op.value=o.numero;op.textContent=o.numero+' — '+(o.cliente||'—');selPP.appendChild(op);
+      });
+    }
   }catch(e){console.error('carregarOrcamentos:',e);}
 }
 carregarOrcamentos();
@@ -1667,17 +1689,19 @@ async function salvarContaPagar(){
   var cat=document.getElementById('pp-cat').value;
   var per=document.getElementById('pp-per').value;
   var obs=document.getElementById('pp-obs').value.trim();
+  var job=document.getElementById('pp-job').value;
   if(!desc||!valor||!venc){st.textContent='✗ Preencha descrição, valor e vencimento.';st.className='status err';return;}
   btn.disabled=true;st.textContent='Salvando...';st.className='status';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar',{
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({descricao:desc,favorecido:fav,valor:valor,vencimento:venc,categoria:cat,periodicidade:per,observacao:obs,status:'Pendente'})
+      body:JSON.stringify({descricao:desc,favorecido:fav,valor:valor,vencimento:venc,categoria:cat,periodicidade:per,observacao:obs,orcamento_numero:job||null,status:'Pendente'})
     });
     if(!r.ok)throw new Error('HTTP '+r.status+' — '+await r.text());
     st.textContent='✓ Salvo!';st.className='status ok';
     ['pp-desc','pp-fav','pp-valor','pp-obs'].forEach(function(id){document.getElementById(id).value='';});
+    document.getElementById('pp-job').value='';
     carregarContasPagar();
   }catch(e){st.textContent='✗ '+e.message;st.className='status err';}
   btn.disabled=false;
