@@ -723,6 +723,13 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
         <span class="fat-label">Nº da Nota Fiscal</span>
         <input type="text" class="fat-inp" id="fat-nf-numero" placeholder="Ex: 000042">
       </div>
+      <div class="fat-field" style="grid-column:span 2;">
+        <span class="fat-label">NF no Google Drive (link)</span>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="url" class="fat-inp" id="fat-nf-url" placeholder="https://drive.google.com/..." style="flex:1;">
+          <a id="fat-nf-url-link" href="#" target="_blank" style="display:none;font-size:11px;color:var(--ga);white-space:nowrap;">📎 Abrir</a>
+        </div>
+      </div>
       <div class="fat-field">
         <span class="fat-label">Saldo Recebido</span>
         <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
@@ -2296,6 +2303,7 @@ function fatColetarDados(){
     valor_nf:       parseFloat((document.getElementById('fat-valor-nf')||{}).value) || null,
     data_nf:        (document.getElementById('fat-data-nf')||{}).value || null,
     nf_numero:      (document.getElementById('fat-nf-numero')||{}).value || null,
+    nf_url:         (document.getElementById('fat-nf-url')||{}).value || null,
     saldo_recebido: (document.getElementById('fat-saldo-chk')||{}).checked || false,
     saldo_valor:    parseFloat((document.getElementById('fat-saldo-valor')||{}).value) || null,
     saldo_data:     (document.getElementById('fat-saldo-data')||{}).value || null,
@@ -2318,6 +2326,11 @@ function fatRestaurar(orc){
   var sl = document.getElementById('fat-saldo-valor');
   var sd = document.getElementById('fat-saldo-data');
   if(nn) nn.value    = orc.nf_numero    || '';
+  var nu = document.getElementById('fat-nf-url');
+  var nl = document.getElementById('fat-nf-url-link');
+  if(nu) nu.value = orc.nf_url || '';
+  if(nl){ if(orc.nf_url){ nl.href=orc.nf_url; nl.style.display='inline'; } else { nl.style.display='none'; } }
+  nu && nu.addEventListener('input',function(){ if(nl){ if(this.value){ nl.href=this.value; nl.style.display='inline'; } else { nl.style.display='none'; } } });
   if(sc) sc.checked  = orc.saldo_recebido || false;
   if(sl) sl.value    = orc.saldo_valor  || '';
   if(sd) sd.value    = orc.saldo_data   || '';
