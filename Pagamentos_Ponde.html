@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Pagamentos — Sul Sign Group</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+  body{font-family:'DM Sans',system-ui,sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh;}
+
+  .hd{background:#111;border-bottom:2px solid #ffcc02;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .hd-title{font-size:13px;font-weight:700;color:#fff;letter-spacing:.5px;}
+  .hd-sub{font-size:10px;color:#ffcc02;font-weight:600;letter-spacing:1px;text-transform:uppercase;}
+
+  .hero{background:linear-gradient(135deg,#111 0%,#1f1a0d 100%);padding:22px 20px;border-bottom:1px solid #1a1a1a;}
+  .hero-l{font-size:10px;color:#ffcc02;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;}
+  .hero-cards{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .hc{background:#0a0a0a;border-radius:6px;padding:12px;border:1px solid #1a1a1a;}
+  .hc-l{font-size:9px;color:#666;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px;}
+  .hc-v{font-family:'DM Mono',monospace;font-size:17px;font-weight:700;color:#fff;}
+  .hc-v.amarelo{color:#ffcc02;}
+  .hc-v.vermelho{color:#ef9a9a;}
+
+  .lista{padding:16px;}
+  .item{background:#111;border-radius:10px;border:1px solid #1a1a1a;padding:16px;margin-bottom:12px;}
+  .item.pago{opacity:.45;}
+  .item-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}
+  .item-desc{font-size:14px;font-weight:700;color:#fff;}
+  .item-fav{font-size:12px;color:#999;margin-top:2px;}
+  .item-val{font-family:'DM Mono',monospace;font-size:16px;font-weight:700;color:#ffcc02;white-space:nowrap;}
+  .item-venc{font-size:11px;margin-top:4px;}
+  .item-venc.atrasado{color:#ef9a9a;font-weight:700;}
+  .item-venc.hoje{color:#ffcc02;font-weight:700;}
+  .item-venc.normal{color:#777;}
+  .item-obs{font-size:11px;color:#888;margin-top:8px;padding-top:8px;border-top:1px solid #1a1a1a;}
+  .item-tag{display:inline-block;font-size:9px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;padding:2px 8px;border-radius:20px;margin-top:8px;}
+  .tag-pago{background:#0d2b1a;color:#00ff88;border:1px solid #1b5e20;}
+
+  .btn-pagar{width:100%;margin-top:12px;padding:11px;background:#00ff88;border:none;border-radius:6px;color:#0a0a0a;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.5px;}
+  .btn-pagar:disabled{opacity:.3;cursor:not-allowed;}
+
+  .modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:999;align-items:flex-end;justify-content:center;}
+  .modal.open{display:flex;}
+  .sheet{background:#111;border-radius:16px 16px 0 0;width:100%;max-width:560px;padding:22px 20px;border-top:2px solid #00ff88;max-height:85vh;overflow-y:auto;}
+  .sheet-title{font-size:14px;font-weight:700;color:#00ff88;margin-bottom:16px;}
+  .fl{margin-bottom:14px;}
+  .fl label{display:block;font-size:10px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:#666;margin-bottom:5px;}
+  .fl input,.fl textarea{width:100%;background:#0a0a0a;border:1.5px solid #222;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;font-family:inherit;outline:none;}
+  .fl textarea{resize:vertical;min-height:60px;}
+  .btn-row{display:flex;gap:10px;margin-top:8px;}
+  .btn-cancel{flex:1;padding:12px;background:transparent;border:1.5px solid #333;border-radius:6px;color:#999;font-size:12px;font-weight:700;cursor:pointer;}
+  .btn-confirm{flex:2;padding:12px;background:#00ff88;border:none;border-radius:6px;color:#0a0a0a;font-size:12px;font-weight:700;cursor:pointer;}
+
+  .empty{text-align:center;padding:60px 20px;color:#555;font-size:13px;}
+  .status{text-align:center;font-size:12px;margin-top:10px;min-height:16px;}
+  .status.ok{color:#00ff88;}
+  .status.err{color:#ef9a9a;}
+</style>
+</head>
+<body>
+
+<div class="hd">
+  <div>
+    <div class="hd-title">SUL SIGN GROUP</div>
+    <div class="hd-sub">Pagamentos a Efetuar</div>
+  </div>
+</div>
+
+<div class="hero" id="hero">
+  <div class="hero-l">RESUMO</div>
+  <div class="hero-cards">
+    <div class="hc"><div class="hc-l">Pendente</div><div class="hc-v amarelo" id="h-pendente">—</div></div>
+    <div class="hc"><div class="hc-l">Atrasados</div><div class="hc-v vermelho" id="h-atrasado">—</div></div>
+  </div>
+</div>
+
+<div class="lista" id="lista">
+  <div class="empty">Carregando...</div>
+</div>
+
+<!-- MODAL CONFIRMAR PAGAMENTO -->
+<div class="modal" id="modal-pag">
+  <div class="sheet">
+    <div class="sheet-title">✓ Confirmar Pagamento</div>
+    <div class="fl">
+      <label>Data do pagamento</label>
+      <input type="date" id="mp-data">
+    </div>
+    <div class="fl">
+      <label>Observação (opcional)</label>
+      <textarea id="mp-obs" placeholder="Ex: paguei via PIX, comprovante no WhatsApp..."></textarea>
+    </div>
+    <div class="btn-row">
+      <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
+      <button class="btn-confirm" onclick="confirmarPagamento()">Confirmar</button>
+    </div>
+    <div class="status" id="mp-status">—</div>
+  </div>
+</div>
+
+<script>
+var SUPA_URL = 'https://obeamqkcuytctfczhook.supabase.co';
+var SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+var H = {'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+var TOKEN = new URLSearchParams(window.location.search).get('token');
+var CONTAS = [];
+var _idAtual = null;
+
+function fmt(v){return 'R$ '+parseFloat(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+async function init(){
+  if(!TOKEN){
+    document.getElementById('lista').innerHTML='<div class="empty">Link inválido. Peça um novo link ao Carlos.</div>';
+    return;
+  }
+  await carregar();
+}
+
+async function carregar(){
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&token_ponde=eq.'+TOKEN+'&order=vencimento.asc',{headers:H});
+    var data = await r.json();
+    CONTAS = Array.isArray(data)?data:[];
+    render();
+  }catch(e){
+    document.getElementById('lista').innerHTML='<div class="empty">Erro ao carregar: '+e.message+'</div>';
+  }
+}
+
+function render(){
+  var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var pendente=0, atrasado=0;
+  CONTAS.forEach(function(c){
+    if(c.pago_por_ponde || c.status==='Pago') return;
+    var v = parseFloat(c.valor)||0;
+    pendente += v;
+    if(c.vencimento){
+      var dv = new Date(c.vencimento+'T12:00:00');
+      if(dv<hoje) atrasado += v;
+    }
+  });
+  document.getElementById('h-pendente').textContent = fmt(pendente);
+  document.getElementById('h-atrasado').textContent = fmt(atrasado);
+
+  var lista = document.getElementById('lista');
+  if(!CONTAS.length){
+    lista.innerHTML = '<div class="empty">Nenhuma conta enviada para pagamento no momento.</div>';
+    return;
+  }
+
+  var html = '';
+  CONTAS.forEach(function(c){
+    var pago = c.pago_por_ponde || c.status==='Pago';
+    var v = parseFloat(c.valor)||0;
+    var dv = c.vencimento ? new Date(c.vencimento+'T12:00:00') : null;
+    var vencStr = dv ? dv.toLocaleDateString('pt-BR') : '—';
+    var atrasado = dv && dv < hoje && !pago;
+    var vencClass = atrasado ? 'atrasado' : (dv && dv.getTime()===hoje.getTime() ? 'hoje' : 'normal');
+
+    html += '<div class="item'+(pago?' pago':'')+'">'
+      +'<div class="item-top">'
+        +'<div><div class="item-desc">'+esc(c.descricao)+'</div>'
+          +(c.favorecido?'<div class="item-fav">Para: '+esc(c.favorecido)+'</div>':'')
+        +'</div>'
+        +'<div class="item-val">'+fmt(v)+'</div>'
+      +'</div>'
+      +'<div class="item-venc '+vencClass+'">'+(atrasado?'⚠ Venceu em ':'Vence em ')+vencStr+'</div>'
+      +(c.observacao?'<div class="item-obs">'+esc(c.observacao)+'</div>':'')
+      +(pago
+        ? '<div class="item-tag tag-pago">✓ Pago'+(c.data_pagamento?' em '+new Date(c.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR'):'')+'</div>'
+        : '<button class="btn-pagar" onclick="abrirModal(\''+c.id+'\')">✓ Marcar como Pago</button>')
+      +'</div>';
+  });
+  lista.innerHTML = html;
+}
+
+function abrirModal(id){
+  _idAtual = id;
+  document.getElementById('mp-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('mp-obs').value = '';
+  document.getElementById('mp-status').textContent = '—';
+  document.getElementById('modal-pag').classList.add('open');
+}
+
+function fecharModal(){
+  document.getElementById('modal-pag').classList.remove('open');
+  _idAtual = null;
+}
+
+async function confirmarPagamento(){
+  if(!_idAtual) return;
+  var data = document.getElementById('mp-data').value;
+  var obs = document.getElementById('mp-obs').value.trim();
+  var st = document.getElementById('mp-status');
+  if(!data){ st.textContent='Informe a data.'; st.className='status err'; return; }
+
+  st.textContent = 'Salvando...'; st.className = 'status';
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+_idAtual, {
+      method:'PATCH', headers:H,
+      body: JSON.stringify({
+        pago_por_ponde: true,
+        data_pagamento: data,
+        obs_ponde: obs
+      })
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    st.textContent = '✓ Confirmado!'; st.className = 'status ok';
+    setTimeout(function(){
+      fecharModal();
+      carregar();
+    }, 700);
+  }catch(e){
+    st.textContent = '✗ '+e.message; st.className = 'status err';
+  }
+}
+
+init();
+</script>
+</body>
+</html>
