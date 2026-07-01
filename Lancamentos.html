@@ -1835,7 +1835,8 @@ async function pagarConta(id){
           fornecedor:conta.favorecido||'',
           tem_nota:true,
           periodicidade:'unica',
-          tipo_lancamento:'saida'
+          tipo_lancamento:'saida',
+          conciliado:true
         })
       });
     }
@@ -2614,7 +2615,7 @@ var _ccLancsCache = [];
 async function iniciarCentroCusto(){
   // Popular select de jobs
   try{
-    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=orcamento_numero&conciliado=eq.false&orcamento_numero=neq.SEM-JOB&order=orcamento_numero.desc',{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=orcamento_numero&orcamento_numero=neq.SEM-JOB&order=orcamento_numero.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data = await r.json();
@@ -2639,7 +2640,7 @@ async function carregarCentroCusto(){
   document.getElementById('cc-body-cat').innerHTML = '<div class="empty">Carregando...</div>';
 
   try{
-    var query = SUPA_URL+'/rest/v1/lancamentos?select=*&tipo_lancamento=eq.saida&conciliado=eq.false&orcamento_numero=neq.SEM-JOB&order=data.asc';
+    var query = SUPA_URL+'/rest/v1/lancamentos?select=*&tipo_lancamento=eq.saida&orcamento_numero=neq.SEM-JOB&order=data.asc';
     if(job) query += '&orcamento_numero=eq.'+encodeURIComponent(job);
     if(cat) query += '&categoria=eq.'+encodeURIComponent(cat);
 
