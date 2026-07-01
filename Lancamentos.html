@@ -2277,14 +2277,39 @@ function renderFluxoDetalheMes(mes){
     var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
     var jobLabel = it.job && it.job!=='SEM-JOB' ? it.job : '<span style="color:#ccc;">—</span>';
     var editBtn = it.origem==='lancamento'
-      ? '<span data-id="'+it.id+'" onclick="abrirEdicaoFluxo(this.dataset.id)" style="cursor:pointer;color:#0d47a1;font-size:13px;margin-right:8px;" title="Editar">✎</span>'
-        +'<span data-id="'+it.id+'" onclick="excluirLancamentoFluxo(this.dataset.id)" style="cursor:pointer;color:#c62828;font-size:13px;" title="Excluir">✕</span>'
-      : '<span style="color:#ccc;font-size:10px;" title="Aportes são editados na aba Aportes">—</span>';
+      ? '<span data-id="'+it.id+'" onclick="excluirLancamentoFluxo(this.dataset.id)" style="cursor:pointer;color:#e0e0e0;font-size:13px;" title="Excluir">✕</span>'
+      : '<span style="color:#ccc;font-size:10px;">—</span>';
+
+    // Células editáveis inline só para lançamentos (não aportes)
+    var catCell, jobCell;
+    if(it.origem==='lancamento'){
+      var cats = ['Material','Mão de Obra','Logística','Imposto','Serviços','Receita de Job','Comissão','Outros'];
+      var catOpts = cats.map(function(c){
+        return '<option value="'+c+'"'+(it.cat===c?' selected':'')+'>'+c+'</option>';
+      }).join('');
+      catCell = '<td style="padding:2px 4px;">'
+        +'<select onchange="salvarCampoFluxo('+it.id+',\'categoria\',this.value,this)" '
+        +'style="border:none;background:transparent;color:#555;font-size:12px;cursor:pointer;width:100%;padding:4px 2px;outline:none;font-family:inherit;">'
+        +catOpts+'</select></td>';
+
+      var jobOpts = '<option value="SEM-JOB"'+((!it.job||it.job==='SEM-JOB')?' selected':'')+'>— Sem Job —</option>'
+        +(jobsAtivosFluxoCache||[]).map(function(o){
+          return '<option value="'+o.numero+'"'+(it.job===o.numero?' selected':'')+'>'+o.numero+' — '+(o.cliente||'')+'</option>';
+        }).join('');
+      jobCell = '<td style="padding:2px 4px;">'
+        +'<select onchange="salvarCampoFluxo('+it.id+',\'orcamento_numero\',this.value,this)" '
+        +'style="border:none;background:transparent;color:#555;font-size:11px;cursor:pointer;width:100%;padding:4px 2px;outline:none;font-family:DM Mono,monospace,inherit;">'
+        +jobOpts+'</select></td>';
+    } else {
+      catCell = '<td style="padding:6px 10px;color:#888;">'+it.cat+'</td>';
+      jobCell = '<td style="padding:6px 10px;font-family:DM Mono,monospace;font-size:10px;">'+jobLabel+'</td>';
+    }
+
     html += '<tr style="border-bottom:1px solid #f2f2f2;">'
       +'<td style="padding:6px 10px;font-family:DM Mono,monospace;color:#666;">'+dt+'</td>'
       +'<td style="padding:6px 10px;">'+it.desc+(it.forn?' <span style="color:#aaa;">· '+it.forn+'</span>':'')+'</td>'
-      +'<td style="padding:6px 10px;color:#888;">'+it.cat+'</td>'
-      +'<td style="padding:6px 10px;font-family:DM Mono,monospace;font-size:10px;">'+jobLabel+'</td>'
+      +catCell
+      +jobCell
       +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+(it.tipo==='entrada'?'#2e7d32':'#c62828')+';">'+(it.tipo==='entrada'?'+':'-')+fmt(it.valor)+'</td>'
       +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;color:#555;">'+fmt(saldoAteAqui)+'</td>'
       +'<td style="padding:6px 10px;text-align:center;">'+editBtn+'</td>'
@@ -2395,6 +2420,33 @@ async function confirmarEdicaoFluxo(){
     await carregarFluxo();
   }catch(e){
     st.textContent='✗ '+e.message; st.className='status err';
+  }
+}
+
+async function salvarCampoFluxo(id, campo, valor, el){
+  var cor0 = el.style.color;
+  el.style.color = '#aaa';
+  try{
+    var body = {};
+    body[campo] = valor;
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body: JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    el.style.color = '#2e7d32';
+    setTimeout(function(){ el.style.color = cor0; }, 800);
+    // Atualiza cache local para o analítico refletir sem recarregar tudo
+    if(window._fluxoLancsCache){
+      var idx = window._fluxoLancsCache.findIndex(function(l){ return String(l.id)===String(id); });
+      if(idx>=0) window._fluxoLancsCache[idx][campo] = valor;
+      renderAnalitico(window._fluxoLancsCache);
+    }
+  }catch(e){
+    el.style.color = '#c62828';
+    setTimeout(function(){ el.style.color = cor0; }, 1200);
+    console.error('Erro ao salvar campo:', e);
   }
 }
 
