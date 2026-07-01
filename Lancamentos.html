@@ -649,11 +649,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
     <div class="row2">
       <div class="fl"><label>Descrição</label><input type="text" id="pp-desc" placeholder="Ex: Aluguel galpão, DARF, Fornecedor X"></div>
-      <div class="fl"><label>Favorecido</label><input type="text" id="pp-fav" placeholder="Ex: Locadora Silva, Receita Federal"></div>
+      <div class="fl"><label>Favorecido</label><input type="text" id="pp-fav" placeholder="Ex: Gabriel Artista Plástico"></div>
     </div>
     <div class="row2">
       <div class="fl"><label>Valor (R$)</label><input type="number" id="pp-valor" step="0.01" placeholder="0,00"></div>
       <div class="fl"><label>Vencimento</label><input type="date" id="pp-venc"></div>
+    </div>
+    <div class="row2">
+      <div class="fl">
+        <label>Forma de Pagamento</label>
+        <select id="pp-forma">
+          <option value="PIX">PIX</option>
+          <option value="TED">TED</option>
+          <option value="Boleto">Boleto</option>
+          <option value="Dinheiro">Dinheiro</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+      <div class="fl"><label>Chave PIX / Dados Bancários</label><input type="text" id="pp-chave" placeholder="Ex: 21984807424 ou CNPJ/e-mail"></div>
     </div>
     <div class="row2">
       <div class="fl">
@@ -680,17 +693,33 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
         </select>
       </div>
     </div>
-    <div class="fl"><label>Observação</label><input type="text" id="pp-obs" placeholder="Número do boleto, chave PIX, condições..."></div>
+    <div class="fl"><label>Observação</label><input type="text" id="pp-obs" placeholder="Referência, instruções adicionais..."></div>
     <button class="btn" onclick="salvarContaPagar()" id="btn-pp" style="background:#c62828;">Salvar Conta a Pagar</button>
     <div class="status" id="status-pp">—</div>
     <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;" id="pp-lista-wrap">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <label style="font-size:11px;color:#666;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="pp-sel-todos" onchange="toggleSelTodasContas(this.checked)"> Selecionar todas
-        </label>
-        <button onclick="enviarParaPonde()" style="background:#25d366;color:#fff;border:none;padding:8px 14px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">📲 Enviar para Pondé</button>
-      </div>
       <div id="pp-body"><div class="empty">Carregando...</div></div>
+    </div>
+  </div>
+
+  <!-- MODAL ORDEM DE PAGAMENTO -->
+  <div id="modal-op" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:999;overflow-y:auto;padding:20px;">
+    <div style="background:#fff;max-width:480px;margin:0 auto;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <!-- Cabeçalho Sul Sign -->
+      <div style="background:#111;padding:20px 24px;display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="color:#fff;font-size:16px;font-weight:700;letter-spacing:.5px;">SUL SIGN GROUP</div>
+          <div style="color:#00ff88;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">Ordem de Pagamento</div>
+        </div>
+        <button onclick="fecharOP()" style="background:transparent;border:none;color:#888;font-size:22px;cursor:pointer;">✕</button>
+      </div>
+      <!-- Corpo da OP -->
+      <div id="op-corpo" style="padding:24px;"></div>
+      <!-- Ações -->
+      <div style="padding:0 24px 24px;display:flex;gap:10px;">
+        <button onclick="compartilharOP()" style="flex:1;padding:12px;background:#25d366;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📲 Compartilhar WhatsApp</button>
+        <button onclick="imprimirOP()" style="flex:1;padding:12px;background:#1565c0;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🖨 Imprimir / PDF</button>
+        <button onclick="fecharOP()" style="padding:12px 16px;background:#f5f5f5;border:none;border-radius:6px;color:#555;font-size:12px;font-weight:700;cursor:pointer;">Fechar</button>
+      </div>
     </div>
   </div>
 
@@ -1690,17 +1719,19 @@ async function salvarContaPagar(){
   var per=document.getElementById('pp-per').value;
   var obs=document.getElementById('pp-obs').value.trim();
   var job=document.getElementById('pp-job').value;
+  var forma=document.getElementById('pp-forma').value;
+  var chave=document.getElementById('pp-chave').value.trim();
   if(!desc||!valor||!venc){st.textContent='✗ Preencha descrição, valor e vencimento.';st.className='status err';return;}
   btn.disabled=true;st.textContent='Salvando...';st.className='status';
   try{
     var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar',{
       method:'POST',
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({descricao:desc,favorecido:fav,valor:valor,vencimento:venc,categoria:cat,periodicidade:per,observacao:obs,orcamento_numero:job||null,status:'Pendente'})
+      body:JSON.stringify({descricao:desc,favorecido:fav,valor:valor,vencimento:venc,categoria:cat,periodicidade:per,observacao:obs,orcamento_numero:job||null,forma_pagamento:forma,chave_pix:chave,status:'Pendente'})
     });
     if(!r.ok)throw new Error('HTTP '+r.status+' — '+await r.text());
     st.textContent='✓ Salvo!';st.className='status ok';
-    ['pp-desc','pp-fav','pp-valor','pp-obs'].forEach(function(id){document.getElementById(id).value='';});
+    ['pp-desc','pp-fav','pp-valor','pp-obs','pp-chave'].forEach(function(id){document.getElementById(id).value='';});
     document.getElementById('pp-job').value='';
     carregarContasPagar();
   }catch(e){st.textContent='✗ '+e.message;st.className='status err';}
@@ -1763,10 +1794,84 @@ function renderContasPagar(){
         ? '<span style="font-size:9px;background:#e8f5e9;color:#1b5e20;padding:2px 6px;border-radius:10px;font-weight:700;">✓ Pondé confirmou</span>'
         : (c.token_ponde ? '<span style="font-size:9px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:10px;font-weight:700;">📲 enviado</span>' : ''))
       +'<button data-cid="'+c.id+'" onclick="pagarConta(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #2e7d32;border-radius:2px;background:#e8f5e9;color:#1b5e20;cursor:pointer;">✓ Pagar</button>'
+      +'<button data-cid="'+c.id+'" onclick="gerarOP(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #1565c0;border-radius:2px;background:#e3f2fd;color:#1565c0;cursor:pointer;">📄 OP</button>'
       +'<span data-cid="'+c.id+'" style="font-size:10px;color:#c62828;cursor:pointer;" onclick="deletarContaPagar(this.dataset.cid,this.parentNode.parentNode)">× remover</span>'
       +'</div>';
     body.appendChild(div);
   });
+}
+
+var _opAtual = null;
+
+function gerarOP(id){
+  var c = (contasPagarCache||[]).find(function(x){ return String(x.id)===String(id); });
+  if(!c){ alert('Conta não encontrada.'); return; }
+  _opAtual = c;
+
+  var venc = c.vencimento ? new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+  var hoje = new Date().toLocaleDateString('pt-BR');
+  var valor = fmt(parseFloat(c.valor)||0);
+
+  var corpo = document.getElementById('op-corpo');
+  corpo.innerHTML =
+    '<div style="border-bottom:1px solid #e8e8e8;padding-bottom:16px;margin-bottom:16px;">'
+    +'<div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Emitido em</div>'
+    +'<div style="font-size:13px;color:#333;">'+hoje+'</div>'
+    +'</div>'
+    +'<div style="display:grid;gap:14px;">'
+    +'<div><div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Referência</div><div style="font-size:14px;font-weight:700;color:#111;">'+(c.descricao||'—')+'</div>'+(c.observacao?'<div style="font-size:11px;color:#888;margin-top:2px;">'+c.observacao+'</div>':'')+'</div>'
+    +'<div><div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Favorecido</div><div style="font-size:13px;color:#333;">'+(c.favorecido||'—')+'</div></div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">'
+    +'<div><div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Valor</div><div style="font-size:18px;font-weight:700;color:#c62828;font-family:DM Mono,monospace;">'+valor+'</div></div>'
+    +'<div><div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Vencimento</div><div style="font-size:14px;font-weight:700;color:#333;">'+venc+'</div></div>'
+    +'</div>'
+    +'<div style="background:#f5f5f5;border-radius:6px;padding:14px;">'
+    +'<div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;">Forma de Pagamento</div>'
+    +'<div style="font-size:13px;font-weight:700;color:#1565c0;">'+(c.forma_pagamento||'PIX')+'</div>'
+    +(c.chave_pix?'<div style="font-size:12px;color:#333;margin-top:4px;font-family:DM Mono,monospace;">Chave: '+c.chave_pix+'</div>':'')
+    +'</div>'
+    +(c.orcamento_numero?'<div><div style="font-size:9px;color:#aaa;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;">Job / Referência</div><div style="font-size:12px;color:#555;font-family:DM Mono,monospace;">'+c.orcamento_numero+'</div></div>':'')
+    +'</div>'
+    +'<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e8e8e8;font-size:10px;color:#aaa;text-align:center;">Sul Sign Group · CNPJ 03.952.317/0001-16 · sulsign01@gmail.com</div>';
+
+  document.getElementById('modal-op').style.display='block';
+}
+
+function fecharOP(){
+  document.getElementById('modal-op').style.display='none';
+  _opAtual=null;
+}
+
+function compartilharOP(){
+  if(!_opAtual) return;
+  var c=_opAtual;
+  var venc=c.vencimento?new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+  var msg='📄 *ORDEM DE PAGAMENTO — SUL SIGN GROUP*\n\n'
+    +'*Referência:* '+(c.descricao||'—')+'\n'
+    +'*Favorecido:* '+(c.favorecido||'—')+'\n'
+    +'*Valor:* '+fmt(parseFloat(c.valor)||0)+'\n'
+    +'*Vencimento:* '+venc+'\n'
+    +'*Forma:* '+(c.forma_pagamento||'PIX')+'\n'
+    +(c.chave_pix?'*Chave PIX:* '+c.chave_pix+'\n':'')
+    +(c.observacao?'*Obs:* '+c.observacao+'\n':'')
+    +'\nSul Sign Group · CNPJ 03.952.317/0001-16';
+  window.open('https://wa.me/?text='+encodeURIComponent(msg),'_blank');
+}
+
+function imprimirOP(){
+  var corpo=document.getElementById('op-corpo').innerHTML;
+  var win=window.open('','_blank');
+  win.document.write('<html><head><title>Ordem de Pagamento — Sul Sign</title>'
+    +'<style>body{font-family:Arial,sans-serif;max-width:480px;margin:40px auto;color:#111;}'
+    +'.hd{background:#111;color:#fff;padding:20px;border-radius:8px 8px 0 0;}'
+    +'.hd h1{margin:0;font-size:18px;}.hd p{margin:4px 0 0;color:#00ff88;font-size:11px;letter-spacing:2px;}'
+    +'.body{border:1px solid #e8e8e8;border-top:none;padding:24px;border-radius:0 0 8px 8px;}'
+    +'</style></head><body>'
+    +'<div class="hd"><h1>SUL SIGN GROUP</h1><p>ORDEM DE PAGAMENTO</p></div>'
+    +'<div class="body">'+corpo+'</div>'
+    +'</body></html>');
+  win.document.close();
+  win.print();
 }
 
 function toggleSelTodasContas(checked){
