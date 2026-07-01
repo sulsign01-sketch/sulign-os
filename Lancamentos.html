@@ -15,8 +15,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 .hd-tipo{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--g400)}
 .hd-tit{font-size:15px;font-weight:600;color:var(--white);font-family:'DM Mono',monospace}
 .ab{height:3px;background:var(--ga)}
-.tabs{display:flex;background:var(--g100);border-bottom:1px solid var(--g200)}
-.tab{flex:1;padding:12px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--g600);cursor:pointer;border-bottom:2px solid transparent}
+.tabs{display:flex;background:var(--g100);border-bottom:1px solid var(--g200);overflow-x:auto;-webkit-overflow-scrolling:touch;white-space:nowrap;}
+.tab{flex:0 0 auto;padding:12px 14px;text-align:center;font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--g600);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;}
 .tab.active{color:var(--green);border-bottom-color:var(--ga);background:var(--white)}
 .sec{padding:18px 20px}
 .fl{margin-bottom:14px}
@@ -830,7 +830,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   <div id="view-ccusto" class="sec" style="display:none;">
 
     <!-- Filtro -->
-    <div id="fx-filtro-periodo" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+    <div id="cc-filtro-periodo" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
       <div class="fl">
         <label>Job</label>
         <select id="cc-job-sel" style="min-width:220px;">
