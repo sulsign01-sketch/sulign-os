@@ -273,6 +273,17 @@ body{font-family:'DM Sans',sans-serif;background:#0a0a0a;color:var(--white);min-
 
       <!-- Tabela mensal -->
       <div id="inv-fx-tabela"><div style="text-align:center;padding:30px;color:var(--g400);font-size:12px;">Carregando...</div></div>
+
+      <!-- ANALÍTICO -->
+      <div style="margin-top:24px;border-top:1px solid #1e1e1e;padding-top:16px;">
+        <div style="font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--g400);margin-bottom:14px;">Análise de Gastos</div>
+        <div style="display:flex;gap:0;border-bottom:1px solid #1e1e1e;margin-bottom:16px;">
+          <button id="inv-anal-tab-cat" onclick="setInvAnalTab('cat')" style="border:none;background:none;padding:8px 18px;font-size:11px;font-weight:700;color:var(--ga);border-bottom:2px solid var(--ga);margin-bottom:-1px;cursor:pointer;font-family:inherit;letter-spacing:1px;text-transform:uppercase;">Por Categoria</button>
+          <button id="inv-anal-tab-job" onclick="setInvAnalTab('job')" style="border:none;background:none;padding:8px 18px;font-size:11px;font-weight:700;color:var(--g400);border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;font-family:inherit;letter-spacing:1px;text-transform:uppercase;">Por Job</button>
+        </div>
+        <div id="inv-anal-body-cat"></div>
+        <div id="inv-anal-body-job" style="display:none;"></div>
+      </div>
     </div>
   </div>
 
@@ -822,6 +833,7 @@ function renderFluxoInv(lancs,aportes,saldoInicial,de,ate){
 
   html+='</tbody></table>';
   document.getElementById('inv-fx-tabela').innerHTML=html;
+  renderAnaliticoInv(lancs);
 }
 
 function toggleFluxoInvDetalhe(mes){
@@ -887,6 +899,138 @@ function renderFluxoInvDetMes(mes){
 document.addEventListener('keydown',function(e){
   if(e.key==='Enter'&&document.getElementById('login-wrap').style.display!=='none')fazerLogin();
 });
+
+// ══════════════════════════════════
+// ANALÍTICO — DASHBOARD DO INVESTIDOR
+// ══════════════════════════════════
+function setInvAnalTab(tab){
+  document.getElementById('inv-anal-body-cat').style.display=tab==='cat'?'':'none';
+  document.getElementById('inv-anal-body-job').style.display=tab==='job'?'':'none';
+  var tCat=document.getElementById('inv-anal-tab-cat');
+  var tJob=document.getElementById('inv-anal-tab-job');
+  tCat.style.color=tab==='cat'?'var(--ga)':'var(--g400)';
+  tCat.style.borderBottomColor=tab==='cat'?'var(--ga)':'transparent';
+  tJob.style.color=tab==='job'?'var(--ga)':'var(--g400)';
+  tJob.style.borderBottomColor=tab==='job'?'var(--ga)':'transparent';
+}
+
+function renderAnaliticoInv(lancs){
+  if(!lancs||!lancs.length){
+    document.getElementById('inv-anal-body-cat').innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);font-size:12px;">Nenhum dado para o período.</div>';
+    document.getElementById('inv-anal-body-job').innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);font-size:12px;">Nenhum dado para o período.</div>';
+    return;
+  }
+
+  var porCat={}, totalGeral=0;
+  lancs.forEach(function(l){
+    if(l.tipo_lancamento!=='saida') return;
+    var cat=l.categoria||'Sem categoria';
+    if(!porCat[cat]) porCat[cat]={total:0,itens:[]};
+    var v=parseFloat(l.valor)||0;
+    porCat[cat].total+=v; totalGeral+=v;
+    porCat[cat].itens.push(l);
+  });
+  var catKeys=Object.keys(porCat).sort(function(a,b){return porCat[b].total-porCat[a].total;});
+
+  function rowStyle(i){ return 'border-bottom:1px solid #181818;'; }
+  var th='<th style="padding:8px 10px;text-align:';
+  var thE=';font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--g400);font-weight:600;">';
+
+  var htmlCat='<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<thead><tr style="border-bottom:1px solid #222;">'
+    +th+'left'+thE+'Categoria</th>'
+    +th+'right'+thE+'Total Saídas</th>'
+    +th+'right'+thE+'% do Total</th>'
+    +'<th style="width:20px;"></th>'
+    +'</tr></thead><tbody>';
+
+  catKeys.forEach(function(cat){
+    var d=porCat[cat];
+    var pct=totalGeral>0?(d.total/totalGeral*100).toFixed(1):'0.0';
+    var cid='inv-anal-cat-'+cat.replace(/[^a-z0-9]/gi,'_');
+    htmlCat+='<tr style="'+rowStyle()+';cursor:pointer;" onclick="toggleInvAnal(\''+cid+'\')">'
+      +'<td style="padding:10px 10px;color:var(--white);font-weight:600;">'
+        +'<span id="arr-'+cid+'" style="font-size:10px;color:var(--g400);margin-right:6px;">▸</span>'+cat+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;color:var(--red);font-weight:600;">-'+fmtK(d.total)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;color:var(--g400);font-size:11px;">'+pct+'%</td>'
+      +'<td></td></tr>'
+      +'<tr id="'+cid+'" style="display:none;"><td colspan="4" style="padding:0;background:#0a0a0a;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    d.itens.sort(function(a,b){return (a.data||'').localeCompare(b.data||'');}).forEach(function(it){
+      var dt=it.data?new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+      htmlCat+='<tr style="border-bottom:1px solid #141414;">'
+        +'<td style="padding:5px 10px 5px 24px;color:var(--g400);font-family:DM Mono,monospace;font-size:10px;">'+dt+'</td>'
+        +'<td style="padding:5px 10px;color:var(--white);">'+(it.descricao||'—')+'</td>'
+        +'<td style="padding:5px 10px;color:var(--g400);font-size:10px;">'+(it.orcamento_numero&&it.orcamento_numero!=='SEM-JOB'?it.orcamento_numero:'—')+'</td>'
+        +'<td style="padding:5px 16px 5px 10px;text-align:right;font-family:DM Mono,monospace;color:var(--red);">-'+fmtK(parseFloat(it.valor)||0)+'</td>'
+        +'</tr>';
+    });
+    htmlCat+='</table></td></tr>';
+  });
+  htmlCat+='<tr style="border-top:1px solid #222;">'
+    +'<td style="padding:10px 10px;font-weight:700;color:var(--white);">TOTAL</td>'
+    +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:700;color:var(--red);">-'+fmtK(totalGeral)+'</td>'
+    +'<td colspan="2"></td></tr></tbody></table>';
+  document.getElementById('inv-anal-body-cat').innerHTML=htmlCat;
+
+  // Por Job
+  var porJob={};
+  lancs.forEach(function(l){
+    if(l.tipo_lancamento!=='saida') return;
+    var job=(l.orcamento_numero&&l.orcamento_numero!=='SEM-JOB')?l.orcamento_numero:'Avulso / Sem Job';
+    if(!porJob[job]) porJob[job]={total:0,itens:[]};
+    var v=parseFloat(l.valor)||0;
+    porJob[job].total+=v;
+    porJob[job].itens.push(l);
+  });
+  var jobKeys=Object.keys(porJob).sort(function(a,b){return porJob[b].total-porJob[a].total;});
+
+  var htmlJob='<table style="width:100%;border-collapse:collapse;font-size:12px;">'
+    +'<thead><tr style="border-bottom:1px solid #222;">'
+    +th+'left'+thE+'Job</th>'
+    +th+'right'+thE+'Total Saídas</th>'
+    +th+'right'+thE+'% do Total</th>'
+    +'<th style="width:20px;"></th>'
+    +'</tr></thead><tbody>';
+
+  jobKeys.forEach(function(job){
+    var d=porJob[job];
+    var pct=totalGeral>0?(d.total/totalGeral*100).toFixed(1):'0.0';
+    var jid='inv-anal-job-'+job.replace(/[^a-z0-9]/gi,'_');
+    htmlJob+='<tr style="'+rowStyle()+';cursor:pointer;" onclick="toggleInvAnal(\''+jid+'\')">'
+      +'<td style="padding:10px 10px;color:var(--white);font-weight:600;">'
+        +'<span id="arr-'+jid+'" style="font-size:10px;color:var(--g400);margin-right:6px;">▸</span>'+job+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;color:var(--red);font-weight:600;">-'+fmtK(d.total)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;color:var(--g400);font-size:11px;">'+pct+'%</td>'
+      +'<td></td></tr>'
+      +'<tr id="'+jid+'" style="display:none;"><td colspan="4" style="padding:0;background:#0a0a0a;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    d.itens.sort(function(a,b){return (a.data||'').localeCompare(b.data||'');}).forEach(function(it){
+      var dt=it.data?new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
+      htmlJob+='<tr style="border-bottom:1px solid #141414;">'
+        +'<td style="padding:5px 10px 5px 24px;color:var(--g400);font-family:DM Mono,monospace;font-size:10px;">'+dt+'</td>'
+        +'<td style="padding:5px 10px;color:var(--white);">'+(it.descricao||'—')+'</td>'
+        +'<td style="padding:5px 10px;color:var(--g400);font-size:10px;">'+(it.categoria||'—')+'</td>'
+        +'<td style="padding:5px 16px 5px 10px;text-align:right;font-family:DM Mono,monospace;color:var(--red);">-'+fmtK(parseFloat(it.valor)||0)+'</td>'
+        +'</tr>';
+    });
+    htmlJob+='</table></td></tr>';
+  });
+  htmlJob+='<tr style="border-top:1px solid #222;">'
+    +'<td style="padding:10px 10px;font-weight:700;color:var(--white);">TOTAL</td>'
+    +'<td style="padding:10px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:700;color:var(--red);">-'+fmtK(totalGeral)+'</td>'
+    +'<td colspan="2"></td></tr></tbody></table>';
+  document.getElementById('inv-anal-body-job').innerHTML=htmlJob;
+}
+
+function toggleInvAnal(id){
+  var row=document.getElementById(id);
+  var arr=document.getElementById('arr-'+id);
+  if(!row) return;
+  var aberto=row.style.display!=='none';
+  row.style.display=aberto?'none':'table-row';
+  if(arr) arr.textContent=aberto?'▸':'▾';
+}
 </script>
 </body>
 </html>
