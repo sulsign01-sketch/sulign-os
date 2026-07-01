@@ -473,9 +473,12 @@ function renderApontamentosView(){
   h += '<div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#52b788;margin-bottom:12px;">+ Criar Apontamento</div>';
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
   h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Job (SS-Número)</label>'
-    +'<input type="text" id="ap-job" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;" placeholder="SS-2026_06-43"></div>';
+    +'<select id="ap-job" onchange="preencherNomeJobAp(this.value)" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;background:#fff;">'
+    +'<option value="">— Selecione o job —</option>'
+    +(orcamentosAtivosCache||[]).map(function(o){return '<option value="'+o.numero+'">'+o.numero+(o.cliente?' — '+o.cliente:'')+(o.projeto?' · '+o.projeto:'')+'</option>';}).join('')
+    +'</select></div>';
   h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Nome do Job</label>'
-    +'<input type="text" id="ap-job-nome" style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;" placeholder="Festa Junina PRIO"></div>';
+    +'<input type="text" id="ap-job-nome" readonly style="width:100%;border:1.5px solid #e8e8e8;border-radius:4px;padding:8px 10px;font-size:12px;background:#f9f9f9;color:#555;" placeholder="Preenchido automaticamente"></div>';
   h += '</div>';
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
   h += '<div><label style="font-size:10px;font-weight:600;color:#888;display:block;margin-bottom:4px;">Disciplina</label>'
@@ -548,6 +551,12 @@ async function carregarApontamentos(){
     var data = await r.json();
     apontamentosCache = Array.isArray(data)?data:[];
   }catch(e){console.error('apontamentos:',e);}
+}
+
+function preencherNomeJobAp(numero){
+  var orc = (orcamentosAtivosCache||[]).find(function(o){ return o.numero===numero; });
+  var el = document.getElementById('ap-job-nome');
+  if(el) el.value = orc ? (orc.projeto||orc.cliente||numero) : '';
 }
 
 async function criarApontamento(){
