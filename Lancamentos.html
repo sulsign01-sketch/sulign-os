@@ -575,6 +575,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <option value="Devolução de Empréstimo">Devolução de Empréstimo</option>
           <option value="Outros">Outros</option>
           <option value="Alimentação">Alimentação</option>
+          <option value="Verba Produção">Verba Produção</option>
         </select>
       </div>
       <div class="fl">
@@ -788,7 +789,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
         <select id="fx-cat">
           <option>Material</option><option>Mão de Obra</option><option>Logística</option>
           <option>Imposto</option><option>Serviços</option><option>Receita de Job</option>
-          <option>Comissão</option><option>Alimentação</option><option>Outros</option>
+          <option>Comissão</option><option>Alimentação</option><option>Verba Produção</option><option>Outros</option>
         </select>
       </div>
     </div>
@@ -843,7 +844,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <select id="fxe-cat">
             <option>Material</option><option>Mão de Obra</option><option>Logística</option>
             <option>Imposto</option><option>Serviços</option><option>Receita de Job</option>
-            <option>Comissão</option><option>Aporte</option><option>Alimentação</option><option>Outros</option>
+            <option>Comissão</option><option>Aporte</option><option>Alimentação</option><option>Verba Produção</option><option>Outros</option>
           </select>
         </div>
       </div>
@@ -2284,7 +2285,7 @@ function renderFluxoDetalheMes(mes){
     // Células editáveis inline só para lançamentos (não aportes)
     var catCell, jobCell;
     if(it.origem==='lancamento'){
-      var cats = ['Material','Mão de Obra','Logística','Imposto','Serviços','Receita de Job','Comissão','Alimentação','Outros'];
+      var cats = ['Material','Mão de Obra','Logística','Imposto','Serviços','Receita de Job','Comissão','Alimentação','Verba Produção','Outros'];
       var catOpts = cats.map(function(c){
         return '<option value="'+c+'"'+(it.cat===c?' selected':'')+'>'+c+'</option>';
       }).join('');
