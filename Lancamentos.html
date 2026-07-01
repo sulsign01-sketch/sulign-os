@@ -669,6 +669,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <button class="btn" onclick="salvarContaPagar()" id="btn-pp" style="background:#c62828;">Salvar Conta a Pagar</button>
     <div class="status" id="status-pp">—</div>
     <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;" id="pp-lista-wrap">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <label style="font-size:11px;color:#666;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="pp-sel-todos" onchange="toggleSelTodasContas(this.checked)"> Selecionar todas
+        </label>
+        <button onclick="enviarParaPonde()" style="background:#25d366;color:#fff;border:none;padding:8px 14px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;">📲 Enviar para Pondé</button>
+      </div>
       <div id="pp-body"><div class="empty">Carregando...</div></div>
     </div>
   </div>
@@ -1721,18 +1727,65 @@ function renderContasPagar(){
     var perBadge=c.periodicidade&&c.periodicidade!=='unica'?'<span class="tag-per">'+c.periodicidade+'</span>':'';
     var div=document.createElement('div');
     div.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-left:3px solid '+bord+';border-bottom:1px solid #f0f0f0;gap:12px;';
-    div.innerHTML='<div style="flex:1;min-width:0;">'
+    div.innerHTML='<input type="checkbox" class="pp-sel-item" data-cid="'+c.id+'" style="margin-top:3px;flex-shrink:0;">'
+      +'<div style="flex:1;min-width:0;">'
       +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.descricao||'—')+perBadge+'</div>'
       +'<div style="font-size:11px;color:#777;margin-top:2px;">'+(c.categoria||'—')+(c.favorecido?' · '+c.favorecido:'')+(c.observacao?' · '+c.observacao:'')+'</div>'
       +'<div style="font-size:10px;color:'+(atrasado?'#c62828':urgente?'#e65100':'#999')+';margin-top:3px;">'+(atrasado?'⚠ ATRASADO':'Vence')+' '+vencStr+'</div>'
       +'</div>'
       +'<div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px;">'
       +'<span style="font-family:DM Mono,monospace;font-weight:700;color:#c62828;">'+fmt(vv)+'</span>'
+      +(c.pago_por_ponde
+        ? '<span style="font-size:9px;background:#e8f5e9;color:#1b5e20;padding:2px 6px;border-radius:10px;font-weight:700;">✓ Pondé confirmou</span>'
+        : (c.token_ponde ? '<span style="font-size:9px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:10px;font-weight:700;">📲 enviado</span>' : ''))
       +'<button data-cid="'+c.id+'" onclick="pagarConta(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #2e7d32;border-radius:2px;background:#e8f5e9;color:#1b5e20;cursor:pointer;">✓ Pagar</button>'
       +'<span data-cid="'+c.id+'" style="font-size:10px;color:#c62828;cursor:pointer;" onclick="deletarContaPagar(this.dataset.cid,this.parentNode.parentNode)">× remover</span>'
       +'</div>';
     body.appendChild(div);
   });
+}
+
+function toggleSelTodasContas(checked){
+  document.querySelectorAll('.pp-sel-item').forEach(function(cb){ cb.checked = checked; });
+}
+
+async function enviarParaPonde(){
+  var selecionados = Array.from(document.querySelectorAll('.pp-sel-item:checked')).map(function(cb){ return cb.dataset.cid; });
+  if(!selecionados.length){
+    alert('Selecione ao menos uma conta para enviar.');
+    return;
+  }
+
+  var contas = contasPagarCache.filter(function(c){ return selecionados.indexOf(String(c.id))>=0; });
+  var token = 'pd' + Date.now().toString(36) + Math.random().toString(36).substring(2,8);
+
+  try{
+    // Salva o mesmo token em todas as contas selecionadas (lote compartilha um link)
+    for(var i=0; i<contas.length; i++){
+      await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+contas[i].id,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({token_ponde: token, enviado_ponde_em: new Date().toISOString()})
+      });
+    }
+
+    var link = 'https://sulsign01-sketch.github.io/sulign-os/Pagamentos_Ponde.html?token='+token;
+    var total = contas.reduce(function(a,c){ return a+(parseFloat(c.valor)||0); }, 0);
+
+    var msg = '💰 *Contas a pagar* ('+contas.length+' item'+(contas.length>1?'s':'')+' · '+fmt(total)+')\n\n';
+    contas.forEach(function(c){
+      var venc = c.vencimento ? new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      msg += '• '+c.descricao+' — '+fmt(parseFloat(c.valor)||0)+' (vence '+venc+')\n';
+    });
+    msg += '\nAcesse e marque como pago: '+link;
+
+    var waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
+    window.open(waUrl, '_blank');
+
+    await carregarContasPagar();
+  }catch(e){
+    alert('Erro ao enviar: '+e.message);
+  }
 }
 
 async function pagarConta(id){
