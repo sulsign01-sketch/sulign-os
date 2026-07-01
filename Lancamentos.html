@@ -1515,7 +1515,7 @@ function fmtNF(v){
 async function carregarNF(){
   try{
     // Buscar orçamentos com valor_nf preenchido OU status Faturado/Entregue
-    var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,cliente,projeto,status,valor_nf,data_nf,nf_numero,sinal_recebido,sinal_valor,saldo_recebido,saldo_valor,updated_at&or=(valor_nf.not.is.null,status.in.(Faturado,Entregue))&order=data_nf.desc.nullslast,updated_at.desc',{
+    var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,cliente,projeto,status,valor_nf,data_nf,nf_numero,nf_url,sinal_recebido,sinal_valor,saldo_recebido,saldo_valor,updated_at&or=(valor_nf.not.is.null,status.in.(Faturado,Entregue))&order=data_nf.desc.nullslast,updated_at.desc',{
       headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -1576,7 +1576,7 @@ function renderNF(){
     var badgeSinal = o.sinal_recebido ? '<span class="nf-badge pago">Sinal ✓</span>' : '<span class="nf-badge pend">Sinal ⏳</span>';
     var badgeSaldo = o.saldo_recebido ? '<span class="nf-badge pago">Saldo ✓</span>' : '<span class="nf-badge pend">Saldo ⏳</span>';
     return '<div class="nf-row">'
-      +'<div class="nf-cell nf-num" style="font-family:DM Mono,monospace;color:#9e9e9e;">'+(o.nf_numero?'NF-'+o.nf_numero:'—')+'</div>'
+      +'<div class="nf-cell nf-num" style="font-family:DM Mono,monospace;color:#9e9e9e;">'+(o.nf_numero?'NF-'+o.nf_numero:'—')+(o.nf_url?'<a href="'+o.nf_url+'" target="_blank" style="margin-left:6px;color:#1565c0;text-decoration:none;" title="Ver NF no Drive">📎</a>':'')+'</div>'
       +'<div class="nf-cell nf-ss">'+(o.numero||'—')+'</div>'
       +'<div class="nf-cell nf-cli" title="'+(o.cliente||'')+'"><div><div style="font-weight:600;">'+(o.cliente||'—')+'</div><div style="font-size:10px;color:#9e9e9e;">'+(o.projeto||'')+'</div></div></div>'
       +'<div class="nf-cell nf-val n" style="font-weight:600;">'+(o.valor_nf?fmtNF(o.valor_nf):'<span style="color:#9e9e9e;">est. do ORC</span>')+'</div>'
