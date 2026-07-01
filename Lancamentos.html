@@ -809,6 +809,18 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:10px;">Resumo por Mês</div>
       <div id="fx-tabela"><div class="empty">Carregando...</div></div>
     </div>
+
+    <!-- ANALÍTICO -->
+    <div style="margin-top:24px;border-top:1px solid #e8e8e8;padding-top:16px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;margin-bottom:14px;">Análise de Gastos</div>
+      <!-- Abas -->
+      <div style="display:flex;gap:0;border-bottom:2px solid #e8e8e8;margin-bottom:16px;">
+        <button id="anal-tab-cat" onclick="setAnalTab('cat')" style="border:none;background:none;padding:8px 18px;font-size:12px;font-weight:700;color:#0d47a1;border-bottom:2px solid #0d47a1;margin-bottom:-2px;cursor:pointer;font-family:inherit;">Por Categoria</button>
+        <button id="anal-tab-job" onclick="setAnalTab('job')" style="border:none;background:none;padding:8px 18px;font-size:12px;font-weight:700;color:#aaa;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;font-family:inherit;">Por Job</button>
+      </div>
+      <div id="anal-body-cat"><div class="empty">Carregando...</div></div>
+      <div id="anal-body-job" style="display:none;"><div class="empty">Carregando...</div></div>
+    </div>
   </div>
 
   <!-- MODAL EDITAR LANÇAMENTO DO FLUXO -->
@@ -2113,6 +2125,7 @@ function renderFluxo(lancs, aportes, saldoInicial, de, ate){
   window._fluxoLancsCache = lancs;
   window._fluxoAportesCache = aportes;
   window._fluxoSaldoInicial = saldoInicial;
+  renderAnalitico(lancs);
 
   // Montar lista de meses no range
   var meses = [];
@@ -2398,6 +2411,143 @@ async function excluirLancamentoFluxo(id){
     alert('Erro ao excluir: '+e.message);
   }
 }
+
+// ══════════════════════════════════
+// ANALÍTICO POR CATEGORIA E JOB
+// ══════════════════════════════════
+var _analTabAtiva = 'cat';
+
+function setAnalTab(tab){
+  _analTabAtiva = tab;
+  document.getElementById('anal-body-cat').style.display = tab==='cat'?'':'none';
+  document.getElementById('anal-body-job').style.display = tab==='job'?'':'none';
+  var tCat = document.getElementById('anal-tab-cat');
+  var tJob = document.getElementById('anal-tab-job');
+  tCat.style.color = tab==='cat'?'#0d47a1':'#aaa';
+  tCat.style.borderBottomColor = tab==='cat'?'#0d47a1':'transparent';
+  tJob.style.color = tab==='job'?'#0d47a1':'#aaa';
+  tJob.style.borderBottomColor = tab==='job'?'#0d47a1':'transparent';
+}
+
+function renderAnalitico(lancs){
+  if(!lancs || !lancs.length){
+    document.getElementById('anal-body-cat').innerHTML = '<div class="empty">Nenhum dado para o período.</div>';
+    document.getElementById('anal-body-job').innerHTML = '<div class="empty">Nenhum dado para o período.</div>';
+    return;
+  }
+
+  // ── POR CATEGORIA ──
+  var porCat = {};
+  lancs.forEach(function(l){
+    if(l.tipo_lancamento !== 'saida') return;
+    var cat = l.categoria || 'Sem categoria';
+    if(!porCat[cat]) porCat[cat] = {total:0, itens:[]};
+    var v = parseFloat(l.valor)||0;
+    porCat[cat].total += v;
+    porCat[cat].itens.push(l);
+  });
+  var totalGeral = 0;
+  Object.keys(porCat).forEach(function(c){ totalGeral += porCat[c].total; });
+  var catKeys = Object.keys(porCat).sort(function(a,b){ return porCat[b].total - porCat[a].total; });
+
+  var htmlCat = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    +'<thead><tr style="border-bottom:2px solid #e8e8e8;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Categoria</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Total Saídas</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">% do Total</th>'
+    +'<th style="padding:8px 10px;width:24px;"></th>'
+    +'</tr></thead><tbody>';
+
+  catKeys.forEach(function(cat){
+    var d = porCat[cat];
+    var pct = totalGeral>0 ? (d.total/totalGeral*100).toFixed(1) : '0.0';
+    var catId = 'anal-cat-'+cat.replace(/[^a-z0-9]/gi,'_');
+    htmlCat += '<tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="toggleAnalDetalhe(\''+catId+'\')">'
+      +'<td style="padding:10px 10px;font-weight:600;color:#222;">'
+        +'<span id="arr-'+catId+'" style="font-size:10px;color:#aaa;margin-right:6px;">▸</span>'+cat+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:monospace;color:#c62828;font-weight:600;">-'+fmt(d.total)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;color:#aaa;font-size:12px;">'+pct+'%</td>'
+      +'<td></td></tr>'
+      +'<tr id="'+catId+'" style="display:none;"><td colspan="4" style="padding:0;background:#fafafa;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    d.itens.sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }).forEach(function(it){
+      var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      htmlCat += '<tr style="border-bottom:1px solid #f0f0f0;">'
+        +'<td style="padding:5px 10px 5px 28px;color:#666;">'+dt+'</td>'
+        +'<td style="padding:5px 10px;color:#333;">'+( it.descricao||'—')+'<span style="color:#bbb;"> · '+(it.fornecedor||'')+'</span></td>'
+        +'<td style="padding:5px 10px;color:#888;font-size:10px;">'+(it.orcamento_numero&&it.orcamento_numero!=='SEM-JOB'?it.orcamento_numero:'—')+'</td>'
+        +'<td style="padding:5px 16px 5px 10px;text-align:right;font-family:monospace;color:#c62828;">-'+fmt(parseFloat(it.valor)||0)+'</td>'
+        +'</tr>';
+    });
+    htmlCat += '</table></td></tr>';
+  });
+  htmlCat += '<tr style="border-top:2px solid #e8e8e8;">'
+    +'<td style="padding:10px 10px;font-weight:700;color:#222;">TOTAL</td>'
+    +'<td style="padding:10px 10px;text-align:right;font-family:monospace;font-weight:700;color:#c62828;">-'+fmt(totalGeral)+'</td>'
+    +'<td colspan="2"></td></tr>';
+  htmlCat += '</tbody></table>';
+  document.getElementById('anal-body-cat').innerHTML = htmlCat;
+
+  // ── POR JOB ──
+  var porJob = {};
+  lancs.forEach(function(l){
+    if(l.tipo_lancamento !== 'saida') return;
+    var job = (l.orcamento_numero && l.orcamento_numero !== 'SEM-JOB') ? l.orcamento_numero : 'Avulso / Sem Job';
+    if(!porJob[job]) porJob[job] = {total:0, itens:[]};
+    var v = parseFloat(l.valor)||0;
+    porJob[job].total += v;
+    porJob[job].itens.push(l);
+  });
+  var jobKeys = Object.keys(porJob).sort(function(a,b){ return porJob[b].total - porJob[a].total; });
+
+  var htmlJob = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    +'<thead><tr style="border-bottom:2px solid #e8e8e8;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Job</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Total Saídas</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">% do Total</th>'
+    +'<th style="padding:8px 10px;width:24px;"></th>'
+    +'</tr></thead><tbody>';
+
+  jobKeys.forEach(function(job){
+    var d = porJob[job];
+    var pct = totalGeral>0 ? (d.total/totalGeral*100).toFixed(1) : '0.0';
+    var jobId = 'anal-job-'+job.replace(/[^a-z0-9]/gi,'_');
+    htmlJob += '<tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="toggleAnalDetalhe(\''+jobId+'\')">'
+      +'<td style="padding:10px 10px;font-weight:600;color:#222;">'
+        +'<span id="arr-'+jobId+'" style="font-size:10px;color:#aaa;margin-right:6px;">▸</span>'+job+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:monospace;color:#c62828;font-weight:600;">-'+fmt(d.total)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;color:#aaa;font-size:12px;">'+pct+'%</td>'
+      +'<td></td></tr>'
+      +'<tr id="'+jobId+'" style="display:none;"><td colspan="4" style="padding:0;background:#fafafa;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    d.itens.sort(function(a,b){ return (a.data||'').localeCompare(b.data||''); }).forEach(function(it){
+      var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      htmlJob += '<tr style="border-bottom:1px solid #f0f0f0;">'
+        +'<td style="padding:5px 10px 5px 28px;color:#666;">'+dt+'</td>'
+        +'<td style="padding:5px 10px;color:#333;">'+(it.descricao||'—')+'</td>'
+        +'<td style="padding:5px 10px;color:#888;font-size:10px;">'+(it.categoria||'—')+'</td>'
+        +'<td style="padding:5px 16px 5px 10px;text-align:right;font-family:monospace;color:#c62828;">-'+fmt(parseFloat(it.valor)||0)+'</td>'
+        +'</tr>';
+    });
+    htmlJob += '</table></td></tr>';
+  });
+  htmlJob += '<tr style="border-top:2px solid #e8e8e8;">'
+    +'<td style="padding:10px 10px;font-weight:700;color:#222;">TOTAL</td>'
+    +'<td style="padding:10px 10px;text-align:right;font-family:monospace;font-weight:700;color:#c62828;">-'+fmt(totalGeral)+'</td>'
+    +'<td colspan="2"></td></tr>';
+  htmlJob += '</tbody></table>';
+  document.getElementById('anal-body-job').innerHTML = htmlJob;
+}
+
+function toggleAnalDetalhe(id){
+  var row = document.getElementById(id);
+  var arr = document.getElementById('arr-'+id);
+  if(!row) return;
+  var aberto = row.style.display !== 'none';
+  row.style.display = aberto ? 'none' : 'table-row';
+  if(arr) arr.textContent = aberto ? '▸' : '▾';
+}
+
 
 </script>
 </body>
