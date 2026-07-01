@@ -710,7 +710,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <div style="color:#fff;font-size:16px;font-weight:700;letter-spacing:.5px;">SUL SIGN GROUP</div>
           <div style="color:#00ff88;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;margin-top:2px;">Ordem de Pagamento</div>
         </div>
-        <button onclick="fecharOP()" style="background:transparent;border:none;color:#888;font-size:22px;cursor:pointer;">✕</button>
+        <div style="text-align:right;">
+          <div id="op-numero" style="color:#00ff88;font-family:DM Mono,monospace;font-size:14px;font-weight:700;margin-bottom:6px;">—</div>
+          <button onclick="fecharOP()" style="background:transparent;border:none;color:#888;font-size:22px;cursor:pointer;">✕</button>
+        </div>
       </div>
       <!-- Corpo da OP -->
       <div id="op-corpo" style="padding:24px;"></div>
@@ -1784,7 +1787,7 @@ function renderContasPagar(){
     div.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-left:3px solid '+bord+';border-bottom:1px solid #f0f0f0;gap:12px;';
     div.innerHTML='<input type="checkbox" class="pp-sel-item" data-cid="'+c.id+'" style="margin-top:3px;flex-shrink:0;">'
       +'<div style="flex:1;min-width:0;">'
-      +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.descricao||'—')+perBadge+'</div>'
+      +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.numero_op?'<span style="font-size:10px;color:#1565c0;font-family:DM Mono,monospace;margin-right:6px;">'+c.numero_op+'</span>':'')+( c.descricao||'—')+perBadge+'</div>'
       +'<div style="font-size:11px;color:#777;margin-top:2px;">'+(c.categoria||'—')+(c.favorecido?' · '+c.favorecido:'')+(c.observacao?' · '+c.observacao:'')+'</div>'
       +'<div style="font-size:10px;color:'+(atrasado?'#c62828':urgente?'#e65100':'#999')+';margin-top:3px;">'+(atrasado?'⚠ ATRASADO':'Vence')+' '+vencStr+'</div>'
       +'</div>'
@@ -1835,6 +1838,7 @@ function gerarOP(id){
     +'<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e8e8e8;font-size:10px;color:#aaa;text-align:center;">Sul Sign Group · CNPJ 03.952.317/0001-16 · sulsign01@gmail.com</div>';
 
   document.getElementById('modal-op').style.display='block';
+  document.getElementById('op-numero').textContent = c.numero_op||'—';
 }
 
 function fecharOP(){
@@ -1846,7 +1850,8 @@ function compartilharOP(){
   if(!_opAtual) return;
   var c=_opAtual;
   var venc=c.vencimento?new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR'):'—';
-  var msg='📄 *ORDEM DE PAGAMENTO — SUL SIGN GROUP*\n\n'
+  var msg='📄 *ORDEM DE PAGAMENTO — SUL SIGN GROUP*\n'
+    +(c.numero_op?'*Nº:* '+c.numero_op+'\n':'')+'\n'
     +'*Referência:* '+(c.descricao||'—')+'\n'
     +'*Favorecido:* '+(c.favorecido||'—')+'\n'
     +'*Valor:* '+fmt(parseFloat(c.valor)||0)+'\n'
