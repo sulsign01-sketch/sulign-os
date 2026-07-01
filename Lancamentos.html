@@ -247,6 +247,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="tab" id="tab-receber" onclick="setTab('receber')" style="color:#2e7d32;">📥 A Receber</div>
     <div class="tab" id="tab-caixas" onclick="setTab('caixas')" style="color:#ffcc02;">🏗️ Caixas</div>
     <div class="tab" id="tab-fluxo" onclick="setTab('fluxo')" style="color:#0d47a1;">💵 Fluxo de Caixa</div>
+    <div class="tab" id="tab-ccusto" onclick="setTab('ccusto')" style="color:#e65100;">💼 Centro de Custo</div>
     <a href="Manual.html" target="_blank" rel="noopener" class="tab" style="text-decoration:none;color:#52b788;margin-left:auto;">📖 Manual</a>
   </div>
 
@@ -825,6 +826,61 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
   </div>
 
+  <!-- CENTRO DE CUSTO -->
+  <div id="view-ccusto" class="sec" style="display:none;">
+
+    <!-- Filtro -->
+    <div id="fx-filtro-periodo" style="display:flex;gap:10px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;">
+      <div class="fl">
+        <label>Job</label>
+        <select id="cc-job-sel" style="min-width:220px;">
+          <option value="">— Todos os jobs —</option>
+        </select>
+      </div>
+      <div class="fl">
+        <label>Categoria</label>
+        <select id="cc-cat-sel">
+          <option value="">— Todas —</option>
+          <option>Material</option>
+          <option>Mão de Obra</option>
+          <option>Logística</option>
+          <option>Imposto</option>
+          <option>Serviços</option>
+          <option>Receita de Job</option>
+          <option>Comissão</option>
+          <option>Alimentação</option>
+          <option>Verba Produção</option>
+          <option>Outros</option>
+        </select>
+      </div>
+      <button class="btn" onclick="carregarCentroCusto()" style="background:#e65100;">Aplicar</button>
+    </div>
+
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e8;border-radius:4px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#fff;padding:14px 16px;">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:6px;">TOTAL CUSTOS</div>
+        <div style="font-family:monospace;font-size:18px;font-weight:700;color:#c62828;" id="cc-kpi-custos">—</div>
+      </div>
+      <div style="background:#fff;padding:14px 16px;">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:6px;">ITENS</div>
+        <div style="font-family:monospace;font-size:18px;font-weight:700;color:#333;" id="cc-kpi-itens">—</div>
+      </div>
+      <div style="background:#fff;padding:14px 16px;">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:6px;">JOBS</div>
+        <div style="font-family:monospace;font-size:18px;font-weight:700;color:#333;" id="cc-kpi-jobs">—</div>
+      </div>
+    </div>
+
+    <!-- Abas Por Job / Por Categoria -->
+    <div style="display:flex;gap:0;border-bottom:2px solid #e8e8e8;margin-bottom:16px;">
+      <button id="cc-tab-job" onclick="setCCTab('job')" style="border:none;background:none;padding:8px 18px;font-size:12px;font-weight:700;color:#e65100;border-bottom:2px solid #e65100;margin-bottom:-2px;cursor:pointer;font-family:inherit;">Por Job</button>
+      <button id="cc-tab-cat" onclick="setCCTab('cat')" style="border:none;background:none;padding:8px 18px;font-size:12px;font-weight:700;color:#aaa;border-bottom:2px solid transparent;margin-bottom:-2px;cursor:pointer;font-family:inherit;">Por Categoria</button>
+    </div>
+    <div id="cc-body-job"><div class="empty">Carregando...</div></div>
+    <div id="cc-body-cat" style="display:none;"><div class="empty">Carregando...</div></div>
+  </div>
+
   <!-- MODAL EDITAR LANÇAMENTO DO FLUXO -->
   <div id="fx-edit-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;">
     <div style="background:#fff;border-radius:8px;max-width:460px;width:92%;padding:20px;">
@@ -876,7 +932,7 @@ var jobSelecionado=null;
 function fmt(v){return (parseFloat(v)||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});}
 
 function setTab(t){
-  ['novo','lista','fixas','impostos','nf','aportes','pagar','receber','caixas','fluxo'].forEach(function(n){
+  ['novo','lista','fixas','impostos','nf','aportes','pagar','receber','caixas','fluxo','ccusto'].forEach(function(n){
     document.getElementById('tab-'+n).classList.toggle('active',t===n);
     document.getElementById('view-'+n).style.display=t===n?'block':'none';
   });
@@ -889,6 +945,7 @@ function setTab(t){
   if(t==='receber')carregarContasReceber();
   if(t==='caixas')carregarCaixas();
   if(t==='fluxo')carregarFluxo();
+  if(t==='ccusto')iniciarCentroCusto();
 }
 
 // localStorage autocomplete helpers (últimos 8)
@@ -2470,6 +2527,206 @@ async function excluirLancamentoFluxo(id){
 // ANALÍTICO POR CATEGORIA E JOB
 // ══════════════════════════════════
 var _analTabAtiva = 'cat';
+
+// ══════════════════════════════════
+// CENTRO DE CUSTO
+// ══════════════════════════════════
+var _ccTabAtiva = 'job';
+var _ccLancsCache = [];
+
+async function iniciarCentroCusto(){
+  // Popular select de jobs
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=orcamento_numero&conciliado=eq.false&orcamento_numero=neq.SEM-JOB&order=orcamento_numero.desc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+    });
+    var data = await r.json();
+    var jobs = [];
+    (Array.isArray(data)?data:[]).forEach(function(l){
+      if(l.orcamento_numero && jobs.indexOf(l.orcamento_numero)<0) jobs.push(l.orcamento_numero);
+    });
+    var sel = document.getElementById('cc-job-sel');
+    if(sel){
+      sel.innerHTML = '<option value="">— Todos os jobs —</option>'
+        + jobs.map(function(j){ return '<option value="'+j+'">'+j+'</option>'; }).join('');
+    }
+  }catch(e){ console.warn('CC jobs:', e); }
+  carregarCentroCusto();
+}
+
+async function carregarCentroCusto(){
+  var job = document.getElementById('cc-job-sel').value;
+  var cat = document.getElementById('cc-cat-sel').value;
+
+  document.getElementById('cc-body-job').innerHTML = '<div class="empty">Carregando...</div>';
+  document.getElementById('cc-body-cat').innerHTML = '<div class="empty">Carregando...</div>';
+
+  try{
+    var query = SUPA_URL+'/rest/v1/lancamentos?select=*&tipo_lancamento=eq.saida&conciliado=eq.false&orcamento_numero=neq.SEM-JOB&order=data.asc';
+    if(job) query += '&orcamento_numero=eq.'+encodeURIComponent(job);
+    if(cat) query += '&categoria=eq.'+encodeURIComponent(cat);
+
+    var r = await fetch(query,{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+    });
+    _ccLancsCache = await r.json();
+    if(!Array.isArray(_ccLancsCache)) _ccLancsCache = [];
+    renderCentroCusto();
+  }catch(e){
+    document.getElementById('cc-body-job').innerHTML = '<div class="empty">Erro: '+e.message+'</div>';
+  }
+}
+
+function renderCentroCusto(){
+  var lancs = _ccLancsCache;
+  var totalCusto = lancs.reduce(function(a,l){ return a+(parseFloat(l.valor)||0); }, 0);
+  var jobs = [];
+  lancs.forEach(function(l){ if(jobs.indexOf(l.orcamento_numero)<0) jobs.push(l.orcamento_numero); });
+
+  document.getElementById('cc-kpi-custos').textContent = fmt(totalCusto);
+  document.getElementById('cc-kpi-itens').textContent = lancs.length;
+  document.getElementById('cc-kpi-jobs').textContent = jobs.length;
+
+  // ── POR JOB ────────────────────────────────────────────────
+  var porJob = {};
+  lancs.forEach(function(l){
+    var j = l.orcamento_numero||'Sem Job';
+    if(!porJob[j]) porJob[j] = {total:0, porCat:{}, itens:[]};
+    var v = parseFloat(l.valor)||0;
+    porJob[j].total += v;
+    porJob[j].itens.push(l);
+    var c = l.categoria||'Outros';
+    porJob[j].porCat[c] = (porJob[j].porCat[c]||0) + v;
+  });
+  var jobKeys = Object.keys(porJob).sort(function(a,b){ return porJob[b].total-porJob[a].total; });
+
+  var htmlJob = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    +'<thead><tr style="border-bottom:2px solid #e8e8e8;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Job</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Total</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Itens</th>'
+    +'<th style="padding:8px 10px;width:20px;"></th>'
+    +'</tr></thead><tbody>';
+
+  jobKeys.forEach(function(job){
+    var d = porJob[job];
+    var jid = 'cc-job-'+job.replace(/[^a-z0-9]/gi,'_');
+    htmlJob += '<tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="toggleCCDet(\''+jid+'\')">'
+      +'<td style="padding:10px 10px;font-weight:700;color:#333;">'
+        +'<span id="arr-'+jid+'" style="font-size:10px;color:#aaa;margin-right:6px;">▸</span>'+job+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:monospace;font-weight:700;color:#c62828;">'+fmt(d.total)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;color:#aaa;">'+d.itens.length+'</td>'
+      +'<td></td></tr>'
+      // Sub-resumo por categoria
+      +'<tr id="'+jid+'" style="display:none;"><td colspan="4" style="padding:0;background:#fafafa;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+
+    // Resumo por categoria dentro do job
+    Object.keys(d.porCat).sort(function(a,b){ return d.porCat[b]-d.porCat[a]; }).forEach(function(cat){
+      htmlJob += '<tr style="border-bottom:1px solid #f0f0f0;">'
+        +'<td style="padding:5px 10px 5px 28px;color:#555;font-weight:600;" colspan="2">'+cat+'</td>'
+        +'<td style="padding:5px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(d.porCat[cat])+'</td>'
+        +'<td></td></tr>';
+    });
+
+    // Linhas individuais
+    d.itens.forEach(function(it){
+      var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      htmlJob += '<tr style="border-bottom:1px solid #f5f5f5;background:#fff;">'
+        +'<td style="padding:4px 10px 4px 28px;color:#999;font-family:monospace;font-size:10px;">'+dt+'</td>'
+        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span></td>'
+        +'<td style="padding:4px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(parseFloat(it.valor)||0)+'</td>'
+        +'<td style="padding:4px 8px;text-align:center;">'
+          +'<span onclick="excluirCCLanc('+it.id+',\''+job+'\')" style="cursor:pointer;color:#ddd;font-size:12px;" title="Excluir">✕</span>'
+        +'</td></tr>';
+    });
+
+    htmlJob += '</table></td></tr>';
+  });
+
+  if(!jobKeys.length) htmlJob += '<tr><td colspan="4" style="padding:20px;text-align:center;color:#aaa;">Nenhum custo lançado para os filtros selecionados.</td></tr>';
+  htmlJob += '</tbody></table>';
+  document.getElementById('cc-body-job').innerHTML = htmlJob;
+
+  // ── POR CATEGORIA ───────────────────────────────────────────
+  var porCat = {};
+  lancs.forEach(function(l){
+    var c = l.categoria||'Outros';
+    if(!porCat[c]) porCat[c] = {total:0, itens:[]};
+    var v = parseFloat(l.valor)||0;
+    porCat[c].total += v;
+    porCat[c].itens.push(l);
+  });
+  var catKeys = Object.keys(porCat).sort(function(a,b){ return porCat[b].total-porCat[a].total; });
+
+  var htmlCat = '<table style="width:100%;border-collapse:collapse;font-size:13px;">'
+    +'<thead><tr style="border-bottom:2px solid #e8e8e8;">'
+    +'<th style="padding:8px 10px;text-align:left;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Categoria</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">Total</th>'
+    +'<th style="padding:8px 10px;text-align:right;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#aaa;font-weight:600;">%</th>'
+    +'<th style="padding:8px 10px;width:20px;"></th>'
+    +'</tr></thead><tbody>';
+
+  catKeys.forEach(function(cat){
+    var d = porCat[cat];
+    var pct = totalCusto>0 ? (d.total/totalCusto*100).toFixed(1) : '0.0';
+    var cid = 'cc-cat-'+cat.replace(/[^a-z0-9]/gi,'_');
+    htmlCat += '<tr style="border-bottom:1px solid #f0f0f0;cursor:pointer;" onclick="toggleCCDet(\''+cid+'\')">'
+      +'<td style="padding:10px 10px;font-weight:700;color:#333;">'
+        +'<span id="arr-'+cid+'" style="font-size:10px;color:#aaa;margin-right:6px;">▸</span>'+cat+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;font-family:monospace;font-weight:700;color:#c62828;">'+fmt(d.total)+'</td>'
+      +'<td style="padding:10px 10px;text-align:right;color:#aaa;font-size:12px;">'+pct+'%</td>'
+      +'<td></td></tr>'
+      +'<tr id="'+cid+'" style="display:none;"><td colspan="4" style="padding:0;background:#fafafa;">'
+        +'<table style="width:100%;border-collapse:collapse;font-size:11px;">';
+    d.itens.forEach(function(it){
+      var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      htmlCat += '<tr style="border-bottom:1px solid #f5f5f5;">'
+        +'<td style="padding:5px 10px 5px 28px;color:#999;font-family:monospace;font-size:10px;">'+dt+'</td>'
+        +'<td style="padding:5px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.orcamento_numero||'—')+']</span></td>'
+        +'<td style="padding:5px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(parseFloat(it.valor)||0)+'</td>'
+        +'<td></td></tr>';
+    });
+    htmlCat += '</table></td></tr>';
+  });
+
+  if(!catKeys.length) htmlCat += '<tr><td colspan="4" style="padding:20px;text-align:center;color:#aaa;">Nenhum custo lançado para os filtros selecionados.</td></tr>';
+  htmlCat += '</tbody></table>';
+  document.getElementById('cc-body-cat').innerHTML = htmlCat;
+}
+
+function setCCTab(tab){
+  _ccTabAtiva = tab;
+  document.getElementById('cc-body-job').style.display = tab==='job'?'':'none';
+  document.getElementById('cc-body-cat').style.display = tab==='cat'?'':'none';
+  var tJob = document.getElementById('cc-tab-job');
+  var tCat = document.getElementById('cc-tab-cat');
+  tJob.style.color = tab==='job'?'#e65100':'#aaa';
+  tJob.style.borderBottomColor = tab==='job'?'#e65100':'transparent';
+  tCat.style.color = tab==='cat'?'#e65100':'#aaa';
+  tCat.style.borderBottomColor = tab==='cat'?'#e65100':'transparent';
+}
+
+function toggleCCDet(id){
+  var row = document.getElementById(id);
+  var arr = document.getElementById('arr-'+id);
+  if(!row) return;
+  var aberto = row.style.display !== 'none';
+  row.style.display = aberto ? 'none' : 'table-row';
+  if(arr) arr.textContent = aberto ? '▸' : '▾';
+}
+
+async function excluirCCLanc(id, job){
+  if(!confirm('Excluir este item de custo permanentemente?')) return;
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{
+      method:'DELETE',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Prefer':'return=minimal'}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    await carregarCentroCusto();
+  }catch(e){ alert('Erro ao excluir: '+e.message); }
+}
 
 function setAnalTab(tab){
   _analTabAtiva = tab;
