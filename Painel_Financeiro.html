@@ -876,10 +876,43 @@ function renderPrevisaoCaixa(orcamentos, todasFixas) {
 // ══════════════════════════════════════════════
 // ALERTAS AUTOMÁTICOS
 // ══════════════════════════════════════════════
-function renderAlertas(orcamentos, todasFixas) {
+function renderAlertas(orcamentos, todasFixas, contasPagar, nfsEmitidas) {
   var wrap = document.getElementById('alertas-wrap');
   var alertas = [];
   var hoje = new Date(); hoje.setHours(0,0,0,0);
+  var em7dias = new Date(hoje); em7dias.setDate(em7dias.getDate()+7);
+
+  // 5. NFs a receber vencendo em 7 dias (saldo não recebido)
+  (nfsEmitidas||[]).forEach(function(o){
+    if(o.saldo_recebido) return; // já recebeu
+    if(!o.data_nf) return;
+    // vencimento = data_nf + 30 dias (padrão) — só alerta se não recebeu
+    var dataNF = new Date(o.data_nf+'T12:00:00');
+    var diff = Math.floor((dataNF - hoje)/(1000*60*60*24));
+    if(diff <= 7){
+      alertas.push({
+        tipo: diff < 0 ? 'red' : 'ylw',
+        icon: '🧾',
+        titulo: 'NF a receber — '+(o.nf_numero?'NF-'+o.nf_numero+' · ':'')+( o.cliente||o.numero||'—'),
+        sub: (diff < 0 ? Math.abs(diff)+' dia(s) em atraso' : diff===0?'Vence hoje':'Vence em '+diff+' dia(s)')+' · '+fmt(parseFloat(o.valor_nf)||0)
+      });
+    }
+  });
+
+  // 6. Contas a pagar vencendo em 7 dias
+  (contasPagar||[]).forEach(function(c){
+    if(!c.vencimento) return;
+    var dv = new Date(c.vencimento+'T12:00:00');
+    var diff = Math.floor((dv - hoje)/(1000*60*60*24));
+    if(diff <= 7){
+      alertas.push({
+        tipo: diff < 0 ? 'red' : 'ylw',
+        icon: '💸',
+        titulo: 'Conta a pagar — '+(c.numero_op?c.numero_op+' · ':'')+( c.descricao||'—'),
+        sub: (diff < 0 ? Math.abs(diff)+' dia(s) em atraso' : diff===0?'Vence hoje':'Vence em '+diff+' dia(s)')+' · '+fmt(parseFloat(c.valor)||0)+(c.favorecido?' · '+c.favorecido:'')
+      });
+    }
+  });
 
   // 1. Propostas enviadas há mais de 7 dias sem retorno
   orcamentos.forEach(function(o) {
@@ -1125,11 +1158,13 @@ async function carregar(){
   var wrap=document.getElementById('tbl-wrap');
   if(!wrap){console.warn('tbl-wrap não encontrado');return;}
   try{
-    var [rOrc, rOs, rLanc, rFixas] = await Promise.all([
+    var [rOrc, rOs, rLanc, rFixas, rPagar, rNFs] = await Promise.all([
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,valor_nf,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
       fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
       fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
-      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=created_at.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}})
+      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=created_at.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&status=eq.Pendente&order=vencimento.asc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,valor_nf,data_nf,nf_numero,sinal_recebido,saldo_recebido&data_nf=not.is.null&order=data_nf.asc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}})
     ]);
     if(!rOrc.ok)throw new Error('Erro orçamentos: HTTP '+rOrc.status);
     if(!rOs.ok)throw new Error('Erro OS: HTTP '+rOs.status);
@@ -1139,6 +1174,8 @@ async function carregar(){
     var todasOs=await rOs.json();
     var todosLanc=await rLanc.json();
     var todasFixas=await rFixas.json();
+    var contasPagar=rPagar.ok?(await rPagar.json()):[];
+    var nfsEmitidas=rNFs.ok?(await rNFs.json()):[];
 
     renderRepasse(montarRepasse(todasOs, todosLanc));
     renderFixas(todasFixas);
@@ -1211,7 +1248,7 @@ async function carregar(){
       if(!existingClients.includes(c)){var o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);}
     });
     renderTabela();
-    renderAlertas(orcamentos, todasFixas);
+    renderAlertas(orcamentos, todasFixas, contasPagar, nfsEmitidas);
     renderMetricas(orcamentos);
     renderCicloComercial(orcamentos);
     renderDRE(orcamentos,todasOs,todosLanc,todasFixas);
