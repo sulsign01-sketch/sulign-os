@@ -731,6 +731,24 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
             <option value="SEM-JOB">— Sem Job —</option>
           </select>
         </div>
+        <div style="border-top:1px solid #e8e8e8;padding-top:14px;">
+          <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#e65100;margin-bottom:12px;">Comprovante</div>
+          <div class="fl">
+            <label>Link do Google Drive</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input type="url" id="cce-comp-url" placeholder="https://drive.google.com/..." style="flex:1;">
+              <a id="cce-comp-link" href="#" target="_blank" style="display:none;font-size:11px;color:#1565c0;white-space:nowrap;">📎 Abrir</a>
+            </div>
+          </div>
+          <div class="fl">
+            <label>Ou enviar imagem (foto do comprovante)</label>
+            <input type="file" id="cce-comp-img" accept="image/*" capture="environment" style="font-size:12px;">
+            <div id="cce-comp-preview" style="margin-top:8px;display:none;">
+              <img id="cce-comp-img-preview" style="max-width:100%;max-height:200px;border-radius:4px;border:1px solid #e8e8e8;">
+              <button onclick="limparImagemCC()" style="display:block;margin-top:4px;font-size:10px;color:#c62828;background:none;border:none;cursor:pointer;">✕ Remover imagem</button>
+            </div>
+          </div>
+        </div>
       </div>
       <div style="padding:0 20px 20px;display:flex;gap:10px;">
         <button onclick="fecharEdicaoCC()" style="flex:1;padding:12px;background:#f5f5f5;border:none;border-radius:6px;color:#555;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
@@ -2914,7 +2932,13 @@ function renderCentroCusto(){
       var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
       htmlJob += '<tr style="border-bottom:1px solid #f5f5f5;background:#fff;">'
         +'<td style="padding:4px 10px 4px 28px;color:#999;font-family:monospace;font-size:10px;">'+dt+'</td>'
-        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span></td>'
+        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span>'
+          +(it.comprovante
+            ? (it.comprovante.startsWith('http')
+                ? '<a href="'+it.comprovante+'" target="_blank" style="margin-left:6px;color:#1565c0;text-decoration:none;" title="Ver comprovante">📎</a>'
+                : '<span onclick="verImagemCC(\''+it.id+'\')" style="margin-left:6px;cursor:pointer;" title="Ver comprovante">🖼</span>')
+            : '')
+          +'</td>'
         +'<td style="padding:4px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(parseFloat(it.valor)||0)+'</td>'
         +'<td style="padding:4px 8px;text-align:center;white-space:nowrap;">'
           +'<span onclick="abrirEdicaoCC('+it.id+')" style="cursor:pointer;color:#1565c0;font-size:13px;margin-right:6px;" title="Editar">✎</span>'
@@ -2993,6 +3017,46 @@ function abrirEdicaoCC(id){
     +(orcamentosCache||[]).map(function(o){
       return '<option value="'+o.numero+'"'+(it.orcamento_numero===o.numero?' selected':'')+'>'+o.numero+' — '+(o.cliente||'')+'</option>';
     }).join('');
+
+  // Comprovante
+  var urlInp = document.getElementById('cce-comp-url');
+  var urlLink = document.getElementById('cce-comp-link');
+  var imgPrev = document.getElementById('cce-comp-preview');
+  var imgEl = document.getElementById('cce-comp-img-preview');
+  urlInp.value = '';
+  imgPrev.style.display = 'none';
+  document.getElementById('cce-comp-img').value = '';
+
+  if(it.comprovante){
+    if(it.comprovante.startsWith('http')){
+      urlInp.value = it.comprovante;
+      urlLink.href = it.comprovante;
+      urlLink.style.display = 'inline';
+    } else if(it.comprovante.startsWith('data:image')){
+      imgEl.src = it.comprovante;
+      imgPrev.style.display = 'block';
+    }
+  }
+
+  // Listener preview de imagem
+  document.getElementById('cce-comp-img').onchange = function(){
+    var file = this.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(e){
+      imgEl.src = e.target.result;
+      imgPrev.style.display = 'block';
+      urlInp.value = ''; // limpa URL se subiu imagem
+      urlLink.style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Listener URL
+  urlInp.oninput = function(){
+    if(this.value){ urlLink.href=this.value; urlLink.style.display='inline'; } else { urlLink.style.display='none'; }
+  };
+
   document.getElementById('cce-status').textContent='—';
   document.getElementById('modal-cc-edit').style.display='block';
 }
@@ -3002,16 +3066,44 @@ function fecharEdicaoCC(){
   _ccEditId=null;
 }
 
+function verImagemCC(id){
+  var it = (_ccLancsCache||[]).find(function(l){ return String(l.id)===String(id); });
+  if(!it||!it.comprovante) return;
+  var win = window.open('','_blank');
+  win.document.write('<html><body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;">'
+    +'<img src="'+it.comprovante+'" style="max-width:100%;max-height:100vh;">'
+    +'</body></html>');
+  win.document.close();
+}
+
+function limparImagemCC(){
+  document.getElementById('cce-comp-img').value='';
+  document.getElementById('cce-comp-img-preview').src='';
+  document.getElementById('cce-comp-preview').style.display='none';
+}
+
 async function salvarEdicaoCC(){
   if(!_ccEditId) return;
   var st = document.getElementById('cce-status');
+
+  // Comprovante: prioridade imagem > URL
+  var comprovante = null;
+  var imgEl = document.getElementById('cce-comp-img-preview');
+  var urlVal = document.getElementById('cce-comp-url').value.trim();
+  if(imgEl.src && imgEl.src.startsWith('data:image')){
+    comprovante = imgEl.src; // base64
+  } else if(urlVal){
+    comprovante = urlVal;
+  }
+
   var body = {
     descricao: document.getElementById('cce-desc').value.trim(),
     valor: parseFloat(document.getElementById('cce-valor').value)||0,
     data: document.getElementById('cce-data').value,
     categoria: document.getElementById('cce-cat').value,
     fornecedor: document.getElementById('cce-forn').value.trim(),
-    orcamento_numero: document.getElementById('cce-job').value||'SEM-JOB'
+    orcamento_numero: document.getElementById('cce-job').value||'SEM-JOB',
+    comprovante: comprovante
   };
   st.textContent='Salvando...'; st.style.color='#888';
   try{
