@@ -701,6 +701,45 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     </div>
   </div>
 
+  <!-- MODAL EDITAR ITEM CENTRO DE CUSTO -->
+  <div id="modal-cc-edit" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1001;padding:20px;overflow-y:auto;">
+    <div style="background:#fff;max-width:440px;margin:0 auto;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div style="background:#e65100;padding:14px 20px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="color:#fff;font-size:14px;font-weight:700;">✎ Editar Custo</div>
+        <button onclick="fecharEdicaoCC()" style="background:transparent;border:none;color:#fff;font-size:20px;cursor:pointer;">✕</button>
+      </div>
+      <div style="padding:20px;display:grid;gap:14px;">
+        <div class="fl"><label>Descrição</label><input type="text" id="cce-desc" placeholder="Ex: Visita técnica"></div>
+        <div class="row2">
+          <div class="fl"><label>Valor (R$)</label><input type="number" id="cce-valor" step="0.01" placeholder="0,00"></div>
+          <div class="fl"><label>Data</label><input type="date" id="cce-data"></div>
+        </div>
+        <div class="row2">
+          <div class="fl">
+            <label>Categoria</label>
+            <select id="cce-cat">
+              <option>Material</option><option>Mão de Obra</option><option>Logística</option>
+              <option>Imposto</option><option>Serviços</option><option>Comissão</option>
+              <option>Alimentação</option><option>Verba Produção</option><option>Outros</option>
+            </select>
+          </div>
+          <div class="fl"><label>Fornecedor</label><input type="text" id="cce-forn" placeholder="Ex: PDVEX"></div>
+        </div>
+        <div class="fl">
+          <label>Job vinculado</label>
+          <select id="cce-job">
+            <option value="SEM-JOB">— Sem Job —</option>
+          </select>
+        </div>
+      </div>
+      <div style="padding:0 20px 20px;display:flex;gap:10px;">
+        <button onclick="fecharEdicaoCC()" style="flex:1;padding:12px;background:#f5f5f5;border:none;border-radius:6px;color:#555;font-size:13px;font-weight:700;cursor:pointer;">Cancelar</button>
+        <button onclick="salvarEdicaoCC()" style="flex:2;padding:12px;background:#e65100;border:none;border-radius:6px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;">Salvar</button>
+      </div>
+      <div id="cce-status" style="text-align:center;font-size:12px;padding-bottom:14px;min-height:16px;color:#888;">—</div>
+    </div>
+  </div>
+
   <!-- MODAL CONFIRMAR PAGAMENTO -->
   <div id="modal-pag-confirmar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;display:none;align-items:center;justify-content:center;padding:20px;">
     <div style="background:#fff;max-width:420px;width:100%;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.3);">
@@ -2877,7 +2916,8 @@ function renderCentroCusto(){
         +'<td style="padding:4px 10px 4px 28px;color:#999;font-family:monospace;font-size:10px;">'+dt+'</td>'
         +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span></td>'
         +'<td style="padding:4px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(parseFloat(it.valor)||0)+'</td>'
-        +'<td style="padding:4px 8px;text-align:center;">'
+        +'<td style="padding:4px 8px;text-align:center;white-space:nowrap;">'
+          +'<span onclick="abrirEdicaoCC('+it.id+')" style="cursor:pointer;color:#1565c0;font-size:13px;margin-right:6px;" title="Editar">✎</span>'
           +'<span onclick="excluirCCLanc('+it.id+',\''+job+'\')" style="cursor:pointer;color:#ddd;font-size:12px;" title="Excluir">✕</span>'
         +'</td></tr>';
     });
@@ -2934,6 +2974,58 @@ function renderCentroCusto(){
   if(!catKeys.length) htmlCat += '<tr><td colspan="4" style="padding:20px;text-align:center;color:#aaa;">Nenhum custo lançado para os filtros selecionados.</td></tr>';
   htmlCat += '</tbody></table>';
   document.getElementById('cc-body-cat').innerHTML = htmlCat;
+}
+
+var _ccEditId = null;
+
+function abrirEdicaoCC(id){
+  var it = (_ccLancsCache||[]).find(function(l){ return String(l.id)===String(id); });
+  if(!it){ alert('Item não encontrado.'); return; }
+  _ccEditId = id;
+  document.getElementById('cce-desc').value = it.descricao||'';
+  document.getElementById('cce-valor').value = it.valor||0;
+  document.getElementById('cce-data').value = it.data||'';
+  document.getElementById('cce-forn').value = it.fornecedor||'';
+  var catSel = document.getElementById('cce-cat');
+  if(it.categoria) catSel.value = it.categoria;
+  var jobSel = document.getElementById('cce-job');
+  jobSel.innerHTML = '<option value="SEM-JOB">— Sem Job —</option>'
+    +(orcamentosCache||[]).map(function(o){
+      return '<option value="'+o.numero+'"'+(it.orcamento_numero===o.numero?' selected':'')+'>'+o.numero+' — '+(o.cliente||'')+'</option>';
+    }).join('');
+  document.getElementById('cce-status').textContent='—';
+  document.getElementById('modal-cc-edit').style.display='block';
+}
+
+function fecharEdicaoCC(){
+  document.getElementById('modal-cc-edit').style.display='none';
+  _ccEditId=null;
+}
+
+async function salvarEdicaoCC(){
+  if(!_ccEditId) return;
+  var st = document.getElementById('cce-status');
+  var body = {
+    descricao: document.getElementById('cce-desc').value.trim(),
+    valor: parseFloat(document.getElementById('cce-valor').value)||0,
+    data: document.getElementById('cce-data').value,
+    categoria: document.getElementById('cce-cat').value,
+    fornecedor: document.getElementById('cce-forn').value.trim(),
+    orcamento_numero: document.getElementById('cce-job').value||'SEM-JOB'
+  };
+  st.textContent='Salvando...'; st.style.color='#888';
+  try{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+_ccEditId,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify(body)
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    st.textContent='✓ Salvo!'; st.style.color='#2e7d32';
+    setTimeout(function(){ fecharEdicaoCC(); carregarCentroCusto(); },600);
+  }catch(e){
+    st.textContent='Erro: '+e.message; st.style.color='#c62828';
+  }
 }
 
 function setCCTab(tab){
