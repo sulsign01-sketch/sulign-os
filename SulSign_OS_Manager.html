@@ -623,7 +623,9 @@ async function consolidarApontamento(id, jobNumero, discNome){
         tem_nota:l.tem_nota!==false,
         comprovante:l.comprovante||null,
         periodicidade:'unica',
-        tipo_lancamento:'saida'
+        tipo_lancamento:'saida',
+        origem:'consolidacao',        // rastreabilidade: veio de apontamento de produção
+        apontamento_id:id             // vínculo com o apontamento de origem (dedup)
       };
     });
     var ri = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/lancamentos',{
@@ -748,7 +750,8 @@ async function sbPatch(tbl,id,d){
   return r.json();
 }
 async function sbDel(tbl,id){
-  var r=await fetch(SU+'/rest/v1/'+tbl+'?id=eq.'+id,{method:'DELETE',headers:H});
+  // SOFT DELETE: marca deletado_em em vez de apagar (trilha de auditoria)
+  var r=await fetch(SU+'/rest/v1/'+tbl+'?id=eq.'+id,{method:'PATCH',headers:Object.assign({},H,{'Prefer':'return=minimal'}),body:JSON.stringify({deletado_em:new Date().toISOString()})});
   if(!r.ok)throw new Error(await r.text());
 }
 
