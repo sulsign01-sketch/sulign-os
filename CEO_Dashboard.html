@@ -345,24 +345,8 @@ function esc(s){
 }
 
 function calcOrcamento(orc){
-  var bdi=orc.bdi||{};
-  var ac=(parseFloat(bdi.ac)||0)/100, df=(parseFloat(bdi.df)||0)/100, ri=(parseFloat(bdi.ri)||0)/100;
-  var l=(parseFloat(bdi.lc)||0)/100, im=(parseFloat(bdi.im)||0)/100, ir=(parseFloat(bdi.ir)||0)/100;
-  var dp=(parseFloat(bdi['desc-pct'])||0)/100;
-  var fator=(1+ac+df+ri)/(1-l-im);
-  var custoTotal=0, vendaBruta=0;
-  (orc.grupos||[]).forEach(function(g){
-    (g.linhas||[]).forEach(function(ln){
-      var q=parseFloat(ln.qtd)||0, u=parseFloat(ln.unit)||0;
-      var custo=q*u;
-      var venda=custo*fator;
-      var imp=venda*ir;
-      custoTotal+=custo;
-      vendaBruta+=venda+imp;
-    });
-  });
-  var vendaTotal=vendaBruta*(1-dp); // aplica Desconto (%) do BDI, igual ao ORC_Manager (gl = gT - gT*dp)
-  return {custo:custoTotal, venda:vendaTotal};
+  // FONTE UNICA: sulsign_core.js - corrige grupos opcionais (excluidos) e op-pct (Operacional %)
+  return SulSignCore.calcOrcamento(orc);
 }
 
 // ══════════════════════════════════
@@ -375,10 +359,10 @@ async function carregar(){
     var hdrs={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY};
     var [rOrc,rOs,rLanc,rFixas,rPagar,rNFs]=await Promise.all([
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,agencia,projeto,bdi,grupos,status,valor_nf,sinal_recebido,updated_at&order=updated_at.desc',{headers:hdrs}),
-      fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina,created_at',{headers:hdrs}),
-      fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,categoria,data,orcamento_numero',{headers:hdrs}),
-      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=valor,categoria,tipo,status,data',{headers:hdrs}),
-      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=numero_op,descricao,valor,vencimento,favorecido&status=eq.Pendente&order=vencimento.asc',{headers:hdrs}),
+      fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina,created_at&deletado_em=is.null',{headers:hdrs}),
+      fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,categoria,data,orcamento_numero&deletado_em=is.null',{headers:hdrs}),
+      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=valor,categoria,tipo,status,data&deletado_em=is.null',{headers:hdrs}),
+      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=numero_op,descricao,valor,vencimento,favorecido&status=eq.Pendente&order=vencimento.asc&deletado_em=is.null',{headers:hdrs}),
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,valor_nf,data_nf,nf_numero,saldo_recebido&data_nf=not.is.null&order=data_nf.asc',{headers:hdrs})
     ]);
     var orcs=await rOrc.json();
@@ -405,7 +389,7 @@ function calcReceitaReal(orc){
   return calcOrcamento(orc).venda;
 }
 function renderDash(orcs,todasOs,todosLanc,todasFixas,contasPagar,nfsEmitidas){
-  var STATUS_EXEC=['Entregue','Faturado','Em Produção','Orçamento Aprovado'];
+  var STATUS_EXEC=['Entregue','Faturado','Em Produção','Aprovado'];
   var STATUS_FAT=['Entregue','Faturado'];
   var STATUS_PIPE=['Cotação','Em Orçamento','Proposta Enviada'];
 
@@ -589,7 +573,7 @@ function renderAlertasInv(orcs,todosLanc,todasFixas,ebitda,margemPct,contasPagar
   // Jobs aprovados sem sinal recebido
   orcs.forEach(function(o){
     var s=o.status||'';
-    if(['Orçamento Aprovado','Em Produção'].indexOf(s)>=0 && !o.sinal_recebido){
+    if(['Aprovado','Em Produção'].indexOf(s)>=0 && !o.sinal_recebido){
       alertas.push({tipo:'warn',icon:'💰',
         titulo:'Sinal pendente — '+esc(o.numero||'')+(o.cliente?' · '+esc(o.cliente):''),
         sub:'Job em produção sem confirmação de recebimento do sinal de entrada'});
@@ -598,7 +582,7 @@ function renderAlertasInv(orcs,todosLanc,todasFixas,ebitda,margemPct,contasPagar
 
   // Jobs em produção sem custo lançado
   var semCusto=orcs.filter(function(o){
-    if(['Em Produção','Orçamento Aprovado'].indexOf(o.status||'')<0)return false;
+    if(['Em Produção','Aprovado'].indexOf(o.status||'')<0)return false;
     var lancJob=todosLanc.filter(function(l){return l.orcamento_numero===o.numero;});
     return lancJob.length===0;
   });
@@ -673,7 +657,7 @@ function renderPipelineInv(orcs){
   var etapas=[
     {lbl:'Cotação / Rascunho',statuses:['Cotação','Em Orçamento'],cor:'#1565c0'},
     {lbl:'Proposta Enviada',  statuses:['Proposta Enviada'],       cor:'#f9a825'},
-    {lbl:'Aprovado / Produção',statuses:['Orçamento Aprovado','Em Produção'],cor:'var(--ga)'},
+    {lbl:'Aprovado / Produção',statuses:['Aprovado','Em Produção'],cor:'var(--ga)'},
     {lbl:'Entregue / Faturado',statuses:['Entregue','Faturado'],  cor:'#2d6a4f'},
     {lbl:'Recusado / Vencido',statuses:['Orçamento Recusado','Orçamento Vencido','Cancelado'],cor:'var(--red)'},
   ];
@@ -738,25 +722,25 @@ async function carregarFluxoInv(){
     var ultDia=new Date(parseInt(partesFim[0]),parseInt(partesFim[1]),0).getDate();
     var dataFim=ate+'-'+String(ultDia).padStart(2,'0');
 
-    var r1=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
+    var r1=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.&deletado_em=is.null'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var lancs=await r1.json();
     lancs=Array.isArray(lancs)?lancs:[];
 
-    var r2=await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
+    var r2=await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.&deletado_em=is.null'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var aportes=await r2.json();
     aportes=Array.isArray(aportes)?aportes:[];
 
-    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&conciliado=eq.true',{
+    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.&deletado_em=is.null'+dataIni+'&conciliado=eq.true',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var lancsAntes=await r3.json();
     lancsAntes=Array.isArray(lancsAntes)?lancsAntes:[];
 
-    var r4=await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.'+dataIni,{
+    var r4=await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.&deletado_em=is.null'+dataIni,{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var aportesAntes=await r4.json();
