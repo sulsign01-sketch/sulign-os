@@ -660,14 +660,14 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
       <div class="hd-info-item"><span class="hd-info-label">Status</span>
         <select id="orc-status" style="background:transparent;border:none;border-bottom:1px solid #2a2a2a;color:var(--white);font-size:12px;padding:2px 4px;cursor:pointer;font-family:&#39;DM Sans&#39;,sans-serif;">
           <option value="Em Orçamento">Em Orçamento</option>
-          <option value="Cotação">Cotação</option>
           <option value="Proposta Enviada">Proposta Enviada</option>
-          <option value="Orçamento Aprovado">Orçamento Aprovado</option>
-          <option value="Orçamento Recusado">Orçamento Recusado</option>
-          <option value="Orçamento Vencido">Orçamento Vencido</option>
+          <option value="Aprovado">Aprovado</option>
           <option value="Em Produção">Em Produção</option>
           <option value="Entregue">Entregue</option>
           <option value="Faturado">Faturado</option>
+          <option value="Pago">Pago</option>
+          <option value="Orçamento Recusado">Orçamento Recusado</option>
+          <option value="Orçamento Vencido">Orçamento Vencido</option>
           <option value="Cancelado">Cancelado</option>
         </select>
       </div>
@@ -1907,7 +1907,7 @@ async function confirmarGerarOS(){
   // Pré-contar sequenciais existentes
   var contadores={ROUTER:0,LASER:0,MARC:0,SERR:0,IMPRE:0,PLOTAGEM:0};
   try{
-    var exist=await fetch(SUPA_URL+'/rest/v1/ordens_servico?orcamento_numero=eq.'+encodeURIComponent(orcNum)+'&select=numero',{
+    var exist=await fetch(SUPA_URL+'/rest/v1/ordens_servico?orcamento_numero=eq.'+encodeURIComponent(orcNum)+'&select=numero&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var existData=await exist.json();
@@ -2124,7 +2124,7 @@ async function confirmarGerarOSSetorial(){
   // Pré-contar OS existentes para sequencial
   var contadores={};
   try{
-    var exist=await fetch(SUPA_URL+'/rest/v1/ordens_servico?orcamento_numero=eq.'+encodeURIComponent(orcNum)+'&select=num',{
+    var exist=await fetch(SUPA_URL+'/rest/v1/ordens_servico?orcamento_numero=eq.'+encodeURIComponent(orcNum)+'&select=num&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var existData=await exist.json();
@@ -2361,7 +2361,7 @@ function fatRestaurar(orc){
 function verificarSinalParaOS(){
   var chk = document.getElementById('fat-sinal-chk');
   var st = (document.getElementById('orc-status')||{}).value||'';
-  if(['Orçamento Aprovado','Em Produção'].indexOf(st) >= 0 && chk && !chk.checked){
+  if(['Aprovado','Em Produção'].indexOf(st) >= 0 && chk && !chk.checked){
     return confirm('⚠ Sinal ainda não confirmado neste orçamento.\n\nIniciar produção sem sinal recebido pode comprometer o caixa.\n\nDeseja continuar mesmo assim?');
   }
   return true;
@@ -3852,7 +3852,7 @@ function voltarLista(){
   showListView();
 }
 
-var ARQUIVO_STATUS=['Orçamento Aprovado','Orçamento Recusado','Orçamento Vencido','Entregue','Cancelado'];
+var ARQUIVO_STATUS=['Aprovado','Orçamento Recusado','Orçamento Vencido','Entregue','Pago','Cancelado'];
 var FATURADO_STATUS=['Faturado'];
 function setLvTab(tab){
   _lvTabAtual=tab;
@@ -3880,7 +3880,7 @@ async function carregarListaOrcamentos(){
 }
 function checkVencido(orc){
   // Status definitivos: manter exatamente como estão
-  var finais=['Orçamento Aprovado','Orçamento Recusado','Em Produção','Entregue','Faturado','Cancelado','Orçamento Vencido','Proposta Enviada'];
+  var finais=['Aprovado','Orçamento Recusado','Em Produção','Entregue','Faturado','Pago','Cancelado','Orçamento Vencido','Proposta Enviada'];
   if(finais.indexOf(orc.status)>=0) return orc.status;
   // Só auto-vence rascunhos (sem status, Em Orçamento ou Cotação)
   var rascunhos=[null,undefined,'','Em Orçamento','Cotação'];
@@ -3932,7 +3932,7 @@ function renderListaOrcamentos(data){
     });
   }
 
-  var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Orçamento Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Faturado':'background:#1b5e20;color:#fff','Cancelado':'background:#ffebee;color:#c62828'};
+  var stStyles={'Em Orçamento':'background:#e3f2fd;color:#1565c0','Cotação':'background:#e3f2fd;color:#1565c0','Proposta Enviada':'background:#fff8e1;color:#8a6d00','Aprovado':'background:#e8f5e9;color:#2d6a4f','Orçamento Recusado':'background:#ffebee;color:#c62828','Orçamento Vencido':'background:#f3e5f5;color:#6a1b9a','Em Produção':'background:#f3e5f5;color:#7b1fa2','Entregue':'background:#e0e0e0;color:#424242','Faturado':'background:#1b5e20;color:#fff','Pago':'background:#0d3b0d;color:#7CFC00','Cancelado':'background:#ffebee;color:#c62828'};
 
   var body=document.getElementById('lv-body');
   if(!filtrados.length){
@@ -4296,7 +4296,7 @@ async function carregarAnaliseMargem(){
   statusEl.style.color='var(--g400)';
   cont.innerHTML='<div style="text-align:center;padding:20px;color:var(--g400);">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&order=data.asc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&deletado_em=is.null&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -4487,7 +4487,7 @@ async function carregarListaCustosReais(numero){
   var lista=document.getElementById('cr-lista');
   lista.innerHTML='<div style="font-size:11px;color:var(--g400);">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&order=data.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?orcamento_numero=eq.'+encodeURIComponent(numero)+'&select=*&deletado_em=is.null&order=data.desc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data=await r.json();
