@@ -483,24 +483,8 @@ atualizarBotaoToggle();
 
 // Replica exatamente a fórmula de BDI do ORC_Manager
 function calcOrcamento(orc){
-  var bdi=orc.bdi||{};
-  var ac=(parseFloat(bdi.ac)||0)/100, df=(parseFloat(bdi.df)||0)/100, ri=(parseFloat(bdi.ri)||0)/100;
-  var l=(parseFloat(bdi.lc)||0)/100, im=(parseFloat(bdi.im)||0)/100, ir=(parseFloat(bdi.ir)||0)/100;
-  var dp=(parseFloat(bdi['desc-pct'])||0)/100;
-  var fator=(1+ac+df+ri)/(1-l-im);
-  var custoTotal=0, vendaBruta=0;
-  (orc.grupos||[]).forEach(function(g){
-    (g.linhas||[]).forEach(function(ln){
-      var q=parseFloat(ln.qtd)||0, u=parseFloat(ln.unit)||0;
-      var custo=q*u;
-      var venda=custo*fator;
-      var imp=venda*ir;
-      custoTotal+=custo;
-      vendaBruta+=venda+imp;
-    });
-  });
-  var vendaTotal=vendaBruta*(1-dp); // aplica Desconto (%) do BDI, igual ao ORC_Manager (gl = gT - gT*dp)
-  return {custo:custoTotal, venda:vendaTotal};
+  // FONTE UNICA: sulsign_core.js - corrige grupos opcionais (excluidos) e op-pct (Operacional %)
+  return SulSignCore.calcOrcamento(orc);
 }
 
 function calcRealizado(osList, lancList){
@@ -533,37 +517,42 @@ function categDisciplina(disc){
 }
 
 function montarRepasse(todasOs, todosLanc){
-  // chave: fornecedor||job  -> {fornecedor, numero, Material:0, Insumo:0, 'Mão de Obra':0, 'Logística':0, total:0}
+  // CORRIGIDO: OS (fechado) e Lançamentos (pago) NÃO são mais somados no mesmo total.
+  // Fechado = compromisso com fornecedor (OS). Lançado = o que já saiu do caixa.
+  // Saldo = Fechado − Lançado (o que ainda falta repassar). Evita dupla contagem.
   var mapa={};
-  function add(fornecedor, numero, categoria, valor){
+  function ent(fornecedor, numero){
     fornecedor=fornecedor||'(sem fornecedor)';
     var key=fornecedor+'||'+numero;
-    if(!mapa[key])mapa[key]={fornecedor:fornecedor, numero:numero, vals:{'Material':0,'Insumo':0,'Mão de Obra':0,'Logística':0,'Imprevisto':0}, total:0};
-    if(!mapa[key].vals[categoria])mapa[key].vals[categoria]=0;
-    mapa[key].vals[categoria]+=valor;
-    mapa[key].total+=valor;
+    if(!mapa[key])mapa[key]={fornecedor:fornecedor, numero:numero, vals:{'Material':0,'Insumo':0,'Mão de Obra':0,'Logística':0,'Imprevisto':0}, fechado:0, lancado:0};
+    return mapa[key];
   }
   todasOs.forEach(function(os){
     var cat=categDisciplina(os.disciplina);
     (os.itens||[]).forEach(function(it){
       var v=parseFloat(it.fechado)||0;
       if(!v)return;
-      add(it.fornecedor, os.orcamento_numero||'—', cat, v);
+      var r=ent(it.fornecedor, os.orcamento_numero||'—');
+      if(!r.vals[cat])r.vals[cat]=0;
+      r.vals[cat]+=v;
+      r.fechado+=v;
     });
   });
   todosLanc.forEach(function(l){
     var v=parseFloat(l.valor)||0;
     if(!v)return;
-    add(l.fornecedor, l.orcamento_numero||'—', l.categoria||'Imprevisto', v);
+    var r=ent(l.fornecedor, l.orcamento_numero||'—');
+    r.lancado+=v;
   });
-  return Object.values(mapa).filter(function(r){return r.total>0;}).sort(function(a,b){return b.total-a.total;});
+  return Object.values(mapa).filter(function(r){return (r.fechado+r.lancado)>0;}).sort(function(a,b){return (b.fechado-b.lancado)-(a.fechado-a.lancado);});
 }
 
 function renderRepasse(rows){
   var wrap=document.getElementById('forn-wrap');
   if(!rows.length){wrap.innerHTML='<div class="loading">Nenhum custo fechado/lançado ainda.</div>';return;}
-  var html='<table><thead><tr><th>Fornecedor</th><th>Job</th><th class="n">Material</th><th class="n">Insumo</th><th class="n">Mão de Obra</th><th class="n">Logística</th><th class="n">Total a repassar</th></tr></thead><tbody>';
+  var html='<table><thead><tr><th>Fornecedor</th><th>Job</th><th class="n">Material</th><th class="n">Insumo</th><th class="n">Mão de Obra</th><th class="n">Logística</th><th class="n">Fechado (OS)</th><th class="n">Lançado</th><th class="n">Saldo a repassar</th></tr></thead><tbody>';
   rows.forEach(function(r){
+    var saldo=r.fechado-r.lancado;
     html+='<tr>'
       +'<td><strong>'+r.fornecedor+'</strong></td>'
       +'<td class="num">'+r.numero+'</td>'
@@ -571,7 +560,9 @@ function renderRepasse(rows){
       +'<td class="n">'+(r.vals['Insumo']?fmt(r.vals['Insumo']):'<span class=\'muted\'>—</span>')+'</td>'
       +'<td class="n">'+(r.vals['Mão de Obra']?fmt(r.vals['Mão de Obra']):'<span class=\'muted\'>—</span>')+'</td>'
       +'<td class="n">'+(r.vals['Logística']?fmt(r.vals['Logística']):'<span class=\'muted\'>—</span>')+'</td>'
-      +'<td class="n pos">'+fmt(r.total)+'</td>'
+      +'<td class="n">'+(r.fechado?fmt(r.fechado):'<span class=\'muted\'>—</span>')+'</td>'
+      +'<td class="n">'+(r.lancado?fmt(r.lancado):'<span class=\'muted\'>—</span>')+'</td>'
+      +'<td class="n '+(saldo>0?'pos':'muted')+'">'+(saldo>0?fmt(saldo):(saldo<0?'<span style=\'color:#c62828\'>'+fmt(saldo)+' ⚠</span>':'✓ quitado'))+'</td>'
       +'</tr>';
   });
   html+='</tbody></table>';
@@ -677,7 +668,7 @@ function renderMetricas(orcamentos) {
     var s=o.status||'Em Orçamento';
     if(s==='Cotação'||s==='Em Orçamento')emCotacao++;
     else if(s==='Proposta Enviada')enviadas++;
-    else if(s==='Orçamento Aprovado'||s==='Em Produção')aprovadas++;
+    else if(s==='Aprovado'||s==='Em Produção')aprovadas++;
     else if(s==='Entregue'||s==='Faturado')fechados++;
     else if(s==='Orçamento Recusado'||s==='Cancelado'||s==='Orçamento Vencido')recusados++;
   });
@@ -749,7 +740,7 @@ function renderMetricas(orcamentos) {
 var PIPE_STAGES = [
   {key:'cotacao',    label:'Cotação',          dot:'#1565c0', statuses:['Cotação','Em Orçamento']},
   {key:'enviada',   label:'Proposta Enviada',  dot:'#f9a825', statuses:['Proposta Enviada']},
-  {key:'aprovado',  label:'Aprovado',          dot:'#2d6a4f', statuses:['Orçamento Aprovado']},
+  {key:'aprovado',  label:'Aprovado',          dot:'#2d6a4f', statuses:['Aprovado']},
   {key:'producao',  label:'Em Produção',       dot:'#7b1fa2', statuses:['Em Produção']},
   {key:'entregue',  label:'Entregue/Faturado', dot:'#00c853', statuses:['Entregue','Faturado']},
 ];
@@ -806,7 +797,7 @@ function renderPrevisaoCaixa(orcamentos, todasFixas) {
 
   // Entradas previstas: propostas em Aprovado ou Em Produção (venda orçada ainda não faturada)
   var entradas = orcamentos.filter(function(o) {
-    return ['Orçamento Aprovado','Em Produção'].indexOf(o.status||'') >= 0;
+    return ['Aprovado','Em Produção'].indexOf(o.status||'') >= 0;
   }).map(function(o) {
     var calc = calcOrcamento(o);
     return {label: o.numero + ' — ' + (o.cliente||''), val: calc.venda};
@@ -932,7 +923,7 @@ function renderAlertas(orcamentos, todasFixas, contasPagar, nfsEmitidas) {
   // 1b. Jobs aprovados sem sinal recebido
   orcamentos.forEach(function(o){
     var s=o.status||'';
-    if(['Orçamento Aprovado','Em Produção'].indexOf(s)>=0 && !o.sinal_recebido){
+    if(['Aprovado','Em Produção'].indexOf(s)>=0 && !o.sinal_recebido){
       alertas.push({tipo:'ylw',icon:'💰',
         titulo:'Sinal pendente — '+(o.numero||'')+(o.cliente?' · '+o.cliente:''),
         sub:'Job aprovado/em produção sem confirmação de recebimento do sinal'});
@@ -969,7 +960,7 @@ function renderAlertas(orcamentos, todasFixas, contasPagar, nfsEmitidas) {
 
   // 4. Propostas aprovadas mas sem OS criada
   orcamentos.forEach(function(o) {
-    if (['Orçamento Aprovado','Em Produção'].indexOf(o.status||'') < 0) return;
+    if (['Aprovado','Em Produção'].indexOf(o.status||'') < 0) return;
     // se não tem nenhuma OS associada (verificação vai ser feita com todasOs no contexto de carregar)
     // guardamos para checar lá — aqui é só o trigger
     if (o._semOS) {
@@ -1063,11 +1054,11 @@ function renderCicloComercial(orcamentos){
   if(!wrap) return;
   var hoje = new Date();
 
-  // Ciclo médio: dias entre created_at e aprovação (Orçamento Aprovado/Em Produção/Entregue/Faturado)
+  // Ciclo médio: dias entre created_at e aprovação (Aprovado/Em Produção/Entregue/Faturado)
   var ciclos = [];
   orcamentos.forEach(function(o){
     var s = o.status||'';
-    if(['Orçamento Aprovado','Em Produção','Entregue','Faturado'].indexOf(s) < 0) return;
+    if(['Aprovado','Em Produção','Entregue','Faturado'].indexOf(s) < 0) return;
     if(!o.updated_at) return;
     // Aproximação: updated_at é a data de mudança de status
     // Número: SS-2026_06-42 → ano/mês de criação
@@ -1091,11 +1082,11 @@ function renderCicloComercial(orcamentos){
   // Taxa de aprovação
   var totalDecididos = orcamentos.filter(function(o){
     var s=o.status||'';
-    return ['Orçamento Aprovado','Em Produção','Entregue','Faturado','Orçamento Recusado','Orçamento Vencido','Cancelado'].indexOf(s)>=0;
+    return ['Aprovado','Em Produção','Entregue','Faturado','Orçamento Recusado','Orçamento Vencido','Cancelado'].indexOf(s)>=0;
   }).length;
   var totalAprov = orcamentos.filter(function(o){
     var s=o.status||'';
-    return ['Orçamento Aprovado','Em Produção','Entregue','Faturado'].indexOf(s)>=0;
+    return ['Aprovado','Em Produção','Entregue','Faturado'].indexOf(s)>=0;
   }).length;
   var txAprov = totalDecididos > 0 ? Math.round(totalAprov/totalDecididos*100) : null;
 
@@ -1112,7 +1103,7 @@ function renderCicloComercial(orcamentos){
   var reativacao = Object.entries(clienteMap).filter(function(kv){
     var dias = Math.floor((hoje - kv[1].dt)/(1000*60*60*24));
     var s = kv[1].status;
-    return dias >= 60 && ['Em Produção','Orçamento Aprovado'].indexOf(s) < 0;
+    return dias >= 60 && ['Em Produção','Aprovado'].indexOf(s) < 0;
   }).map(function(kv){
     return {
       nome: kv[0],
@@ -1160,10 +1151,10 @@ async function carregar(){
   try{
     var [rOrc, rOs, rLanc, rFixas, rPagar, rNFs] = await Promise.all([
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,bdi,grupos,status,valor_nf,updated_at&order=numero.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
-      fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
-      fetch(SUPA_URL+'/rest/v1/lancamentos?select=*',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
-      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=created_at.desc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
-      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&status=eq.Pendente&order=vencimento.asc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina&deletado_em=is.null',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&deletado_em=is.null',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=created_at.desc&deletado_em=is.null',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
+      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&status=eq.Pendente&order=vencimento.asc&deletado_em=is.null',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}}),
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,valor_nf,data_nf,nf_numero,sinal_recebido,saldo_recebido&data_nf=not.is.null&order=data_nf.asc',{headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}})
     ]);
     if(!rOrc.ok)throw new Error('Erro orçamentos: HTTP '+rOrc.status);
@@ -1190,7 +1181,7 @@ async function carregar(){
     renderPrevisaoCaixa(orcamentos, todasFixas);
 
     var kVendaTotal=0, kCustoRealTotal=0, kMargemTotal=0, kPipelineTotal=0;
-    var STATUS_EXEC=['Entregue','Faturado','Em Produção','Orçamento Aprovado'];
+    var STATUS_EXEC=['Entregue','Faturado','Em Produção','Aprovado'];
     var STATUS_FATURADO=['Entregue','Faturado'];
 
     var rows=orcamentos.filter(function(orc){
@@ -1209,7 +1200,7 @@ async function carregar(){
       if(!ehTreinamento){
         if(STATUS_FATURADO.indexOf(orcStatus)>=0){
           kVendaTotal+=calcReceitaReal(orc); // usa valor_nf se disponível
-        } else if(['Proposta Enviada','Orçamento Aprovado','Em Produção','Cotação','Em Orçamento'].indexOf(orcStatus)>=0){
+        } else if(['Proposta Enviada','Aprovado','Em Produção','Cotação','Em Orçamento'].indexOf(orcStatus)>=0){
           kPipelineTotal+=calc.venda;
         }
         if(real.temFechado){kCustoRealTotal+=real.fechado;kMargemTotal+=margem;}
