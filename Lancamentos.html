@@ -152,10 +152,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
   </div>
 </div>
 
+<script src="sulsign_core.js"></script>
 <script>
 (function(){
-  var SB_AUTH_URL = 'https://obeamqkcuytctfczhook.supabase.co';
-  var SB_AUTH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+  var SB_AUTH_URL =SulSignCore.SUPA_URL;
+  var SB_AUTH_KEY =SulSignCore.SUPA_KEY;
   var SESSION_KEY = 'sulsign_session';
 
   function getStoredSession(){
@@ -1054,8 +1055,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
 
 
 <script>
-var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+var SUPA_URL=SulSignCore.SUPA_URL;
+var SUPA_KEY=SulSignCore.SUPA_KEY;
 function getAuthToken(){ return window.SULSIGN_ACCESS_TOKEN || SUPA_KEY; }
 
 var orcamentosCache=[];
@@ -1572,7 +1573,7 @@ async function carregarNF(){
   try{
     // Buscar orçamentos com valor_nf preenchido OU status Faturado/Entregue
     var r = await fetch('https://obeamqkcuytctfczhook.supabase.co/rest/v1/orcamentos?select=numero,cliente,projeto,status,valor_nf,data_nf,nf_numero,nf_url,sinal_recebido,sinal_valor,saldo_recebido,saldo_valor,updated_at&or=(valor_nf.not.is.null,status.in.(Faturado,Entregue))&order=data_nf.desc.nullslast,updated_at.desc',{
-      headers:{'apikey':'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY','Authorization':'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY'}
+      headers:{'apikey':SulSignCore.SUPA_KEY,'Authorization':'Bearer '+SulSignCore.SUPA_KEY}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     nfCache = (await r.json()).filter(function(o){
