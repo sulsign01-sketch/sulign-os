@@ -26,6 +26,7 @@
 <div id="root"></div>
 <!-- Carregar configuração segura do Supabase -->
 <script src="./config.js"></script>
+<script src="sulsign_core.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous"></script>
 <script>
@@ -185,6 +186,9 @@ function nextNum(oss) {
 // ═══════════════════════════════════════════════════════════════════════════
 // SUPABASE CLIENT
 // ═══════════════════════════════════════════════════════════════════════════
+// Credenciais: config.js (se existir) tem precedência; senão, SulSignCore
+var SB_URL = (typeof window.SB_URL !== 'undefined' && window.SB_URL) ? window.SB_URL : SulSignCore.SUPA_URL;
+var SB_KEY = (typeof window.SB_KEY !== 'undefined' && window.SB_KEY) ? window.SB_KEY : SulSignCore.SUPA_KEY;
 function makeDB(token) {
   const h = (extra = {}) => ({
     "Content-Type": "application/json",
@@ -2814,7 +2818,7 @@ function App() {
     setLoadingData(true);
     setLoadError(null);
     try {
-      const [r1, r2] = await Promise.all([db.db("ordens_servico").select(), db.db("clientes").select()]);
+      const [r1, r2] = await Promise.all([db.db("ordens_servico").select("*", "&deletado_em=is.null"), db.db("clientes").select()]);
       if (Array.isArray(r1)) setOSs(r1); else throw new Error("Falha ao carregar OSs");
       if (Array.isArray(r2)) setClientes(r2);
     } catch(e) {
@@ -2864,11 +2868,11 @@ function App() {
   };
   const handleDeleteOS = async () => {
     if (!editOS?.id || !window.confirm("Excluir esta OS?")) return;
-    await db.db("os_historico").del({
-      os_id: editOS.id
-    });
-    await db.db("ordens_servico").del({
+    // SOFT DELETE: marca deletado_em; histórico é preservado como trilha de auditoria
+    await db.db("ordens_servico").update({
       id: editOS.id
+    }, {
+      deletado_em: new Date().toISOString()
     });
     setEditOS(null);
     setView("kanban");
