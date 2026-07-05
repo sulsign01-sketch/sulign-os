@@ -103,7 +103,7 @@ var SECOES = [
         <tr><td>Ordens de Serviço</td><td>SulSign_OS_Manager.html</td><td>Login obrigatório</td><td>Gestor / Produção</td></tr>
         <tr><td>Lançamentos Financeiros</td><td>Lancamentos.html</td><td>Login obrigatório</td><td>Financeiro / Gestor</td></tr>
         <tr><td>Painel Financeiro</td><td>Painel_Financeiro.html</td><td>Login obrigatório</td><td>Gestor / Financeiro</td></tr>
-        <tr><td>Painel do Investidor</td><td>CEO_Dashboard.html</td><td>Login obrigatório</td><td>Sócio investidor</td></tr>
+        <tr><td>Painel dos Sócios</td><td>CEO_Dashboard.html</td><td>Login obrigatório</td><td>Todos os sócios</td></tr>
         <tr><td>Caixa de Produção</td><td>Caixa_Producao.html</td><td>Link com token</td><td>Produtor de campo</td></tr>
         <tr><td>Apontamento de Produção</td><td>Apontamento_Producao.html</td><td>Link com token</td><td>Profissional de disciplina</td></tr>
       </table>
@@ -115,7 +115,7 @@ var SECOES = [
         <li>Produção acontece — registrada via OS, Caixa de Produção e/ou Apontamentos</li>
         <li>Custos reais são lançados (direto em Lançamentos, ou consolidados de Caixa/Apontamentos)</li>
         <li>Nota Fiscal é emitida → orçamento muda para "Faturado"</li>
-        <li>Job aparece no Painel Financeiro e no Painel do Investidor com margem real</li>
+        <li>Job aparece no Painel Financeiro e no Painel dos Sócios com margem real</li>
       </ol>
       <div class="callout demo"><div class="callout-title">🎓 Exemplo prático neste manual</div>
         Acompanhe o job <b>SS-TREINO-2026_06-99</b> em cada módulo deste manual. Ele percorre exatamente este fluxo completo, com dados fictícios, e está marcado com status "Treinamento" para nunca contaminar relatórios reais.</div>
@@ -256,7 +256,7 @@ var SECOES = [
       <h2>Aba Apontamentos — Gestão de Apontamentos</h2>
       <p>Análogo ao Caixa de Produção, mas para insumos e progresso de uma disciplina. O checklist vem dos grupos do orçamento marcados com aquela disciplina.</p>
       <h2>NF Emitidas</h2>
-      <p>Lista de notas fiscais emitidas, vinculadas ao número do orçamento — alimenta a receita real do Painel Financeiro e do Painel do Investidor.</p>
+      <p>Lista de notas fiscais emitidas, vinculadas ao número do orçamento — alimenta a receita real do Painel Financeiro e do Painel dos Sócios.</p>
       <div class="callout demo"><div class="callout-title">🎓 Exemplo no job de treinamento</div>
         SS-TREINO-2026_06-99 já tem 5 lançamentos (R$ 1.120,00), um Caixa de Produção ativo com R$ 500,00, e um Apontamento de Pintura com checklist.</div>
     `
@@ -281,7 +281,7 @@ var SECOES = [
         Busque SS-TREINO na tabela — aparece com badge roxo "🎓 TREINO — não é real", e seus valores NÃO entram em nenhum KPI de receita, pipeline ou margem total. Você pode abrir o relatório normalmente.</div>
     `
   },
-  { grupo: "Sócios", id: "painel-investidor", titulo: "Painel do Investidor", publico: "Sócio Investidor", corPublico: "ylwb",
+  { grupo: "Sócios", id: "painel-socios", titulo: "Painel dos Sócios", publico: "Todos os Sócios", corPublico: "ylwb",
     html: `
       <p>Visão executiva e simplificada da saúde financeira da empresa, sem acesso aos detalhes operacionais de produção. Pensado para consulta rápida.</p>
       <h2>O que aparece</h2>
@@ -326,7 +326,7 @@ var SECOES = [
     html: `
       <p>Em Jul/2026 o sistema passou por uma auditoria completa com correções estruturais. Regras que todo usuário precisa conhecer:</p>
       <h2>Fonte Única da Verdade — sulsign_core.js</h2>
-      <p>Todo cálculo financeiro (BDI, venda, custo), a lista oficial de status e as credenciais do banco vivem em um único arquivo: <b>sulsign_core.js</b>. Nenhum módulo recalcula por conta própria — o número que aparece no ORC, no Painel e no Dashboard do Investidor é o mesmo. Mudou regra de negócio? Edita-se um arquivo só.</p>
+      <p>Todo cálculo financeiro (BDI, venda, custo), a lista oficial de status e as credenciais do banco vivem em um único arquivo: <b>sulsign_core.js</b>. Nenhum módulo recalcula por conta própria — o número que aparece no ORC, no Painel e no Painel dos Sócios é o mesmo. Mudou regra de negócio? Edita-se um arquivo só.</p>
       <h2>Nada Mais é Apagado (Soft Delete)</h2>
       <p>Excluir um lançamento, conta, imposto, aporte ou OS <b>não apaga o registro do banco</b> — apenas o marca com <code>deletado_em</code> e ele some das telas. Isso cria trilha de auditoria permanente: qualquer exclusão pode ser rastreada (e revertida) direto no Supabase. Excluir uma OS preserva todo o seu histórico de tramitação.</p>
       <h2>Grupos Opcionais Ficam Fora dos KPIs</h2>
