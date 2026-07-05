@@ -448,7 +448,7 @@ tr:hover td{background:var(--g100)}
     <div class="sec-title">Ficha de Fornecedores</div>
     <div id="forn-ficha-wrap"><div class="loading">Carregando...</div></div>
   </div>
-  <div class="foot">Custo orçado/venda vêm do orçamento (memorial × BDI). Custo realizado soma "Fechado" das compras + lançamentos avulsos vinculados ao número do orçamento. Margem realizada = Venda − Custo Realizado. Repasse por fornecedor soma compras + lançamentos por fornecedor, categoria e job — base para conferência e pagamento (ex: PDVEX). Despesas fixas são custos/receitas da empresa sem vínculo a um job específico (impostos, contador, aportes de sócio).</div>
+  <div class="foot">Custo orçado/venda vêm do orçamento (memorial × BDI). Custo realizado combina "Fechado" das compras e lançamentos vinculados ao job, deduplicado por fornecedor (quando o mesmo fornecedor aparece nos dois, vale o maior valor — o pagamento realiza o compromisso, não soma a ele). Margem realizada = Venda − Custo Realizado. Repasse por fornecedor soma compras + lançamentos por fornecedor, categoria e job — base para conferência e pagamento (ex: PDVEX). Despesas fixas são custos/receitas da empresa sem vínculo a um job específico (impostos, contador, aportes de sócio).</div>
 </div>
 
 <script>
@@ -457,6 +457,7 @@ var SUPA_KEY=SulSignCore.SUPA_KEY;
 function getAuthToken(){ return window.SULSIGN_ACCESS_TOKEN || SUPA_KEY; }
 
 var valoresOcultos = localStorage.getItem('ss_painel_ocultar')==='1';
+var _repasseRows=[];
 var _allRows = [];
 
 function fmt(v){
@@ -488,23 +489,31 @@ function calcOrcamento(orc){
 }
 
 function calcRealizado(osList, lancList){
-  var totalFechado=0, totalTarget=0, temFechado=false;
+  // CORRIGIDO: dedup por fornecedor. Quando o mesmo fornecedor tem valor
+  // "fechado" na OS E lançamento pago, conta-se o MAIOR dos dois (o pagamento
+  // realiza o compromisso, não soma a ele). Fornecedores distintos somam normal.
+  var porForn={}, totalTarget=0, temFechado=false;
+  function ent(f){f=f||'(sem fornecedor)';if(!porForn[f])porForn[f]={os:0,lanc:0};return porForn[f];}
   osList.forEach(function(os){
     (os.itens||[]).forEach(function(it){
       var fc=parseFloat(it.fechado)||0;
-      var tg=parseFloat(it.target)||0;
-      if(it.fechado){temFechado=true;}
-      totalFechado+=fc;
-      totalTarget+=tg;
+      totalTarget+=parseFloat(it.target)||0;
+      if(!fc)return;
+      temFechado=true;
+      ent(it.fornecedor).os+=fc;
     });
   });
-  var totalLanc=0;
   lancList.forEach(function(l){
     var v=parseFloat(l.valor)||0;
-    totalLanc+=v;
-    if(v)temFechado=true;
+    if(!v)return;
+    temFechado=true;
+    ent(l.fornecedor).lanc+=v;
   });
-  return {fechado:totalFechado+totalLanc, target:totalTarget, temFechado:temFechado};
+  var total=0;
+  Object.keys(porForn).forEach(function(f){
+    total+=Math.max(porForn[f].os, porForn[f].lanc);
+  });
+  return {fechado:total, target:totalTarget, temFechado:temFechado};
 }
 
 // Mapeia disciplina da OS para uma das 4 categorias de repasse
@@ -932,6 +941,7 @@ function renderAlertas(orcamentos, todasFixas, contasPagar, nfsEmitidas) {
 
   // 2. Margem abaixo de 15% em jobs em andamento
   _allRows.forEach(function(r) {
+    if ((r.orc&&r.orc.status)==='Treinamento') return; // treino não gera alerta
     if (r.margemPct !== null && r.margemPct < 15 && r.venda > 0) {
       alertas.push({
         tipo: r.margemPct < 0 ? 'red' : 'ylw',
@@ -970,6 +980,41 @@ function renderAlertas(orcamentos, todasFixas, contasPagar, nfsEmitidas) {
         titulo: 'Aprovado sem OS — ' + (o.numero||'') + ' · ' + (o.cliente||''),
         sub: 'Proposta aprovada mas nenhuma Ordem de Serviço foi gerada ainda'
       });
+    }
+  });
+
+  // 7. Entregue há 7+ dias sem faturar (dinheiro parado na rua)
+  orcamentos.forEach(function(o){
+    if((o.status||'')!=='Entregue') return;
+    if(!o.updated_at) return;
+    var diff=Math.floor((hoje-new Date(o.updated_at))/(1000*60*60*24));
+    if(diff>=7){
+      alertas.push({tipo:diff>=15?'red':'ylw',icon:'📦',
+        titulo:'Entregue sem faturar — '+(o.numero||'')+(o.cliente?' · '+o.cliente:''),
+        sub:diff+' dias desde a entrega sem emissão de NF'});
+    }
+  });
+
+  // 8. Faturado há 30+ dias sem virar Pago (aging de recebível)
+  orcamentos.forEach(function(o){
+    if((o.status||'')!=='Faturado') return;
+    var ref=o.data_nf||((o.updated_at||'').split('T')[0]);
+    if(!ref) return;
+    var diff=Math.floor((hoje-new Date(ref+'T12:00:00'))/(1000*60*60*24));
+    if(diff>=30){
+      alertas.push({tipo:diff>=60?'red':'ylw',icon:'⏰',
+        titulo:'Faturado sem receber — '+(o.numero||'')+(o.cliente?' · '+o.cliente:''),
+        sub:diff+' dias desde a NF sem marcar como Pago'+(o.valor_nf?' · '+fmt(parseFloat(o.valor_nf)||0):'')});
+    }
+  });
+
+  // 9. Saldo de repasse negativo (pagou fornecedor além do fechado na OS)
+  (_repasseRows||[]).forEach(function(r){
+    var saldo=(r.fechado||0)-(r.lancado||0);
+    if(r.fechado>0 && saldo<-0.01){
+      alertas.push({tipo:'red',icon:'⚠',
+        titulo:'Pagamento acima do fechado — '+r.fornecedor+(r.numero&&r.numero!=='—'?' · '+r.numero:''),
+        sub:'Lançado '+fmt(r.lancado)+' vs fechado '+fmt(r.fechado)+' ('+fmt(saldo)+')'});
     }
   });
 
@@ -1168,7 +1213,8 @@ async function carregar(){
     var contasPagar=rPagar.ok?(await rPagar.json()):[];
     var nfsEmitidas=rNFs.ok?(await rNFs.json()):[];
 
-    renderRepasse(montarRepasse(todasOs, todosLanc));
+    _repasseRows = montarRepasse(todasOs, todosLanc);
+    renderRepasse(_repasseRows);
     renderFixas(todasFixas);
 
     // Marcar orcamentos sem OS para alertas
