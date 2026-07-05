@@ -145,14 +145,16 @@ var SECOES = [
       <h2>Status de Orçamento</h2>
       <table>
         <tr><th>Status</th><th>Significado</th></tr>
-        <tr><td>Cotação / Em Orçamento</td><td>Orçamento em elaboração, ainda não enviado ao cliente.</td></tr>
+        <tr><td>Em Orçamento</td><td>Orçamento em elaboração, ainda não enviado ao cliente. Rascunhos parados há 15+ dias viram "Orçamento Vencido" automaticamente. <i>(O antigo status "Cotação" foi absorvido por este.)</i></td></tr>
         <tr><td>Proposta Enviada</td><td>Já está com o cliente, aguardando resposta.</td></tr>
-        <tr><td>Orçamento Aprovado</td><td>Cliente aprovou — pode iniciar produção.</td></tr>
+        <tr><td>Aprovado</td><td>Cliente aprovou — pode iniciar produção. <i>(Era "Orçamento Aprovado" antes de Jul/2026.)</i></td></tr>
         <tr><td>Em Produção</td><td>Trabalho em execução.</td></tr>
         <tr><td>Entregue</td><td>Trabalho fisicamente entregue ao cliente.</td></tr>
         <tr><td>Faturado</td><td>Nota Fiscal emitida — conta como receita real nos painéis.</td></tr>
-        <tr><td>Orçamento Recusado</td><td>Cliente recusou a proposta.</td></tr>
+        <tr><td>Pago</td><td><b>Novo (Jul/2026).</b> Cliente pagou a NF — fecha o ciclo do job. Marcar sempre que o dinheiro entrar: é ele que desarma o alerta "Faturado sem receber".</td></tr>
+        <tr><td>Orçamento Recusado</td><td>Cliente recusou a proposta (abre modal para registrar o motivo).</td></tr>
         <tr><td>Orçamento Vencido</td><td>Validade da proposta expirou sem resposta.</td></tr>
+        <tr><td>Cancelado</td><td>Job cancelado após aprovação/início.</td></tr>
         <tr><td>Treinamento</td><td>Job fictício de demonstração/treino — isolado de todos os KPIs financeiros reais.</td></tr>
       </table>
     `
@@ -318,6 +320,25 @@ var SECOES = [
       </ol>
       <div class="callout info"><div class="callout-title">📋 Onde conseguir o link</div>
         Os links são gerados pelo gestor (Lançamentos → aba Caixas, ou OS Manager → aba Apontamentos) e enviados por WhatsApp ou e-mail. Não há forma de acessar essas ferramentas sem o link específico do job.</div>
+    `
+  },
+  { grupo: "Administração", id: "auditoria-jul26", titulo: "O que Mudou — Auditoria Jul/2026", publico: "Todos", corPublico: "g600",
+    html: `
+      <p>Em Jul/2026 o sistema passou por uma auditoria completa com correções estruturais. Regras que todo usuário precisa conhecer:</p>
+      <h2>Fonte Única da Verdade — sulsign_core.js</h2>
+      <p>Todo cálculo financeiro (BDI, venda, custo), a lista oficial de status e as credenciais do banco vivem em um único arquivo: <b>sulsign_core.js</b>. Nenhum módulo recalcula por conta própria — o número que aparece no ORC, no Painel e no Dashboard do Investidor é o mesmo. Mudou regra de negócio? Edita-se um arquivo só.</p>
+      <h2>Nada Mais é Apagado (Soft Delete)</h2>
+      <p>Excluir um lançamento, conta, imposto, aporte ou OS <b>não apaga o registro do banco</b> — apenas o marca com <code>deletado_em</code> e ele some das telas. Isso cria trilha de auditoria permanente: qualquer exclusão pode ser rastreada (e revertida) direto no Supabase. Excluir uma OS preserva todo o seu histórico de tramitação.</p>
+      <h2>Grupos Opcionais Ficam Fora dos KPIs</h2>
+      <p>Grupos marcados como <b>opcionais</b> no orçamento não entram na venda/custo dos painéis — igual à proposta. O componente <b>Operacional %</b> agora também entra no total dos dashboards. Resultado: o valor do Painel bate centavo a centavo com o "Total Geral" da proposta.</p>
+      <h2>Repasse: Fechado × Lançado × Saldo</h2>
+      <p>A tabela de repasse por fornecedor deixou de somar compromisso + pagamento no mesmo número. Agora mostra: <b>Fechado (OS)</b> = o combinado; <b>Lançado</b> = o que já saiu do caixa; <b>Saldo</b> = o que falta repassar. Saldo negativo (pagou a mais) aparece em vermelho e gera alerta.</p>
+      <h2>Margem Realizada Deduplicada</h2>
+      <p>O custo realizado de um job combina compras fechadas (OS) e lançamentos, <b>deduplicando por fornecedor</b>: se o mesmo fornecedor tem R$ 5.000 fechados e R$ 5.000 pagos, conta R$ 5.000 (o pagamento realiza o compromisso, não soma a ele). Margens anteriores a Jul/2026 estavam subestimadas nesses casos.</p>
+      <h2>Consolidação Rastreável</h2>
+      <p>Insumos consolidados de apontamentos de produção entram nos lançamentos com <code>origem='consolidacao'</code> e o <code>apontamento_id</code> de origem — cada custo sabe de onde veio, e a consolidação só pode ocorrer uma vez por apontamento.</p>
+      <h2>Alertas de Exceção no Painel</h2>
+      <p>O topo do Painel Financeiro agora vigia: proposta sem retorno (7d+), sinal pendente em produção, margem abaixo de 15%, despesa vencida, NF a receber vencendo, conta a pagar vencendo, <b>entregue sem faturar (7d+)</b>, <b>faturado sem receber (30d+)</b> e <b>pagamento acima do fechado</b>. A gestão é por exceção: se está no alerta, exige ação.</p>
     `
   },
   { grupo: "Administração", id: "seguranca", titulo: "Segurança e Acessos", publico: "Gestor", corPublico: "g600",
