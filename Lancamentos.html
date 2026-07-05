@@ -1230,7 +1230,7 @@ async function carregarLancamentos(){
   var body=document.getElementById('lista-body');
   body.innerHTML='<div class="empty">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&order=data.desc,created_at.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&order=data.desc,created_at.desc&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(r.status===401){body.innerHTML='<div class="empty" style="color:#c62828;">⚠ Chave Supabase inválida (401). Tente Ctrl+Shift+R para limpar o cache.</div>';return;}
@@ -1320,7 +1320,7 @@ async function toggleConciliado(id, atual, btn){
 
 async function deletarLancamento(id,el){
   if(!confirm('Remover este lançamento?'))return;
-  await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
+  await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})});
   lancamentosCache=lancamentosCache.filter(function(l){return l.id!==id;});
   renderLista();
 }
@@ -1376,7 +1376,7 @@ async function carregarDespesasFixas(){
   var body=document.getElementById('fixas-lista-body');
   body.innerHTML='<div class="empty">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=data.desc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=*&order=data.desc&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -1414,7 +1414,7 @@ function renderDespesasFixas(){
 
 async function deletarDespesaFixa(id){
   if(!confirm('Remover este lançamento fixo?'))return;
-  await fetch(SUPA_URL+'/rest/v1/despesas_fixas?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
+  await fetch(SUPA_URL+'/rest/v1/despesas_fixas?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})});
   despesasFixasCache=despesasFixasCache.filter(function(d){return d.id!==id;});
   renderDespesasFixas();
 }
@@ -1550,8 +1550,7 @@ async function deletarImposto(id){
   if(!confirm('Remover este registro de imposto?'))return;
   try{
     await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+id,{
-      method:'DELETE',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+      method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})
     });
     impostosCache=impostosCache.filter(function(i){return i.id!==id;});
     renderImpostos();
@@ -1697,7 +1696,7 @@ async function carregarAportes(){
   var body = document.getElementById('aportes-lista-body');
   body.innerHTML = '<div class="empty">Carregando...</div>';
   try{
-    var r = await fetch(SUPA_URL+'/rest/v1/aportes?select=*&order=data.desc,created_at.desc',{
+    var r = await fetch(SUPA_URL+'/rest/v1/aportes?select=*&order=data.desc,created_at.desc&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
@@ -1771,7 +1770,7 @@ async function deletarAporte(btnEl){
   var el = btnEl.closest ? btnEl.closest('div[style]') : btnEl.parentNode.parentNode;
   if(!confirm('Remover este lançamento?')) return;
   await fetch(SUPA_URL+'/rest/v1/aportes?id=eq.'+id,{
-    method:'DELETE', headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+    method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})
   });
   aportesCache = aportesCache.filter(function(a){return a.id!==id;});
   if(el) el.parentNode.removeChild(el);
@@ -1825,7 +1824,7 @@ async function carregarContasPagar(){
   var body=document.getElementById('pp-body');
   body.innerHTML='<div class="empty">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&order=vencimento.asc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar?select=*&order=vencimento.asc&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -2069,7 +2068,7 @@ async function pagarConta(id){
 
 async function deletarContaPagar(id,el){
   if(!confirm('Remover esta conta?'))return;
-  await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
+  await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})});
   if(el)el.remove();
   contasPagarCache=contasPagarCache.filter(function(c){return c.id!==id;});
   renderContasPagar();
@@ -2110,7 +2109,7 @@ async function carregarContasReceber(){
   var body=document.getElementById('pr-body');
   body.innerHTML='<div class="empty">Carregando...</div>';
   try{
-    var r=await fetch(SUPA_URL+'/rest/v1/contas_receber?select=*&order=vencimento.asc',{
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_receber?select=*&order=vencimento.asc&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
@@ -2176,7 +2175,7 @@ async function receberConta(id){
 
 async function deletarContaReceber(id,el){
   if(!confirm('Remover esta conta?'))return;
-  await fetch(SUPA_URL+'/rest/v1/contas_receber?id=eq.'+id,{method:'DELETE',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}});
+  await fetch(SUPA_URL+'/rest/v1/contas_receber?id=eq.'+id,{method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})});
   if(el)el.remove();
   contasReceberCache=contasReceberCache.filter(function(c){return c.id!==id;});
   renderContasReceber();
@@ -2389,7 +2388,7 @@ async function consolidarCaixa(contaId, jobNumero){
 // ══════════════════════════════════════════════════════
 // FLUXO DE CAIXA
 // ══════════════════════════════════════════════════════
-var STATUS_JOBS_ATIVOS = ['Orçamento Aprovado','Em Produção','Entregue','Faturado'];
+var STATUS_JOBS_ATIVOS = ['Aprovado','Em Produção','Entregue','Faturado'];
 var jobsAtivosFluxoCache = [];
 
 async function carregarJobsAtivosFluxo(){
@@ -2436,25 +2435,25 @@ async function carregarFluxo(){
     var ultimoDia = new Date(parseInt(anoF), parseInt(mesF), 0).getDate();
     var dataFim = ate+'-'+String(ultimoDia).padStart(2,'0');
 
-    var r1 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
+    var r1 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.&deletado_em=is.null'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var lancs = await r1.json();
     lancs = Array.isArray(lancs)?lancs:[];
 
-    var r2 = await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
+    var r2 = await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.&deletado_em=is.null'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var aportes = await r2.json();
     aportes = Array.isArray(aportes)?aportes:[];
 
     // Saldo acumulado ANTES do período (tudo antes de dataIni)
-    var r3 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&conciliado=eq.true',{
+    var r3 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.&deletado_em=is.null'+dataIni+'&conciliado=eq.true',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var lancsAntes = await r3.json();
     lancsAntes = Array.isArray(lancsAntes)?lancsAntes:[];
-    var r4 = await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.'+dataIni,{
+    var r4 = await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.&deletado_em=is.null'+dataIni,{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var aportesAntes = await r4.json();
@@ -2811,8 +2810,7 @@ async function excluirLancamentoFluxo(id){
   if(!confirm('Excluir este lançamento permanentemente?')) return;
   try{
     var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{
-      method:'DELETE',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Prefer':'return=minimal'}
+      method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})
     });
     if(!r.ok) throw new Error('HTTP '+r.status+' — '+await r.text());
     await carregarFluxo();
@@ -2835,7 +2833,7 @@ var _ccLancsCache = [];
 async function iniciarCentroCusto(){
   // Popular select de jobs
   try{
-    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=orcamento_numero&orcamento_numero=neq.SEM-JOB&order=orcamento_numero.desc',{
+    var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=orcamento_numero&orcamento_numero=neq.SEM-JOB&order=orcamento_numero.desc&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var data = await r.json();
@@ -2860,7 +2858,7 @@ async function carregarCentroCusto(){
   document.getElementById('cc-body-cat').innerHTML = '<div class="empty">Carregando...</div>';
 
   try{
-    var query = SUPA_URL+'/rest/v1/lancamentos?select=*&tipo_lancamento=eq.saida&orcamento_numero=neq.SEM-JOB&order=data.asc';
+    var query = SUPA_URL+'/rest/v1/lancamentos?select=*&tipo_lancamento=eq.saida&orcamento_numero=neq.SEM-JOB&order=data.asc&deletado_em=is.null';
     if(job) query += '&orcamento_numero=eq.'+encodeURIComponent(job);
     if(cat) query += '&categoria=eq.'+encodeURIComponent(cat);
 
@@ -3145,8 +3143,7 @@ async function excluirCCLanc(id, job){
   if(!confirm('Excluir este item de custo permanentemente?')) return;
   try{
     var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+id,{
-      method:'DELETE',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Prefer':'return=minimal'}
+      method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
     await carregarCentroCusto();
