@@ -528,10 +528,11 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
   </div>
 </div>
 
+<script src="sulsign_core.js"></script>
 <script>
 (function(){
-  var SB_AUTH_URL = 'https://obeamqkcuytctfczhook.supabase.co';
-  var SB_AUTH_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+  var SB_AUTH_URL =SulSignCore.SUPA_URL;
+  var SB_AUTH_KEY =SulSignCore.SUPA_KEY;
   var SESSION_KEY = 'sulsign_session';
 
   function getStoredSession(){
@@ -2812,8 +2813,8 @@ async function carregarOrcamento(id){
 // ═══ SUPABASE CONFIG ═══
 var _lvTabAtual='ativos';
 var lvCache=[];
-var SUPA_URL='https://obeamqkcuytctfczhook.supabase.co';
-var SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+var SUPA_URL=SulSignCore.SUPA_URL;
+var SUPA_KEY=SulSignCore.SUPA_KEY;
 // Retorna o token de autorização: usa sessão logada se existir, senão anon (fallback)
 function getAuthToken(){
   return window.SULSIGN_ACCESS_TOKEN || SUPA_KEY;
