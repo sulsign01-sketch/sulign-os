@@ -259,6 +259,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div class="job-result" id="job-result"></div>
       <div class="job-sel" id="job-sel"><span id="job-sel-txt"></span><span class="x" onclick="limparJob()">×</span></div>
     </div>
+    <div class="fl" id="fl-bloco" style="display:none;">
+      <label>Bloco do orçamento (opcional)</label>
+      <select id="f-bloco"><option value="">— Job inteiro / geral —</option></select>
+    </div>
     <div class="row2">
       <div class="fl">
         <label>Quem está lançando</label>
@@ -732,6 +736,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
             <option value="SEM-JOB">— Sem Job —</option>
           </select>
         </div>
+        <div class="fl">
+          <label>Bloco do orçamento</label>
+          <select id="cce-bloco"><option value="">— Job inteiro / geral —</option></select>
+        </div>
         <div style="border-top:1px solid #e8e8e8;padding-top:14px;">
           <div style="font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#e65100;margin-bottom:12px;">Comprovante</div>
           <div class="fl">
@@ -1153,11 +1161,58 @@ function selecionarJob(o){
   document.getElementById('f-job-search').style.display='none';
   document.getElementById('job-result').classList.remove('open');
   document.getElementById('f-job-search').value='';
+  var flB=document.getElementById('fl-bloco'),selB=document.getElementById('f-bloco');
+  if(flB){
+    selB.innerHTML='<option value="">— Job inteiro / geral —</option>';
+    flB.style.display='none';
+    buscarBlocosOrc(o.numero).then(function(grupos){
+      if(grupos.length&&jobSelecionado&&jobSelecionado.numero===o.numero){
+        popularSelectBlocos(selB,grupos,null);
+        flB.style.display='block';
+      }
+    });
+  }
 }
 function limparJob(){
   jobSelecionado=null;
   document.getElementById('job-sel').classList.remove('open');
   document.getElementById('f-job-search').style.display='block';
+  var flB=document.getElementById('fl-bloco');
+  if(flB){flB.style.display='none';document.getElementById('f-bloco').innerHTML='<option value="">— Job inteiro / geral —</option>';}
+}
+
+// ── Blocos do orçamento (grupos) ──────────────────────────────
+var blocosCache={};
+async function buscarBlocosOrc(numero){
+  if(!numero||numero==='SEM-JOB') return [];
+  if(blocosCache[numero]) return blocosCache[numero];
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/orcamentos?numero=eq.'+encodeURIComponent(numero)+'&select=grupos',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    var d=await r.json();
+    var grupos=(d[0]&&Array.isArray(d[0].grupos))?d[0].grupos:[];
+    blocosCache[numero]=grupos;
+    return grupos;
+  }catch(e){console.error('buscarBlocosOrc:',e);return [];}
+}
+function popularSelectBlocos(sel,grupos,selecionado){
+  if(!sel) return;
+  sel.innerHTML='<option value="">— Job inteiro / geral —</option>';
+  (grupos||[]).forEach(function(g){
+    var nome=(g.nome||'').trim();if(!nome)return;
+    var op=document.createElement('option');
+    op.value=nome;op.textContent=nome+(g.opcional?' (opcional)':'');
+    if(selecionado&&selecionado===nome)op.selected=true;
+    sel.appendChild(op);
+  });
+  // bloco salvo que foi renomeado/removido do orçamento: preserva o valor
+  if(selecionado&&sel.value!==selecionado){
+    var op2=document.createElement('option');
+    op2.value=selecionado;op2.textContent=selecionado+' (fora do orçamento atual)';
+    op2.selected=true;sel.appendChild(op2);
+  }
 }
 
 function setStatus(msg,cls){
@@ -1201,6 +1256,7 @@ async function salvarLancamento(){
         orcamento_numero:jobSelecionado.numero,
         pessoa:pessoa,funcao:funcao,categoria:categoria,
         data:data,fornecedor:fornecedor,descricao:descricao,valor:valor,
+        bloco:(document.getElementById('f-bloco')?document.getElementById('f-bloco').value:'')||null,
         comprovante:comprovanteB64,tem_nota:temNota,
         tipo_lancamento:tipoLanc,periodicidade:periodicidade,vencimento:vencimento
       };
@@ -1283,7 +1339,7 @@ function renderLista(){
     var isConc=!!l.conciliado;
     var perTag=l.periodicidade&&l.periodicidade!=='unica'?'<span class="tag-per">'+l.periodicidade+'</span>':'';
     div.innerHTML='<div style="flex:1;min-width:0;">'
-      +'<div class="li-desc"><strong>'+(l.orcamento_numero||'—')+'</strong> · '+(l.categoria||'—')+' · '+l.descricao
+      +'<div class="li-desc"><strong>'+(l.orcamento_numero||'—')+'</strong>'+(l.bloco?' <span style="font-size:10px;color:#e65100;">▦ '+l.bloco+'</span>':'')+' · '+(l.categoria||'—')+' · '+l.descricao
       +(semNota?'<span class="tag-sn">SEM NOTA</span>':'')+perTag+'</div>'
       +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · '+l.fornecedor:'')
       +(l.data_conciliacao?' · <span style="color:#2e7d32;font-size:10px;">conc. '+new Date(l.data_conciliacao).toLocaleDateString('pt-BR')+'</span>':'')+'</div>'
@@ -2888,12 +2944,14 @@ function renderCentroCusto(){
   var porJob = {};
   lancs.forEach(function(l){
     var j = l.orcamento_numero||'Sem Job';
-    if(!porJob[j]) porJob[j] = {total:0, porCat:{}, itens:[]};
+    if(!porJob[j]) porJob[j] = {total:0, porCat:{}, porBloco:{}, itens:[]};
     var v = parseFloat(l.valor)||0;
     porJob[j].total += v;
     porJob[j].itens.push(l);
     var c = l.categoria||'Outros';
     porJob[j].porCat[c] = (porJob[j].porCat[c]||0) + v;
+    var bl = (l.bloco||'').trim();
+    if(bl) porJob[j].porBloco[bl] = (porJob[j].porBloco[bl]||0) + v;
   });
   var jobKeys = Object.keys(porJob).sort(function(a,b){ return porJob[b].total-porJob[a].total; });
 
@@ -2926,12 +2984,31 @@ function renderCentroCusto(){
         +'<td></td></tr>';
     });
 
+    // Resumo por bloco do orçamento dentro do job
+    var blocoKeys = Object.keys(d.porBloco||{});
+    if(blocoKeys.length){
+      var semBloco = d.total - blocoKeys.reduce(function(a,k){return a+d.porBloco[k];},0);
+      htmlJob += '<tr><td colspan="4" style="padding:8px 10px 2px 28px;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:#e65100;font-weight:700;">Por bloco do orçamento</td></tr>';
+      blocoKeys.sort(function(a,b){ return d.porBloco[b]-d.porBloco[a]; }).forEach(function(bl){
+        htmlJob += '<tr style="border-bottom:1px solid #f0f0f0;">'
+          +'<td style="padding:5px 10px 5px 28px;color:#555;" colspan="2">▦ '+bl+'</td>'
+          +'<td style="padding:5px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(d.porBloco[bl])+'</td>'
+          +'<td></td></tr>';
+      });
+      if(semBloco>0.005){
+        htmlJob += '<tr style="border-bottom:1px solid #f0f0f0;">'
+          +'<td style="padding:5px 10px 5px 28px;color:#aaa;font-style:italic;" colspan="2">▦ Sem bloco definido</td>'
+          +'<td style="padding:5px 10px;text-align:right;font-family:monospace;color:#c62828;">'+fmt(semBloco)+'</td>'
+          +'<td></td></tr>';
+      }
+    }
+
     // Linhas individuais
     d.itens.forEach(function(it){
       var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
       htmlJob += '<tr style="border-bottom:1px solid #f5f5f5;background:#fff;">'
         +'<td style="padding:4px 10px 4px 28px;color:#999;font-family:monospace;font-size:10px;">'+dt+'</td>'
-        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span>'
+        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span>'+(it.bloco?'<span style="font-size:10px;color:#e65100;margin-left:6px;">▦ '+it.bloco+'</span>':'')
           +(it.comprovante
             ? (it.comprovante.startsWith('http')
                 ? '<a href="'+it.comprovante+'" target="_blank" style="margin-left:6px;color:#1565c0;text-decoration:none;" title="Ver comprovante">📎</a>'
@@ -3016,6 +3093,18 @@ function abrirEdicaoCC(id){
     +(orcamentosCache||[]).map(function(o){
       return '<option value="'+o.numero+'"'+(it.orcamento_numero===o.numero?' selected':'')+'>'+o.numero+' — '+(o.cliente||'')+'</option>';
     }).join('');
+
+  // Blocos do orçamento
+  var blocoSel = document.getElementById('cce-bloco');
+  popularSelectBlocos(blocoSel,[],it.bloco||null);
+  buscarBlocosOrc(it.orcamento_numero).then(function(gr){
+    if(_ccEditId===id) popularSelectBlocos(blocoSel,gr,it.bloco||null);
+  });
+  jobSel.onchange=function(){
+    var nj=this.value;
+    popularSelectBlocos(blocoSel,[],null);
+    buscarBlocosOrc(nj).then(function(gr){ if(jobSel.value===nj) popularSelectBlocos(blocoSel,gr,null); });
+  };
 
   // Comprovante
   var urlInp = document.getElementById('cce-comp-url');
@@ -3102,6 +3191,7 @@ async function salvarEdicaoCC(){
     categoria: document.getElementById('cce-cat').value,
     fornecedor: document.getElementById('cce-forn').value.trim(),
     orcamento_numero: document.getElementById('cce-job').value||'SEM-JOB',
+    bloco: document.getElementById('cce-bloco').value||null,
     comprovante: comprovante
   };
   st.textContent='Salvando...'; st.style.color='#888';
