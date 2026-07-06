@@ -27,7 +27,7 @@ var SulSignCore = (function(){
   ];
 
   // ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
-  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Logística','Outros'];
+  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Logística','Estorno','Outros'];
 
   // ── CÁLCULO OFICIAL DO ORÇAMENTO ──
   // Replica exatamente o calcAll() do ORC_Manager:
