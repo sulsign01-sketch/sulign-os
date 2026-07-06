@@ -165,6 +165,11 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
 #modal-caixa input[type=text]{width:100%;font-family:inherit;font-size:12px;padding:8px;
   border:1px solid #C4CCC7;border-radius:5px;margin-bottom:10px;}
 #modal-caixa .fechar{background:none;border:none;float:right;font-size:16px;cursor:pointer;color:var(--cinza);}
+#modal-caixa .pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+#modal-caixa .pill{font-size:10.5px;padding:4px 10px;border:1px solid #C4CCC7;border-radius:12px;cursor:pointer;color:#556;}
+#modal-caixa .pill.ativo{background:var(--verde);border-color:var(--verde);color:#fff;}
+#modal-caixa .st-badge{font-size:9px;border:1px solid #C4CCC7;border-radius:3px;padding:1px 5px;margin-left:6px;color:#8A938E;white-space:nowrap;}
+#modal-caixa .st-badge.ok{border-color:var(--verde);color:var(--verde);background:var(--verde-claro);}
 
 /* botão flutuante add */
 #btn-add-flutuante{position:fixed;bottom:22px;right:22px;z-index:60;background:var(--verde);
@@ -599,34 +604,82 @@ document.getElementById('modal-caixa').addEventListener('click', function(ev){
     var num = opOrc.getAttribute('data-importa-orc');
     fecharModal(); importarOrc(num);
   }
+  var pill = ev.target.closest('[data-pill]');
+  if(pill){
+    _orcFiltroStatus = pill.getAttribute('data-pill');
+    var pw=document.getElementById('orc-pills'), lw=document.getElementById('orc-lista');
+    var inp=document.getElementById('orc-busca');
+    if(pw) pw.innerHTML=montarPillsOrc();
+    if(lw) lw.innerHTML=montarListaOrc(inp?inp.value:'');
+  }
 });
 
 /* ═══ IMPORTAR DO ORÇAMENTO ═══ */
+var _orcListaCache=[];
+var _orcFiltroStatus='';
+var PILLS_STATUS=['','Faturado','Pago','Aprovado','Em Produção','Entregue'];
+
 function importarOrcPrompt(){
   msg('Buscando orçamentos…');
-  req('GET','orcamentos?select=numero,cliente,projeto,titulo&order=id.desc&limit=40')
+  req('GET','orcamentos?select=numero,cliente,projeto,status,updated_at&order=updated_at.desc&limit=100')
   .then(function(rows){
     msg('');
-    var h='<button class="fechar" data-action="fechar-modal">✕</button><h3>Importar de orçamento</h3>'+
-      '<input type="text" id="orc-num-manual" placeholder="Ou digite o número SS-…">';
-    if(rows && rows.length){
-      for(var i=0;i<rows.length;i++){
-        var r=rows[i];
-        h+='<div class="op" data-importa-orc="'+esc(r.numero)+'"><b>'+esc(r.numero)+'</b> — '+esc(r.projeto||r.titulo||r.cliente||'')+'</div>';
-      }
-    } else h+='<div style="font-size:11px;color:#8A938E">Nenhum orçamento listado — digite o número acima e pressione Enter.</div>';
-    abrirModal(h);
-    var inp=document.getElementById('orc-num-manual');
-    inp.addEventListener('keydown',function(e){ if(e.key==='Enter'&&inp.value){ fecharModal(); importarOrc(inp.value.trim()); } });
+    _orcListaCache = rows||[];
+    _orcFiltroStatus = '';
+    abrirModal(montarModalOrc());
+    ligarModalOrc();
   })
   .catch(function(e){
     msg('');
     var h='<button class="fechar" data-action="fechar-modal">✕</button><h3>Importar de orçamento</h3>'+
-      '<input type="text" id="orc-num-manual" placeholder="Digite o número SS-…">'+
+      '<input type="text" id="orc-busca" placeholder="Digite o número SS-… e Enter">'+
       '<div style="font-size:11px;color:#8A938E">Não consegui listar ('+esc(e.message)+') — informe o número manualmente.</div>';
     abrirModal(h);
-    var inp=document.getElementById('orc-num-manual');
-    inp.addEventListener('keydown',function(ev2){ if(ev2.key==='Enter'&&inp.value){ fecharModal(); importarOrc(inp.value.trim()); } });
+    ligarModalOrc();
+  });
+}
+
+function montarModalOrc(){
+  var h='<button class="fechar" data-action="fechar-modal">✕</button><h3>Importar de orçamento</h3>'+
+    '<input type="text" id="orc-busca" placeholder="Filtrar por número, cliente ou projeto…">'+
+    '<div class="pills" id="orc-pills">'+montarPillsOrc()+'</div>'+
+    '<div id="orc-lista">'+montarListaOrc('')+'</div>';
+  return h;
+}
+function montarPillsOrc(){
+  var h='';
+  for(var i=0;i<PILLS_STATUS.length;i++){
+    var p=PILLS_STATUS[i];
+    h+='<span class="pill'+(_orcFiltroStatus===p?' ativo':'')+'" data-pill="'+p+'">'+(p||'Todos')+'</span>';
+  }
+  return h;
+}
+function montarListaOrc(q){
+  q=(q||'').toLowerCase();
+  var rows=_orcListaCache.filter(function(r){
+    if(_orcFiltroStatus && (r.status||'')!==_orcFiltroStatus) return false;
+    if(q && ((r.numero||'')+' '+(r.cliente||'')+' '+(r.projeto||'')).toLowerCase().indexOf(q)<0) return false;
+    return true;
+  });
+  if(!rows.length) return '<div style="font-size:11px;color:#8A938E;padding:8px 2px">Nenhum orçamento neste filtro.</div>';
+  var h='';
+  rows.slice(0,60).forEach(function(r){
+    var ok=(r.status==='Faturado'||r.status==='Pago');
+    h+='<div class="op" data-importa-orc="'+esc(r.numero)+'"><b>'+esc(r.numero)+'</b> — '+esc(r.projeto||r.cliente||'')+
+       (r.status?'<span class="st-badge'+(ok?' ok':'')+'">'+esc(r.status)+'</span>':'')+
+       '<small>'+esc(r.cliente||'')+' · '+String(r.updated_at||'').slice(0,10)+'</small></div>';
+  });
+  return h;
+}
+function ligarModalOrc(){
+  var inp=document.getElementById('orc-busca');
+  if(!inp) return;
+  inp.addEventListener('input',function(){
+    var lista=document.getElementById('orc-lista');
+    if(lista) lista.innerHTML=montarListaOrc(inp.value);
+  });
+  inp.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&inp.value.trim().toUpperCase().indexOf('SS-')===0){ fecharModal(); importarOrc(inp.value.trim()); }
   });
 }
 
@@ -642,6 +695,10 @@ function importarOrc(numero){
     S.cliente = d.cliente || o.cliente || S.cliente;
     S.agencia = d.agencia || o.agencia || S.agencia;
     var grupos = d.grupos || [];
+    /* imagens e descrições do Estratificado, chaveadas por tblN (N = ordem do grupo) */
+    var estrImgs =(d.estr&&d.estr.imagens)||{};
+    var estrDescs=(d.estr&&d.estr.descricoes)||{};
+    var chavesImg=Object.keys(estrImgs).sort(function(a,b){return num(a.replace(/\D/g,''))-num(b.replace(/\D/g,''));});
     if(grupos.length){
       var novos = [];
       for(var i=0;i<grupos.length;i++){
@@ -660,8 +717,21 @@ function importarOrc(numero){
         if(A>0 && A<=12) A = A*100;
         if(L>0) it.visL = L;
         if(A>0) it.visA = A;
-        /* tenta puxar o material principal da 1ª linha */
-        if(g.linhas && g.linhas.length){ it.material = (g.linhas[0].desc || g.linhas[0].nome || '').toUpperCase(); }
+        /* material principal = linha de maior valor do grupo */
+        if(g.linhas && g.linhas.length){
+          var melhor=g.linhas[0], vMax=-1;
+          g.linhas.forEach(function(ln){
+            var v=(parseFloat(ln.qtd)||0)*(parseFloat(ln.unit)||0);
+            if(v>vMax){vMax=v;melhor=ln;}
+          });
+          it.material = (melhor.desc || melhor.nome || '').toUpperCase();
+        }
+        /* render + observações vindos do Estratificado do ORC */
+        var chave='tbl'+(i+1);
+        var img=estrImgs[chave]||((chavesImg.length===grupos.length)?estrImgs[chavesImg[i]]:null);
+        if(img) it.render=img;
+        var dsc=estrDescs[chave]||((chavesImg.length===grupos.length&&estrDescs[chavesImg[i]])?estrDescs[chavesImg[i]]:'');
+        if(dsc) it.obs=dsc;
         novos.push(it);
       }
       if(novos.length) S.itens = novos;
