@@ -175,6 +175,8 @@
           <option value="pvc20">PVC expandido 20mm</option>
           <option value="mdf15">MDF 15mm</option>
           <option value="acm">ACM 4mm</option>
+          <option value="acm_esp3">ACM espelhado 3mm</option>
+          <option value="acm_esp4">ACM espelhado 4mm</option>
           <option value="inox">Aço inox escovado</option>
           <option value="acr_lat">Acrílico</option>
           <option value="print3d">Impressão 3D (PETG/PLA)</option>
@@ -338,6 +340,8 @@
         <div class="field"><label>MDF 15mm (R$/m²)</label><input type="number" id="pMdf15" value="58" data-action="calc"></div>
         <div class="field"><label>MDF 3mm gabarito (R$/m²)</label><input type="number" id="pMdf3" value="26" data-action="calc"></div>
         <div class="field"><label>ACM 4mm (R$/m²)</label><input type="number" id="pAcm" value="170" data-action="calc"></div>
+        <div class="field"><label>ACM espelhado 3mm (R$/m²)</label><input type="number" id="pAcmEsp3" value="260" data-action="calc"></div>
+        <div class="field"><label>ACM espelhado 4mm (R$/m²)</label><input type="number" id="pAcmEsp4" value="290" data-action="calc"></div>
         <div class="field"><label>Inox escovado (R$/m²)</label><input type="number" id="pInox" value="380" data-action="calc"></div>
         <div class="field"><label>Acrílico leitoso 3mm (R$/m²)</label><input type="number" id="pAcrLeit" value="320" data-action="calc"></div>
         <div class="field"><label>Acrílico colorido 3mm (R$/m²)</label><input type="number" id="pAcrCor" value="380" data-action="calc"></div>
@@ -613,6 +617,8 @@ function precoMat(codigo){
   if (codigo === 'pvc20') return num('pPvc20');
   if (codigo === 'mdf15') return num('pMdf15');
   if (codigo === 'acm' || codigo === 'acm_f') return num('pAcm');
+  if (codigo === 'acm_esp3') return num('pAcmEsp3');
+  if (codigo === 'acm_esp4') return num('pAcmEsp4');
   if (codigo === 'inox') return num('pInox');
   if (codigo === 'acr_lat' || codigo === 'acr_leit') return num('pAcrLeit');
   if (codigo === 'acr_cor') return num('pAcrCor');
@@ -1011,6 +1017,8 @@ function nomeMaterial(codigo){
     mdf15: 'MDF 15mm', acm: 'ACM 4mm', inox: 'aço inox escovado',
     acr_lat: 'acrílico', acr_leit: 'acrílico leitoso 3mm', acr_cor: 'acrílico colorido fosco 3mm',
     acr_cristal: 'acrílico cristal 3mm com vinil aplicado', pvc10f: 'PVC expandido 10mm', acm_f: 'ACM 4mm',
+    acm_esp3: 'ACM espelhado 3mm (face espelhada preservada com película até a montagem)',
+    acm_esp4: 'ACM espelhado 4mm (face espelhada preservada com película até a montagem)',
     print3d: 'impressão 3D'
   };
   return mapa[codigo] || codigo;
@@ -1025,7 +1033,7 @@ function montarDescritivo(){
 
   if (constr === 'chapada') {
     var mat = $('inCorpo').value;
-    var esp = { pvc5: '5mm', pvc10: '10mm', pvc15: '15mm', pvc20: '20mm', mdf15: '15mm', acm: '4mm' }[mat] || '';
+    var esp = { pvc5: '5mm', pvc10: '10mm', pvc15: '15mm', pvc20: '20mm', mdf15: '15mm', acm: '4mm', acm_esp3: '3mm', acm_esp4: '4mm' }[mat] || '';
     t = 'Logotipo/letreiro "' + texto + '" em letras chapadas recortadas em router CNC, em ' + nomeMaterial(mat) +
         (esp ? ' (espessura do próprio material, ' + esp + ')' : '') +
         ', com ' + qtd + ' elemento(s), altura de ' + hCm + 'cm. Bordas limpas e uniformes, sem rebarba.';
