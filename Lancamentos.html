@@ -702,6 +702,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <button class="btn" onclick="salvarContaPagar()" id="btn-pp" style="background:#c62828;">Salvar Conta a Pagar</button>
     <div class="status" id="status-pp">—</div>
     <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;" id="pp-lista-wrap">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#555;cursor:pointer;"><input type="checkbox" onchange="toggleSelTodasContas(this.checked)"> Selecionar todas</label>
+        <button onclick="gerarPedidoPagamento()" style="font-size:11px;font-weight:700;padding:6px 12px;border:none;border-radius:4px;background:#111;color:#00ff88;cursor:pointer;">&#128196; Gerar Pedido de Pagamento</button>
+        <button onclick="enviarParaPonde()" style="font-size:11px;padding:6px 12px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;">&#128242; Enviar Link Pond&eacute;</button>
+      </div>
       <div id="pp-body"><div class="empty">Carregando...</div></div>
     </div>
   </div>
@@ -2018,6 +2023,93 @@ function imprimirOP(){
 
 function toggleSelTodasContas(checked){
   document.querySelectorAll('.pp-sel-item').forEach(function(cb){ cb.checked = checked; });
+}
+
+async function gerarPedidoPagamento(){
+  var selecionados = Array.from(document.querySelectorAll('.pp-sel-item:checked')).map(function(cb){ return cb.dataset.cid; });
+  if(!selecionados.length){ alert('Selecione ao menos uma conta para o pedido.'); return; }
+  var contas = contasPagarCache.filter(function(c){ return selecionados.indexOf(String(c.id))>=0; });
+
+  var agora = new Date();
+  function p2(n){ return (n<10?'0':'')+n; }
+  var numPedido = 'PED-'+agora.getFullYear()+p2(agora.getMonth()+1)+p2(agora.getDate())+'-'+p2(agora.getHours())+p2(agora.getMinutes());
+  var emitido = agora.toLocaleDateString('pt-BR')+' '+p2(agora.getHours())+':'+p2(agora.getMinutes());
+  var total = contas.reduce(function(a,c){ return a+(parseFloat(c.valor)||0); }, 0);
+
+  function e2(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  var cards = '';
+  contas.forEach(function(c, idx){
+    var venc = c.vencimento ? new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '&mdash;';
+    cards += '<div class="op">'
+      +'<div class="op-top"><span class="op-num">'+(idx+1)+'. '+e2(c.numero_op||'OP')+'</span><span class="op-val">'+fmt(parseFloat(c.valor)||0)+'</span></div>'
+      +'<div class="op-ref">'+e2(c.descricao||'&mdash;')+'</div>'
+      +(c.favorecido?'<div class="op-row"><b>Favorecido:</b> '+e2(c.favorecido)+'</div>':'')
+      +'<div class="op-row"><b>Vencimento:</b> '+venc+' &nbsp;&middot;&nbsp; <b>Forma:</b> '+e2(c.forma_pagamento||'PIX')+'</div>'
+      +(c.chave_pix?'<div class="op-pix"><b>Chave PIX:</b> <span class="mono">'+e2(c.chave_pix)+'</span></div>':'')
+      +(c.orcamento_numero?'<div class="op-row"><b>Job:</b> <span class="mono">'+e2(c.orcamento_numero)+'</span></div>':'')
+      +(c.observacao?'<div class="op-obs">'+e2(c.observacao)+'</div>':'')
+      +'<div class="op-exec">Pago em: ____/____/______ &nbsp;&nbsp; Comprovante: [&nbsp;&nbsp;]</div>'
+      +'</div>';
+  });
+
+  var doc = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'
+    +'<meta name="viewport" content="width=device-width, initial-scale=1.0">'
+    +'<title>'+numPedido+' &mdash; Sul Sign Group</title><style>'
+    +'body{font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:24px auto;padding:0 16px;color:#111;background:#fff;}'
+    +'.hd{background:#111;color:#fff;padding:20px;border-radius:8px 8px 0 0;}'
+    +'.hd h1{margin:0;font-size:17px;letter-spacing:.5px;}'
+    +'.hd p{margin:4px 0 0;color:#00ff88;font-size:10px;letter-spacing:2px;text-transform:uppercase;}'
+    +'.meta{border:1px solid #e8e8e8;border-top:none;padding:14px 20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:#555;}'
+    +'.meta b{color:#111;}'
+    +'.op{border:1px solid #e0e0e0;border-radius:8px;padding:16px;margin-top:14px;page-break-inside:avoid;}'
+    +'.op-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}'
+    +'.op-num{font-size:11px;font-weight:700;color:#1565c0;font-family:monospace;}'
+    +'.op-val{font-size:17px;font-weight:700;color:#c62828;font-family:monospace;white-space:nowrap;}'
+    +'.op-ref{font-size:14px;font-weight:700;margin:6px 0 8px;}'
+    +'.op-row{font-size:12px;color:#444;margin-top:4px;}'
+    +'.op-pix{font-size:12px;background:#f5f5f5;border-radius:5px;padding:8px 10px;margin-top:6px;}'
+    +'.op-obs{font-size:11px;color:#888;margin-top:6px;}'
+    +'.op-exec{font-size:11px;color:#999;border-top:1px dashed #ddd;margin-top:10px;padding-top:8px;}'
+    +'.mono{font-family:monospace;}'
+    +'.total{background:#111;color:#fff;border-radius:8px;padding:16px 20px;margin-top:16px;display:flex;justify-content:space-between;align-items:center;}'
+    +'.total b{font-family:monospace;font-size:19px;color:#00ff88;}'
+    +'.ass{display:flex;gap:20px;margin-top:28px;}'
+    +'.ass div{flex:1;border-top:1px solid #333;padding-top:6px;font-size:10px;color:#666;text-align:center;}'
+    +'.ft{text-align:center;font-size:10px;color:#aaa;margin:24px 0;}'
+    +'@media print{body{margin:10px auto;}}'
+    +'</style></head><body>'
+    +'<div class="hd"><h1>SUL SIGN GROUP</h1><p>Pedido de Pagamento &middot; '+numPedido+'</p></div>'
+    +'<div class="meta"><span>Emitido em <b>'+emitido+'</b></span><span><b>'+contas.length+'</b> ordem'+(contas.length>1?'s':'')+' de pagamento</span></div>'
+    +cards
+    +'<div class="total"><span>TOTAL DO PEDIDO</span><b>'+fmt(total)+'</b></div>'
+    +'<div class="ass"><div>Autorizado por<br><b>Carlos Augusto</b></div><div>Executado por<br><b>Eduardo Pond&eacute;</b> &nbsp; Data: ___/___/___</div></div>'
+    +'<div class="ft">Sul Sign Group &middot; CNPJ 03.952.317/0001-16 &middot; sulsign01@gmail.com</div>'
+    +'</body></html>';
+
+  try{
+    var blob = new Blob([doc], {type:'text/html;charset=utf-8'});
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = numPedido+' — SulSign.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
+
+    // Marca as contas como enviadas (mesmo identificador do pedido)
+    for(var i=0; i<contas.length; i++){
+      await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+contas[i].id,{
+        method:'PATCH',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({token_ponde: numPedido, enviado_ponde_em: new Date().toISOString()})
+      });
+    }
+    await carregarContasPagar();
+    alert('Pedido '+numPedido+' gerado: '+contas.length+' OP(s) · '+fmt(total)+'. Arquivo baixado — é só mandar no WhatsApp do Pondé.');
+  }catch(e){
+    alert('Erro ao gerar pedido: '+e.message);
+  }
 }
 
 async function enviarParaPonde(){
