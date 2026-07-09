@@ -1,0 +1,1274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SulSign OS — Calculadora Letra Caixa / 3D v3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f2f2f0; color: #1a1a1a; font-size: 14px; }
+  .header { background: #000; color: #fff; padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .header h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .header .sub { font-size: 11px; color: #b5b5b5; letter-spacing: 1.5px; text-transform: uppercase; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+  .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #555; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .field { flex: 1 1 130px; min-width: 110px; }
+  .field label { display: block; font-size: 11px; color: #666; margin-bottom: 3px; font-weight: 600; }
+  .field input, .field select { width: 100%; padding: 9px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; background: #fafafa; }
+  .field input:focus, .field select:focus { outline: none; border-color: #000; background: #fff; }
+  .field .hint { font-size: 10px; color: #999; margin-top: 2px; }
+  .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .toggle-group button { flex: 1 1 auto; padding: 10px 8px; border: 1.5px solid #ccc; background: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; color: #555; cursor: pointer; }
+  .toggle-group button.on { background: #000; color: #fff; border-color: #000; }
+  .toggle-group button:disabled { opacity: 0.35; cursor: not-allowed; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .kpi { background: #f7f7f5; border-radius: 8px; padding: 10px; border-left: 3px solid #000; }
+  .kpi .k-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #777; }
+  .kpi .k-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .kpi.gold { border-left-color: #c9a227; background: #fdf9ec; }
+  .kpi.gold .k-value { color: #8a6d00; font-size: 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; color: #888; padding: 6px 4px; border-bottom: 1px solid #ddd; }
+  td { padding: 7px 4px; border-bottom: 1px solid #f0f0ee; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tot td { font-weight: 700; border-top: 2px solid #000; }
+  td input.lt { width: 88px; padding: 6px 5px; border: 1px solid #ccc; border-radius: 5px; font-size: 12.5px; text-align: right; background: #fdfdfb; }
+  td input.lt.ov { background: #fff3c4; border-color: #d4b106; }
+  .mini { padding: 2px 7px; font-size: 11px; border: 1px solid #999; background: #fff; border-radius: 5px; cursor: pointer; }
+  .bdi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+  .warn { background: #fff8e0; border: 1px solid #e8d48a; border-radius: 8px; padding: 10px; font-size: 12px; color: #6b5a00; margin-top: 10px; display: none; }
+  .ok-badge { display: inline-block; background: #e6f4e6; border: 1px solid #9ecf9e; color: #2c6b2c; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 700; margin-top: 8px; }
+  .footnote { font-size: 10.5px; color: #999; margin-top: 8px; line-height: 1.5; }
+  details summary { cursor: pointer; font-size: 12px; font-weight: 700; color: #444; padding: 6px 0; }
+  .hide { display: none !important; }
+  .btn { padding: 11px 16px; border: none; border-radius: 8px; background: #000; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn.sec { background: #fff; color: #000; border: 1.5px solid #000; }
+  .btn.sm { padding: 8px 12px; font-size: 12px; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .nest-canvas { border: 1px solid #ddd; border-radius: 6px; background: #fff; margin-top: 8px; max-width: 100%; }
+  .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #444; padding: 8px 0; }
+  .chk input { width: 20px; height: 20px; }
+
+  /* ── RELATÓRIO (na tela + impressão) ── */
+  #report { display: none; font-size: 12.5px; color: #000; background: #fff; max-width: 980px; margin: 0 auto 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  #report.show { display: block; }
+  #report .r-tools { padding: 10px 18px; background: #f2f2f0; display: flex; gap: 8px; }
+  #report .r-head { background: #000; color: #fff; padding: 18px; }
+  #report h1 { font-size: 18px; }
+  #report .r-sub { font-size: 10px; letter-spacing: 2px; color: #ccc; }
+  #report .r-body { padding: 18px; }
+  #report table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  #report th { border-bottom: 1px solid #000; text-align: left; font-size: 10px; padding: 5px 4px; }
+  #report td { border-bottom: 1px solid #ddd; padding: 5px 4px; }
+  #report .num { text-align: right; }
+  #report .r-tot td { font-weight: 700; border-top: 2px solid #000; }
+  #report .r-kpis { display: flex; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+  #report .r-kpi { border: 1px solid #000; padding: 10px 14px; border-radius: 6px; }
+  #report .r-kpi b { display: block; font-size: 16px; }
+  #report .r-foot { margin-top: 20px; font-size: 9.5px; color: #666; border-top: 1px solid #ccc; padding-top: 8px; }
+  #report .r-desc { border: 1.5px dashed #c9a227; border-radius: 6px; padding: 10px 12px; margin: 8px 0 4px; line-height: 1.6; font-size: 12.5px; }
+  #report .r-desc:focus { outline: 2px solid #c9a227; }
+  #report .r-desc-hint { font-size: 10px; color: #a07800; margin-bottom: 12px; }
+  @media print {
+    /* esconde apenas o cromo interativo — a calculadora imprime com todos os dados */
+    .btnrow, .mini, #docbar, #report .r-tools, #report .r-desc-hint { display: none !important; }
+    /* modo documento: aí sim, só o relatório */
+    body.docmode > .header, body.docmode > .wrap { display: none !important; }
+    #report.show { display: block !important; box-shadow: none; border-radius: 0; }
+    #report .r-desc { border: none; padding: 0; }
+    .header, #report .r-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  /* ── MODO DOCUMENTO: só o relatório na tela ── */
+  body.docmode { background: #fff; }
+  body.docmode > .header, body.docmode > .wrap { display: none !important; }
+  body.docmode #report { box-shadow: none; border-radius: 0; margin: 0 auto; }
+  body.docmode #report .r-tools, body.docmode #report .r-desc-hint { display: none; }
+  #docbar { display: none; }
+  body.docmode #docbar { display: flex; position: sticky; top: 0; z-index: 10; background: #000; padding: 12px 16px; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>SUL SIGN GROUP</h1>
+    <div class="sub">Calculadora · Letra Caixa &amp; Letras 3D · v3</div>
+  </div>
+  <div class="sub" id="hdrData"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ═══ 1. PROJETO ═══ -->
+  <div class="card">
+    <h2>1 · Projeto</h2>
+    <div class="row">
+      <div class="field" style="flex:2 1 200px">
+        <label>Cliente / Job (para o relatório)</label>
+        <input type="text" id="inCliente" placeholder="Ex.: Igreja NF — fachada">
+      </div>
+      <div class="field" style="flex:1 1 160px">
+        <label>Foto / render da letra</label>
+        <input type="file" id="inFoto" accept="image/*">
+        <img id="fotoPrev" class="hide" style="max-width:160px;max-height:110px;margin-top:6px;border-radius:6px;border:1px solid #ddd" alt="render">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:2 1 200px">
+        <label>Texto / logotipo</label>
+        <input type="text" id="inTexto" value="SUL SIGN" data-action="calc">
+        <div class="hint">Espaços são ignorados na contagem</div>
+      </div>
+      <div class="field">
+        <label>Qtd. letras (manual)</label>
+        <input type="number" id="inQtd" placeholder="auto" min="1" data-action="calc">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Altura da letra (cm)</label>
+        <input type="number" id="inAltura" value="40" min="5" data-action="calc">
+      </div>
+      <div class="field">
+        <label>Profundidade (cm)</label>
+        <input type="number" id="inProf" value="5" min="0" data-action="calc">
+        <div class="hint">Ignorada no modo chapada</div>
+      </div>
+      <div class="field">
+        <label>Complexidade do desenho</label>
+        <select id="inComplex" data-action="calc">
+          <option value="1">Simples (bastão)</option>
+          <option value="1.25">Média (serifa / logo)</option>
+          <option value="1.5">Alta (cursiva / orgânica)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 2. CONSTRUÇÃO ═══ -->
+  <div class="card">
+    <h2>2 · Construção &amp; Iluminação</h2>
+
+    <label style="font-size:11px;color:#666;font-weight:600">Tipo de construção</label>
+    <div class="toggle-group" id="tgConstr">
+      <button data-constr="caixa" class="on">Letra caixa (com profundidade)</button>
+      <button data-constr="chapada">Letra chapada (só a espessura do material)</button>
+    </div>
+
+    <label style="font-size:11px;color:#666;font-weight:600">Iluminação</label>
+    <div class="toggle-group" id="tgIlum">
+      <button data-ilum="nenhuma" class="on">Sem luz</button>
+      <button data-ilum="frontlit" id="btFront">Frontlit</button>
+      <button data-ilum="halo">Backlit / Halo</button>
+      <button data-ilum="dupla" id="btDupla">Dupla</button>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label id="lblCorpo">Corpo / lateral</label>
+        <select id="inCorpo" data-action="calc">
+          <option value="galv">Chapa galvanizada #26</option>
+          <option value="pvc10">PVC expandido 10mm</option>
+          <option value="pvc15">PVC expandido 15mm</option>
+          <option value="pvc20">PVC expandido 20mm</option>
+          <option value="mdf15">MDF 15mm</option>
+          <option value="acm">ACM 4mm</option>
+          <option value="inox">Aço inox escovado</option>
+          <option value="acr_lat">Acrílico</option>
+          <option value="print3d">Impressão 3D (PETG/PLA)</option>
+        </select>
+      </div>
+      <div class="field" id="fFrente">
+        <label>Frente / face</label>
+        <select id="inFrente" data-action="calc">
+          <option value="mesma">Mesmo material do corpo</option>
+          <option value="acr_leit">Acrílico leitoso 3mm</option>
+          <option value="acr_cor">Acrílico colorido 3mm</option>
+          <option value="acr_cristal">Acrílico cristal + vinil</option>
+          <option value="pvc10f">PVC expandido 10mm</option>
+          <option value="acm_f">ACM 4mm</option>
+        </select>
+        <div class="hint" id="hintFrente"></div>
+      </div>
+      <div class="field" id="fFundo">
+        <label>Fundo</label>
+        <select id="inFundo" data-action="calc">
+          <option value="mesma">Mesmo material do corpo</option>
+          <option value="pvc5">PVC expandido 5mm</option>
+          <option value="pvc10">PVC expandido 10mm</option>
+          <option value="sem">Sem fundo (vazada)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Acabamento</label>
+        <select id="inAcab" data-action="calc">
+          <option value="nenhum">Nenhum / natural</option>
+          <option value="pintura">Pintura automotiva</option>
+          <option value="vinil">Adesivo vinil</option>
+          <option value="ambos">Pintura + vinil</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="chk">
+      <input type="checkbox" id="inGabarito" data-action="calc">
+      <label for="inGabarito" style="margin:0">Incluir gabarito de furação em MDF 3mm</label>
+    </div>
+
+    <!-- 3D printing extras -->
+    <div class="row hide" id="row3d">
+      <div class="field">
+        <label>Filamento</label>
+        <select id="inFilam" data-action="calc">
+          <option value="petg">PETG (externo)</option>
+          <option value="pla">PLA (interno)</option>
+          <option value="asa">ASA (sol intenso)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Parede (mm)</label>
+        <input type="number" id="inParede" value="2.4" step="0.4" data-action="calc">
+      </div>
+      <div class="field">
+        <label>Velocidade média (g/h)</label>
+        <input type="number" id="inGh" value="30" data-action="calc">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Instalação</label>
+        <select id="inInstala" data-action="calc">
+          <option value="sim">Incluir instalação</option>
+          <option value="nao">Só fabricação (retira)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Altura de instalação</label>
+        <select id="inAlturaInst" data-action="calc">
+          <option value="1">Térreo (até 4m)</option>
+          <option value="1.4">Alta (escada/andaime)</option>
+          <option value="1.9">Muito alta (balancim/munck)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 3. RESULTADO ═══ -->
+  <div class="card">
+    <h2>3 · Resultado</h2>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Custo total</div><div class="k-value" id="kCusto">—</div></div>
+      <div class="kpi"><div class="k-label">Custo / letra</div><div class="k-value" id="kCustoLetra">—</div></div>
+      <div class="kpi gold"><div class="k-label">Preço B2B (Sul Sign → PDVEX)</div><div class="k-value" id="kVenda">—</div></div>
+      <div class="kpi gold"><div class="k-label">B2B / letra</div><div class="k-value" id="kVendaLetra">—</div></div>
+      <div class="kpi gold"><div class="k-label">Preço B2C sugerido (PDVEX → cliente)</div><div class="k-value" id="kB2C">—</div></div>
+      <div class="kpi"><div class="k-label">Margem PDVEX</div><div class="k-value" id="kMgPdv">—</div></div>
+      <div class="kpi"><div class="k-label">Margem bruta Sul Sign</div><div class="k-value" id="kMargem">—</div></div>
+      <div class="kpi"><div class="k-label">Impostos embutidos (B2B)</div><div class="k-value" id="kImp">—</div></div>
+      <div class="kpi"><div class="k-label">Referência mercado / letra (B2C)</div><div class="k-value" id="kMercado">—</div></div>
+    </div>
+    <div class="warn" id="warnMercado"></div>
+    <div id="ovBadge" class="ok-badge hide">✓ Usando medidas reais do nesting (área + corte)</div>
+
+    <div style="margin-top:14px">
+      <table id="tblMemorial">
+        <thead><tr><th>Memorial de custo</th><th class="num">Qtd</th><th class="num">Unit.</th><th class="num">Total</th></tr></thead>
+        <tbody id="tbMemorial"></tbody>
+      </table>
+    </div>
+    <div class="footnote" id="ftGeo"></div>
+    <div class="btnrow">
+      <button class="btn sec sm" data-fn="addlinha">+ Linha avulsa</button>
+      <button class="btn sec sm" data-fn="addmat">➕ Nova materialidade</button>
+      <button class="btn sec sm" data-fn="addacab">➕ Novo acabamento</button>
+    </div>
+    <div class="btnrow">
+      <button class="btn" data-fn="relatorio">🖨 Gerar relatório de custo</button>
+      <button class="btn sec" data-fn="descritivo">📝 Gerar descritivo</button>
+    </div>
+    <div id="descBox" class="hide" style="margin-top:12px">
+      <textarea id="descTxt" style="width:100%;min-height:150px;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:13px;line-height:1.55;font-family:inherit"></textarea>
+      <div class="btnrow">
+        <button class="btn sm" data-fn="copiadesc">📋 Copiar descritivo</button>
+      </div>
+      <div class="footnote">Texto editável — ajuste antes de copiar pra proposta ou pro Book de Artes.</div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. BDI ═══ -->
+  <div class="card">
+    <h2>4 · BDI &amp; Comercial</h2>
+    <label style="font-size:11px;color:#666;font-weight:700">SUL SIGN → PDVEX (preço B2B)</label>
+    <div class="bdi-grid" style="margin:6px 0 14px">
+      <div class="field"><label>AC %</label><input type="number" id="bdiAC" value="8" data-action="calc"></div>
+      <div class="field"><label>DF %</label><input type="number" id="bdiDF" value="2" data-action="calc"></div>
+      <div class="field"><label>RI %</label><input type="number" id="bdiRI" value="3" data-action="calc"></div>
+      <div class="field"><label>Lucro %</label><input type="number" id="bdiLucro" value="18" data-action="calc"></div>
+      <div class="field"><label>Impostos %</label><input type="number" id="bdiImp" value="10" data-action="calc"></div>
+      <div class="field"><label>BV / Comissão %</label><input type="number" id="bdiBV" value="0" data-action="calc"></div>
+      <div class="field"><label>Desconto %</label><input type="number" id="bdiDesc" value="0" data-action="calc"></div>
+    </div>
+    <label style="font-size:11px;color:#8a6d00;font-weight:700">PDVEX → CLIENTE FINAL (preço B2C, parâmetros da PDVEX sobre o B2B)</label>
+    <div class="bdi-grid" style="margin-top:6px">
+      <div class="field"><label>AC %</label><input type="number" id="bdi2AC" value="5" data-action="calc"></div>
+      <div class="field"><label>DF %</label><input type="number" id="bdi2DF" value="0" data-action="calc"></div>
+      <div class="field"><label>RI %</label><input type="number" id="bdi2RI" value="0" data-action="calc"></div>
+      <div class="field"><label>Lucro %</label><input type="number" id="bdi2Lucro" value="25" data-action="calc"></div>
+      <div class="field"><label>Impostos %</label><input type="number" id="bdi2Imp" value="10" data-action="calc"></div>
+      <div class="field"><label>BV / Comissão %</label><input type="number" id="bdi2BV" value="0" data-action="calc"></div>
+      <div class="field"><label>Desconto %</label><input type="number" id="bdi2Desc" value="0" data-action="calc"></div>
+    </div>
+    <div class="footnote">Padrão Sul Sign: BDI 57% (AC 8 + DF 2 + RI 3 + Lucro 18 + Impostos 10). BV sobre o bruto líquido de imposto. A camada PDVEX aplica os parâmetros dela sobre o preço B2B — o custo da PDVEX é o que ela paga à Sul Sign.</div>
+  </div>
+
+  <!-- ═══ 5. BASE DE PREÇOS ═══ -->
+  <div class="card">
+    <details>
+      <summary>⚙ 5 · Base de preços (editável — insumos e M.O.)</summary>
+      <div class="row" style="margin-top:10px">
+        <div class="field"><label>Galvanizada #26 (R$/m²)</label><input type="number" id="pGalv" value="95" data-action="calc"></div>
+        <div class="field"><label>PVC exp. 5mm (R$/m²)</label><input type="number" id="pPvc5" value="52" data-action="calc"></div>
+        <div class="field"><label>PVC exp. 10mm (R$/m²)</label><input type="number" id="pPvc10" value="90" data-action="calc"></div>
+        <div class="field"><label>PVC exp. 15mm (R$/m²)</label><input type="number" id="pPvc15" value="130" data-action="calc"></div>
+        <div class="field"><label>PVC exp. 15mm (R$/m²)</label><input type="number" id="pPvc15" value="130" data-action="calc"></div>
+        <div class="field"><label>PVC exp. 20mm (R$/m²)</label><input type="number" id="pPvc20" value="175" data-action="calc"></div>
+        <div class="field"><label>MDF 15mm (R$/m²)</label><input type="number" id="pMdf15" value="58" data-action="calc"></div>
+        <div class="field"><label>MDF 3mm gabarito (R$/m²)</label><input type="number" id="pMdf3" value="26" data-action="calc"></div>
+        <div class="field"><label>ACM 4mm (R$/m²)</label><input type="number" id="pAcm" value="170" data-action="calc"></div>
+        <div class="field"><label>Inox escovado (R$/m²)</label><input type="number" id="pInox" value="380" data-action="calc"></div>
+        <div class="field"><label>Acrílico leitoso 3mm (R$/m²)</label><input type="number" id="pAcrLeit" value="320" data-action="calc"></div>
+        <div class="field"><label>Acrílico colorido 3mm (R$/m²)</label><input type="number" id="pAcrCor" value="380" data-action="calc"></div>
+        <div class="field"><label>Acrílico cristal 3mm (R$/m²)</label><input type="number" id="pAcrCri" value="290" data-action="calc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Módulo LED 0,72W IP65 (R$/un)</label><input type="number" id="pModulo" value="2.20" step="0.1" data-action="calc"></div>
+        <div class="field"><label>Fonte chaveada (R$/W)</label><input type="number" id="pFonte" value="0.80" step="0.05" data-action="calc"></div>
+        <div class="field"><label>Fiação/conectores por letra (R$)</label><input type="number" id="pFiacao" value="6" data-action="calc"></div>
+        <div class="field"><label>Densidade LED (mód./m² face)</label><input type="number" id="pDensLed" value="120" data-action="calc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Pintura automotiva (R$/m²)</label><input type="number" id="pPintura" value="85" data-action="calc"></div>
+        <div class="field"><label>Vinil aplicado (R$/m²)</label><input type="number" id="pVinil" value="55" data-action="calc"></div>
+        <div class="field"><label>Corte router/laser (R$/ml)</label><input type="number" id="pCorte" value="10" data-action="calc"></div>
+        <div class="field"><label>Hora oficina M.O. (R$/h)</label><input type="number" id="pHora" value="60" data-action="calc"></div>
+        <div class="field"><label>Montagem por letra (min)</label><input type="number" id="pMinMont" value="35" data-action="calc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Instalação base (R$)</label><input type="number" id="pInstBase" value="150" data-action="calc"></div>
+        <div class="field"><label>Instalação por letra (R$)</label><input type="number" id="pInstLetra" value="20" data-action="calc"></div>
+        <div class="field"><label>Consumíveis (% s/ MP)</label><input type="number" id="pConsum" value="4" data-action="calc"></div>
+        <div class="field"><label>Perda de chapa (%)</label><input type="number" id="pPerda" value="25" data-action="calc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>PETG (R$/kg)</label><input type="number" id="pPetg" value="95" data-action="calc"></div>
+        <div class="field"><label>PLA (R$/kg)</label><input type="number" id="pPla" value="75" data-action="calc"></div>
+        <div class="field"><label>ASA (R$/kg)</label><input type="number" id="pAsa" value="140" data-action="calc"></div>
+        <div class="field"><label>Hora máquina 3D (R$/h)</label><input type="number" id="pHora3d" value="8" data-action="calc"></div>
+      </div>
+      <div class="footnote">Preços pré-carregados com referências Jul/2026. MDF: confira sempre a planilha Flaviense (os preços internos costumam estar defasados). Perda de chapa 25% cobre o aproveitamento típico de recorte de letras — quando usar o nesting, a perda real substitui a estimativa.</div>
+    </details>
+  </div>
+
+  <!-- ═══ 6. NESTING ═══ -->
+  <div class="card">
+    <h2>6 · Aproveitamento de chapa (nesting SVG)</h2>
+    <div class="footnote" style="margin:0 0 10px 0">
+      Suba o vetor em <b>SVG</b> (do Corel/Illustrator: Salvar como → SVG, um path por letra/peça). A otimização é por caixa delimitadora com rotação 90°, então é uma estimativa <b>conservadora</b> — na prática o aproveitamento real pode ser um pouco melhor.
+    </div>
+    <div class="row">
+      <div class="field" style="flex:2 1 200px">
+        <label>Arquivo vetorial (.svg)</label>
+        <input type="file" id="inSvg" accept=".svg,image/svg+xml">
+      </div>
+      <div class="field">
+        <label>Altura da maior peça (cm)</label>
+        <input type="number" id="inNestAlt" value="40" min="1">
+        <div class="hint">Usada para escalar o vetor</div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Material / chapa</label>
+        <select id="inNestMat" data-fn="nestmat">
+          <option value="mdf" data-w="1850" data-h="2750">MDF (1,85 × 2,75 m)</option>
+          <option value="pvc" data-w="1220" data-h="2440">PVC expandido (1,22 × 2,44 m)</option>
+          <option value="acr" data-w="2000" data-h="3000">Acrílico (2,00 × 3,00 m)</option>
+          <option value="galv" data-w="1200" data-h="3000">Galvanizada (1,20 × 3,00 m)</option>
+          <option value="acm" data-w="1220" data-h="5000">ACM (1,22 × 5,00 m)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Largura chapa (mm)</label>
+        <input type="number" id="inChapaW" value="1850">
+      </div>
+      <div class="field">
+        <label>Altura chapa (mm)</label>
+        <input type="number" id="inChapaH" value="2750">
+      </div>
+      <div class="field">
+        <label>Espaçamento entre peças (mm)</label>
+        <input type="number" id="inGap" value="10">
+      </div>
+    </div>
+    <div class="btnrow">
+      <button class="btn" data-fn="nest">📐 Calcular aproveitamento</button>
+      <button class="btn sec sm hide" id="btAplicar" data-fn="aplicar">→ Aplicar área e corte na calculadora</button>
+      <button class="btn sec sm hide" id="btLimpar" data-fn="limparov">✕ Limpar override</button>
+    </div>
+    <div class="kpi-grid hide" id="nestKpis" style="margin-top:12px">
+      <div class="kpi"><div class="k-label">Peças</div><div class="k-value" id="nPecas">—</div></div>
+      <div class="kpi"><div class="k-label">Chapas necessárias</div><div class="k-value" id="nChapas">—</div></div>
+      <div class="kpi"><div class="k-label">Aproveitamento</div><div class="k-value" id="nAprov">—</div></div>
+      <div class="kpi"><div class="k-label">Corte total</div><div class="k-value" id="nCorte">—</div></div>
+      <div class="kpi"><div class="k-label">Área das faces</div><div class="k-value" id="nArea">—</div></div>
+    </div>
+    <div id="nestCanvases"></div>
+    <div class="warn" id="nestWarn"></div>
+  </div>
+
+</div>
+
+<!-- container invisível p/ medir SVG -->
+<div id="svgHolder" style="position:absolute; left:-99999px; top:0; visibility:hidden;"></div>
+
+<!-- ═══ RELATÓRIO (só impressão) ═══ -->
+<div id="docbar">
+  <button class="btn sm" data-fn="sairdoc">← Voltar à calculadora</button>
+  <button class="btn sm" style="background:#c9a227;color:#000" data-fn="printnow">🖨 Imprimir / PDF</button>
+  <button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button>
+</div>
+<div id="report"></div>
+
+<script>
+var ilum = 'nenhuma';
+var constr = 'caixa';
+var lastCalc = null;
+var nestResult = null;
+var manualTotals = {};   // override manual por linha do memorial (chave = prefixo da descrição)
+var manualQtds = {};     // override manual de quantidade por linha
+var linhasAvulsas = [];  // linhas adicionadas pelo usuário {desc, val}
+var customMats = {};     // materialidades criadas pelo usuário {codigo: {nome, preco}}
+var customAcabs = {};    // acabamentos criados pelo usuário {codigo: {nome, preco}}
+var fotoData = '';       // dataURL da foto/render do job
+var ovAreaFace = 0;   // m² total de faces (override do nesting)
+var ovCorteML = 0;    // ml de corte (override do nesting)
+var ovChapas = 0;
+
+function $(id){ return document.getElementById(id); }
+function num(id){ var v = parseFloat($(id).value); return isNaN(v) ? 0 : v; }
+function brl(v){ return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function selText(id){ var s = $(id); return s.options[s.selectedIndex].text; }
+
+/* ── toggles ── */
+(function(){
+  var btns = document.querySelectorAll('#tgIlum button');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].addEventListener('click', function(){
+      if (this.disabled) return;
+      for (var j = 0; j < btns.length; j++) btns[j].className = '';
+      this.className = 'on';
+      ilum = this.getAttribute('data-ilum');
+      calc();
+    });
+  }
+  var cbtns = document.querySelectorAll('#tgConstr button');
+  for (var k = 0; k < cbtns.length; k++) {
+    cbtns[k].addEventListener('click', function(){
+      for (var j = 0; j < cbtns.length; j++) cbtns[j].className = '';
+      this.className = 'on';
+      constr = this.getAttribute('data-constr');
+      // chapada: frontlit/dupla não fazem sentido (não há caixa p/ LED interno)
+      if (constr === 'chapada') {
+        $('btFront').disabled = true; $('btDupla').disabled = true;
+        if (ilum === 'frontlit' || ilum === 'dupla') {
+          var haloBtn = document.querySelector('#tgIlum button[data-ilum="halo"]');
+          var all = document.querySelectorAll('#tgIlum button');
+          for (var j2 = 0; j2 < all.length; j2++) all[j2].className = '';
+          haloBtn.className = 'on';
+          ilum = 'halo';
+        }
+        $('fFrente').className = 'field hide';
+        $('fFundo').className = 'field hide';
+        $('lblCorpo').textContent = 'Material da letra';
+      } else {
+        $('btFront').disabled = false; $('btDupla').disabled = false;
+        $('fFrente').className = 'field';
+        $('fFundo').className = 'field';
+        $('lblCorpo').textContent = 'Corpo / lateral';
+      }
+      calc();
+    });
+  }
+})();
+
+document.body.addEventListener('input', function(e){
+  if (e.target.getAttribute('data-action') === 'calc') calc();
+});
+document.body.addEventListener('change', function(e){
+  if (e.target.getAttribute('data-action') === 'calc') calc();
+  if (e.target.getAttribute('data-fn') === 'nestmat') {
+    var o = e.target.options[e.target.selectedIndex];
+    $('inChapaW').value = o.getAttribute('data-w');
+    $('inChapaH').value = o.getAttribute('data-h');
+  }
+  if (e.target.hasAttribute('data-lkey')) {
+    var vk = parseFloat(e.target.value);
+    manualTotals[e.target.getAttribute('data-lkey')] = isNaN(vk) ? 0 : vk;
+    calc();
+  }
+  if (e.target.hasAttribute('data-lqty')) {
+    var kq = e.target.getAttribute('data-lqty');
+    var q0 = parseFloat(e.target.getAttribute('data-q0'));
+    var t0 = parseFloat(e.target.getAttribute('data-t0'));
+    var nq = parseFloat(e.target.value);
+    if (!isNaN(nq) && q0 > 0) {
+      manualQtds[kq] = nq;
+      manualTotals[kq] = t0 / q0 * nq;
+    }
+    calc();
+  }
+  if (e.target.hasAttribute('data-lav')) {
+    var ixa = parseInt(e.target.getAttribute('data-lav'));
+    var va = parseFloat(e.target.value);
+    if (linhasAvulsas[ixa]) linhasAvulsas[ixa].val = isNaN(va) ? 0 : va;
+    calc();
+  }
+});
+document.body.addEventListener('click', function(e){
+  var fn = e.target.getAttribute('data-fn');
+  if (fn === 'relatorio') gerarRelatorio();
+  if (fn === 'descritivo') gerarDescritivo();
+  if (fn === 'copiadesc') copiarDescritivo();
+  if (fn === 'nest') runNesting();
+  if (fn === 'aplicar') aplicarNesting();
+  if (fn === 'limparov') limparOverride();
+  if (fn === 'addlinha') {
+    var d = prompt('Descrição da linha (ex.: Frete especial, Andaime, Arte 3D):');
+    if (d) {
+      var v = parseFloat((prompt('Valor (R$):') || '0').replace(',', '.'));
+      linhasAvulsas.push({ desc: d, val: isNaN(v) ? 0 : v });
+      calc();
+    }
+  }
+  if (fn === 'addmat') {
+    var nm = prompt('Nome da nova materialidade (ex.: PS 2mm, Compensado naval 10mm):');
+    if (nm) {
+      var pm = parseFloat((prompt('Preço (R$/m²):') || '0').replace(',', '.'));
+      var cod = 'cust_' + Date.now();
+      customMats[cod] = { nome: nm, preco: isNaN(pm) ? 0 : pm };
+      var sels = ['inCorpo', 'inFrente', 'inFundo'];
+      for (var si = 0; si < sels.length; si++) {
+        var op = document.createElement('option');
+        op.value = cod; op.textContent = nm + ' (custom)';
+        $(sels[si]).appendChild(op);
+      }
+      calc();
+    }
+  }
+  if (fn === 'addacab') {
+    var na = prompt('Nome do novo acabamento (ex.: Verniz PU, Laminação, Textura):');
+    if (na) {
+      var pa = parseFloat((prompt('Preço (R$/m² sobre área acabada):') || '0').replace(',', '.'));
+      var codA = 'custA_' + Date.now();
+      customAcabs[codA] = { nome: na, preco: isNaN(pa) ? 0 : pa };
+      var opA = document.createElement('option');
+      opA.value = codA; opA.textContent = na + ' (custom)';
+      $('inAcab').appendChild(opA);
+      $('inAcab').value = codA;
+      calc();
+    }
+  }
+  if (e.target.hasAttribute('data-lreset')) {
+    delete manualTotals[e.target.getAttribute('data-lreset')];
+    delete manualQtds[e.target.getAttribute('data-lreset')];
+    calc();
+  }
+  if (fn === 'printnow') window.print();
+  if (fn === 'docmode') modoDocumento(true);
+  if (fn === 'sairdoc') modoDocumento(false);
+  if (fn === 'baixarhtml') baixarRelatorioHtml();
+  if (fn === 'fechareport') $('report').className = '';
+  if (e.target.hasAttribute('data-ldel')) {
+    linhasAvulsas.splice(parseInt(e.target.getAttribute('data-ldel')), 1);
+    calc();
+  }
+});
+
+function contaLetras(){
+  var manual = num('inQtd');
+  if (manual > 0) return manual;
+  var t = $('inTexto').value.replace(/\s/g, '');
+  return t.length > 0 ? t.length : 1;
+}
+
+function precoMat(codigo){
+  if (customMats[codigo]) return customMats[codigo].preco;
+  if (codigo === 'galv') return num('pGalv');
+  if (codigo === 'pvc5') return num('pPvc5');
+  if (codigo === 'pvc10' || codigo === 'pvc10f') return num('pPvc10');
+  if (codigo === 'pvc15') return num('pPvc15');
+  if (codigo === 'pvc20') return num('pPvc20');
+  if (codigo === 'mdf15') return num('pMdf15');
+  if (codigo === 'acm' || codigo === 'acm_f') return num('pAcm');
+  if (codigo === 'inox') return num('pInox');
+  if (codigo === 'acr_lat' || codigo === 'acr_leit') return num('pAcrLeit');
+  if (codigo === 'acr_cor') return num('pAcrCor');
+  if (codigo === 'acr_cristal') return num('pAcrCri') + num('pVinil');
+  return 0;
+}
+
+function calc(){
+  var qtd = contaLetras();
+  var H = num('inAltura') / 100;
+  var P = num('inProf') / 100;
+  var cx = parseFloat($('inComplex').value);
+  var is3d = ($('inCorpo').value === 'print3d');
+  $('row3d').className = (is3d && constr === 'caixa') ? 'row' : 'row hide';
+
+  /* geometria estimada por letra */
+  var larg = H * 0.72;
+  var areaFaceUnit = H * larg * 0.45;
+  var perimUnit = H * 4.0 * cx;
+  var perdaF = 1 + num('pPerda') / 100;
+
+  /* overrides do nesting */
+  var usaOv = (ovAreaFace > 0);
+  var areaFaceTot = usaOv ? ovAreaFace : areaFaceUnit * qtd;
+  var perimTot = usaOv ? 0 : perimUnit * qtd; // corte tratado abaixo
+  $('ovBadge').className = usaOv ? 'ok-badge' : 'ok-badge hide';
+
+  var areaLateralTot = perimUnit * qtd * P; // lateral sempre estimada (nesting mede faces)
+
+  var linhas = [];
+  var mpTotal = 0;
+  function addLinha(d, q, u, t){ linhas.push([d, q, u, t]); }
+
+  var corteMlTotal = 0;
+
+  if (constr === 'chapada') {
+    /* ── LETRA CHAPADA: só a espessura do próprio material ── */
+    var pM = precoMat($('inCorpo').value);
+    var mChap = areaFaceTot * (usaOv ? 1 : perdaF);
+    var vChap = mChap * pM;
+    addLinha('Letra chapada (' + selText('inCorpo') + ')', mChap.toFixed(2) + ' m²', brl(pM) + '/m²', vChap);
+    mpTotal += vChap;
+
+    corteMlTotal = usaOv ? ovCorteML : perimUnit * qtd;
+    var vCorteC = corteMlTotal * num('pCorte');
+    addLinha('Corte router/laser', corteMlTotal.toFixed(1) + ' ml', brl(num('pCorte')) + '/ml', vCorteC);
+    mpTotal += vCorteC;
+
+  } else if (!is3d) {
+    /* ── LETRA CAIXA tradicional ── */
+    var frenteForcada = (ilum === 'frontlit' || ilum === 'dupla');
+    var codF = $('inFrente').value;
+    var pF = (frenteForcada && (codF === 'mesma' || codF === 'pvc10f' || codF === 'acm_f')) ? num('pAcrLeit') : (codF === 'mesma' ? precoMat($('inCorpo').value) : precoMat(codF));
+    $('hintFrente').textContent = frenteForcada ? 'Frontlit exige face translúcida — acrílico assumido' : '';
+
+    var nomeFrente = frenteForcada && (codF === 'mesma' || codF === 'pvc10f' || codF === 'acm_f') ? 'acrílico leitoso' : selText('inFrente');
+    var mFace = areaFaceTot * (usaOv ? 1 : perdaF);
+    var vFace = mFace * pF;
+    addLinha('Face (' + nomeFrente + ')', mFace.toFixed(2) + ' m²', brl(pF) + '/m²', vFace);
+    mpTotal += vFace;
+
+    /* lateral */
+    var pC = precoMat($('inCorpo').value);
+    var mLat = areaLateralTot * perdaF;
+    var vLat = mLat * pC;
+    addLinha('Lateral (' + selText('inCorpo') + ')', mLat.toFixed(2) + ' m²', brl(pC) + '/m²', vLat);
+    mpTotal += vLat;
+
+    /* fundo */
+    var codFu = $('inFundo').value;
+    if (codFu !== 'sem') {
+      var pFu = codFu === 'mesma' ? pC : precoMat(codFu);
+      var mFu = areaFaceTot * (usaOv ? 1 : perdaF);
+      var vFu = mFu * pFu;
+      addLinha('Fundo (' + (codFu === 'mesma' ? selText('inCorpo') : selText('inFundo')) + ')', mFu.toFixed(2) + ' m²', brl(pFu) + '/m²', vFu);
+      mpTotal += vFu;
+    }
+
+    /* corte: face + fundo (se houver) + desenvolvimento da lateral */
+    var facesCortadas = (codFu !== 'sem') ? 2 : 1;
+    corteMlTotal = usaOv ? ovCorteML * facesCortadas + perimUnit * qtd : perimUnit * qtd * (facesCortadas + 1);
+    var vCorte = corteMlTotal * num('pCorte');
+    addLinha('Corte router/laser', corteMlTotal.toFixed(1) + ' ml', brl(num('pCorte')) + '/ml', vCorte);
+    mpTotal += vCorte;
+
+  } else {
+    /* ── IMPRESSÃO 3D ── */
+    var areaDesenv = (areaFaceUnit * 1.6 + perimUnit * P) * 10000;
+    var parede = num('inParede') / 10;
+    var pesoG = areaDesenv * parede * 1.25 * 1.15;
+    var pesoTot = pesoG * qtd / 1000;
+    var pKg = $('inFilam').value === 'petg' ? num('pPetg') : ($('inFilam').value === 'pla' ? num('pPla') : num('pAsa'));
+    var vFil = pesoTot * pKg;
+    addLinha('Filamento ' + $('inFilam').value.toUpperCase(), (pesoTot * 1000).toFixed(0) + ' g', brl(pKg) + '/kg', vFil);
+    mpTotal += vFil;
+
+    var horas3 = (pesoTot * 1000) / Math.max(num('inGh'), 1);
+    var vMaq = horas3 * num('pHora3d');
+    addLinha('Hora máquina 3D', horas3.toFixed(1) + ' h', brl(num('pHora3d')) + '/h', vMaq);
+    mpTotal += vMaq;
+
+    if (ilum === 'frontlit' || ilum === 'dupla') {
+      var mF3 = areaFaceTot * perdaF;
+      var vF3 = mF3 * num('pAcrLeit');
+      addLinha('Face acrílico leitoso (difusor)', mF3.toFixed(2) + ' m²', brl(num('pAcrLeit')) + '/m²', vF3);
+      mpTotal += vF3;
+    }
+  }
+
+  /* ── gabarito MDF 3mm ── */
+  if ($('inGabarito').checked) {
+    var areaGab = H * larg * qtd * 1.15; // painel corrido atrás do texto
+    var vGabMat = areaGab * num('pMdf3');
+    var vGabCorte = perimUnit * qtd * 0.4 * num('pCorte'); // furos + contorno parcial
+    addLinha('Gabarito de furação MDF 3mm', areaGab.toFixed(2) + ' m²', brl(num('pMdf3')) + '/m² + corte', vGabMat + vGabCorte);
+    mpTotal += vGabMat + vGabCorte;
+  }
+
+  /* ── acabamento ── */
+  var ac = $('inAcab').value;
+  var areaAcab = areaFaceTot + (constr === 'chapada' ? 0 : areaLateralTot);
+  if (ac === 'pintura' || ac === 'ambos') {
+    var vP = areaAcab * num('pPintura');
+    addLinha('Pintura automotiva', areaAcab.toFixed(2) + ' m²', brl(num('pPintura')) + '/m²', vP);
+    mpTotal += vP;
+  }
+  if (ac === 'vinil' || ac === 'ambos') {
+    var vV = areaFaceTot * num('pVinil');
+    addLinha('Adesivo vinil (face)', areaFaceTot.toFixed(2) + ' m²', brl(num('pVinil')) + '/m²', vV);
+    mpTotal += vV;
+  }
+  if (customAcabs[ac]) {
+    var vCA = areaAcab * customAcabs[ac].preco;
+    addLinha(customAcabs[ac].nome, areaAcab.toFixed(2) + ' m²', brl(customAcabs[ac].preco) + '/m²', vCA);
+    mpTotal += vCA;
+  }
+
+  /* ── iluminação ── */
+  var wattsTot = 0;
+  if (ilum !== 'nenhuma') {
+    var fator = (ilum === 'dupla') ? 1.6 : 1.0;
+    var modulos = Math.ceil(areaFaceTot * num('pDensLed') * fator);
+    if (modulos < qtd * 3) modulos = qtd * 3;
+    var vMod = modulos * num('pModulo');
+    addLinha('Módulos LED (' + ilum + ')', modulos + ' un', brl(num('pModulo')) + '/un', vMod);
+    mpTotal += vMod;
+
+    wattsTot = modulos * 0.72 * 1.25;
+    var vFonte = wattsTot * num('pFonte');
+    addLinha('Fonte chaveada', wattsTot.toFixed(0) + ' W', brl(num('pFonte')) + '/W', vFonte);
+    mpTotal += vFonte;
+
+    var vFia = qtd * num('pFiacao');
+    addLinha('Fiação e conectores', qtd + ' letra(s)', brl(num('pFiacao')), vFia);
+    mpTotal += vFia;
+  }
+
+  /* ── consumíveis ── */
+  var vCons = mpTotal * num('pConsum') / 100;
+  addLinha('Consumíveis (' + num('pConsum') + '% MP)', '—', '—', vCons);
+
+  /* ── M.O. montagem ── */
+  var fatorMont = constr === 'chapada' ? 0.4 : 1;
+  var minMont = num('pMinMont') * cx * (ilum !== 'nenhuma' ? 1.5 : 1) * fatorMont;
+  var horasMont = minMont * qtd / 60;
+  var vMO = horasMont * num('pHora');
+  addLinha('M.O. montagem oficina', horasMont.toFixed(1) + ' h', brl(num('pHora')) + '/h', vMO);
+
+  /* ── instalação ── */
+  var vInst = 0;
+  if ($('inInstala').value === 'sim') {
+    var fAlt = parseFloat($('inAlturaInst').value);
+    vInst = (num('pInstBase') + num('pInstLetra') * qtd) * fAlt * (ilum !== 'nenhuma' ? 1.3 : 1);
+    addLinha('Instalação (fator altura ' + fAlt + ')', '1 vb', '—', vInst);
+  }
+
+  /* ── total efetivo: aplica overrides manuais + linhas avulsas ── */
+  var custoTotal = 0;
+  var chaves = [];
+  var q0s = [];
+  var sufs = [];
+  for (var li = 0; li < linhas.length; li++) {
+    var chave = String(linhas[li][0]).split('(')[0].trim();
+    chaves.push(chave);
+    var mq = String(linhas[li][1]).match(/^(-?[\d.]+)\s*(.*)$/);
+    q0s.push(mq ? parseFloat(mq[1]) : null);
+    sufs.push(mq ? mq[2] : '');
+    if (manualQtds.hasOwnProperty(chave) && mq) {
+      linhas[li][1] = manualQtds[chave] + (mq[2] ? ' ' + mq[2] : '');
+    }
+    var eff = manualTotals.hasOwnProperty(chave) ? manualTotals[chave] : linhas[li][3];
+    linhas[li][4] = eff;
+    custoTotal += eff;
+  }
+  for (var la = 0; la < linhasAvulsas.length; la++) custoTotal += linhasAvulsas[la].val;
+
+  /* ── BDI ── */
+  var somaMk = (num('bdiAC') + num('bdiDF') + num('bdiRI') + num('bdiLucro') + num('bdiImp')) / 100;
+  var pvBase = custoTotal * (1 + somaMk);
+  var bv = pvBase * (1 - num('bdiImp') / 100) * num('bdiBV') / 100;
+  var pvFinal = (pvBase + bv) * (1 - num('bdiDesc') / 100);
+  var margem = pvFinal > 0 ? (1 - custoTotal / pvFinal) * 100 : 0;
+  var impostos = pvFinal * num('bdiImp') / 100;
+
+  /* ── camada PDVEX (B2C): custo dela = preço B2B ── */
+  var soma2 = (num('bdi2AC') + num('bdi2DF') + num('bdi2RI') + num('bdi2Lucro') + num('bdi2Imp')) / 100;
+  var pv2Base = pvFinal * (1 + soma2);
+  var bv2 = pv2Base * (1 - num('bdi2Imp') / 100) * num('bdi2BV') / 100;
+  var pvB2C = (pv2Base + bv2) * (1 - num('bdi2Desc') / 100);
+  var margemPdvR = pvB2C - pvFinal;
+  var margemPdvP = pvB2C > 0 ? (margemPdvR / pvB2C) * 100 : 0;
+
+  /* ── render ── */
+  var tb = $('tbMemorial');
+  var html = '';
+  for (var i = 0; i < linhas.length; i++) {
+    var ovT = manualTotals.hasOwnProperty(chaves[i]);
+    var ovQ = manualQtds.hasOwnProperty(chaves[i]);
+    var qCell;
+    if (q0s[i] !== null && q0s[i] > 0) {
+      var qShow = ovQ ? manualQtds[chaves[i]] : q0s[i];
+      qCell = '<input class="lt' + (ovQ ? ' ov' : '') + '" type="number" step="0.1" style="width:60px" data-lqty="' + chaves[i] + '" data-q0="' + q0s[i] + '" data-t0="' + linhas[i][3] + '" value="' + qShow + '"> ' + sufs[i];
+    } else {
+      qCell = linhas[i][1];
+    }
+    html += '<tr><td>' + linhas[i][0] + ((ovT || ovQ) ? ' <button class="mini" data-lreset="' + chaves[i] + '" title="voltar ao cálculo">↺</button>' : '') + '</td><td class="num">' + qCell + '</td><td class="num">' + linhas[i][2] + '</td><td class="num"><input class="lt' + (ovT ? ' ov' : '') + '" type="number" step="0.01" data-lkey="' + chaves[i] + '" value="' + linhas[i][4].toFixed(2) + '"></td></tr>';
+  }
+  for (var j2 = 0; j2 < linhasAvulsas.length; j2++) {
+    html += '<tr><td>' + linhasAvulsas[j2].desc + ' <button class="mini" data-ldel="' + j2 + '" title="remover">✕</button></td><td class="num">—</td><td class="num">—</td><td class="num"><input class="lt" type="number" step="0.01" data-lav="' + j2 + '" value="' + linhasAvulsas[j2].val.toFixed(2) + '"></td></tr>';
+  }
+  html += '<tr class="tot"><td colspan="3">CUSTO TOTAL</td><td class="num">' + brl(custoTotal) + '</td></tr>';
+  tb.innerHTML = html;
+
+  $('kCusto').textContent = brl(custoTotal);
+  $('kCustoLetra').textContent = brl(custoTotal / qtd);
+  $('kVenda').textContent = brl(pvFinal);
+  $('kVendaLetra').textContent = brl(pvFinal / qtd);
+  $('kB2C').textContent = brl(pvB2C);
+  $('kMgPdv').textContent = brl(margemPdvR) + ' (' + margemPdvP.toFixed(1) + '%)';
+  $('kMargem').textContent = margem.toFixed(1) + '%';
+  $('kImp').textContent = brl(impostos);
+
+  /* referência de mercado */
+  var hCm = num('inAltura');
+  var escala = Math.pow(hCm / 40, 1.6);
+  var refMin, refMax;
+  if (is3d && constr === 'caixa') { refMin = 60 * escala; refMax = 180 * escala; }
+  else if (constr === 'chapada') { refMin = 60 * escala; refMax = 200 * escala; }
+  else if (ilum === 'nenhuma') { refMin = 120 * escala; refMax = 350 * escala; }
+  else { refMin = 300 * escala; refMax = 800 * escala; }
+  $('kMercado').textContent = brl(refMin) + ' – ' + brl(refMax);
+
+  var vl = pvB2C / qtd; // referência de mercado comparada ao preço final (B2C)
+  var w = $('warnMercado');
+  if (vl < refMin * 0.8) {
+    w.style.display = 'block';
+    w.textContent = '⚠ Preço por letra bem abaixo da faixa de mercado — há espaço para subir margem ou pode estar faltando custo.';
+  } else if (vl > refMax * 1.3) {
+    w.style.display = 'block';
+    w.textContent = '⚠ Preço por letra acima da faixa típica — ok em job premium/agência, mas confira a geometria.';
+  } else {
+    w.style.display = 'none';
+  }
+
+  $('ftGeo').textContent = 'Geometria por letra: face ' + (areaFaceUnit * 10000).toFixed(0) + ' cm² · perímetro ' + (perimUnit * 100).toFixed(0) + ' cm.' +
+    (usaOv ? ' MEDIDAS DO NESTING: ' + ovAreaFace.toFixed(2) + ' m² de faces reais, ' + ovCorteML.toFixed(1) + ' ml de corte real' + (ovChapas ? ', ' + ovChapas + ' chapa(s)' : '') + '.' : ' Fatores: preenchimento 45%, perda ' + num('pPerda') + '%.') +
+    (wattsTot > 0 ? ' Potência ~' + wattsTot.toFixed(0) + 'W.' : '');
+
+  lastCalc = {
+    linhas: linhas, custo: custoTotal, pv: pvFinal, qtd: qtd, margem: margem,
+    bdi: somaMk * 100, bv: bv, watts: wattsTot,
+    impostos: impostos, avulsas: linhasAvulsas.slice(),
+    pvB2C: pvB2C, bdi2: soma2 * 100, margemPdvR: margemPdvR, margemPdvP: margemPdvP
+  };
+}
+
+/* ═══════════ RELATÓRIO ═══════════ */
+function montarDocRelatorio(){
+  var rep = $('report');
+  var clone = rep.cloneNode(true);
+  var tools = clone.querySelectorAll('.r-tools, .r-desc-hint');
+  for (var i = 0; i < tools.length; i++) tools[i].parentNode.removeChild(tools[i]);
+  var srcDesc = rep.querySelector('.r-desc');
+  var dstDesc = clone.querySelector('.r-desc');
+  if (srcDesc && dstDesc) { dstDesc.innerHTML = srcDesc.innerHTML; dstDesc.removeAttribute('contenteditable'); }
+  clone.removeAttribute('id');
+  clone.className = '';
+
+  var css =
+    'body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#fff;color:#000;margin:0;font-size:13px}' +
+    '.rwrap{max-width:900px;margin:0 auto}' +
+    '.r-head{background:#000;color:#fff;padding:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.r-head h1{font-size:18px;margin:0}.r-sub{font-size:10px;letter-spacing:2px;color:#ccc}' +
+    '.r-body{padding:18px}' +
+    'h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:22px 0 10px}' +
+    'table{width:100%;border-collapse:collapse;margin-top:10px}' +
+    'th{border-bottom:1px solid #000;text-align:left;font-size:10px;padding:5px 4px}' +
+    'td{border-bottom:1px solid #ddd;padding:5px 4px}.num{text-align:right}' +
+    '.r-tot td{font-weight:700;border-top:2px solid #000}' +
+    '.r-kpis{display:flex;gap:14px;margin-top:14px;flex-wrap:wrap}' +
+    '.r-kpi{border:1px solid #000;padding:10px 14px;border-radius:6px}.r-kpi b{display:block;font-size:16px}' +
+    '.r-desc{border:1px solid #ccc;border-radius:6px;padding:10px 12px;margin:8px 0;line-height:1.6}' +
+    '.r-foot{margin-top:20px;font-size:9.5px;color:#666;border-top:1px solid #ccc;padding-top:8px}' +
+    'img{max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0}' +
+    '.printbar{position:sticky;top:0;background:#000;padding:12px 18px}' +
+    '.printbar button{padding:10px 16px;border:none;border-radius:8px;background:#c9a227;color:#000;font-weight:700;font-size:14px;cursor:pointer}' +
+    '@media print{.printbar{display:none}}';
+
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+    '<title>Relatorio SulSign</title><style>' + css + '</style></head><body>' +
+    '<div class="printbar"><button onclick="window.print()">🖨 Imprimir / salvar PDF</button></div>' +
+    '<div class="rwrap">' + clone.innerHTML + '</div>' +
+    '</body></html>';
+}
+
+function baixarRelatorioHtml(){
+  var doc = montarDocRelatorio();
+  var nome = 'Relatorio_' + (($('inCliente').value || 'SulSign').replace(/[^\w\d-]+/g, '_').slice(0, 40)) + '.html';
+  try {
+    var blob = new Blob([doc], { type: 'text/html' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = nome;
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 1500);
+  } catch (e) {
+    alert('Download bloqueado neste visualizador. Abra a calculadora no Safari/Chrome.');
+  }
+}
+
+function modoDocumento(entrar){
+  if (entrar) {
+    document.body.className = 'docmode';
+    window.scrollTo(0, 0);
+  } else {
+    document.body.className = '';
+  }
+}
+
+function gerarRelatorio(){
+  if (!lastCalc) calc();
+  var c = lastCalc;
+  var h = '';
+  h += '<div class="r-tools"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button><button class="btn sec sm" data-fn="printnow">🖨 Imprimir</button><button class="btn sec sm" data-fn="fechareport">✕ Fechar</button></div>';
+  h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">RELATÓRIO DE CUSTO — LETRA CAIXA / LETRAS 3D</div></div>';
+  h += '<div class="r-body">';
+  h += '<p><b>Job:</b> ' + ($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Data:</b> ' + new Date().toLocaleDateString('pt-BR') + '</p>';
+  if (fotoData) h += '<img src="' + fotoData + '" style="max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0" alt="render do job">';
+  var dtxt = ($('descTxt').value || montarDescritivo()).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:16px 0 8px">Descritivo da peça</h3>';
+  h += '<div class="r-desc" contenteditable="true">' + dtxt + '</div>';
+  h += '<div class="r-desc-hint">✎ Texto editável — toque no parágrafo para ajustar antes de imprimir</div>';
+  h += '<p style="margin-top:4px"><b>Texto:</b> ' + $('inTexto').value + ' &nbsp;·&nbsp; <b>Letras:</b> ' + c.qtd + ' &nbsp;·&nbsp; <b>Altura:</b> ' + num('inAltura') + ' cm &nbsp;·&nbsp; <b>Prof.:</b> ' + num('inProf') + ' cm</p>';
+  h += '<p style="margin-top:4px"><b>Construção:</b> ' + (constr === 'chapada' ? 'Letra chapada' : 'Letra caixa') + ' &nbsp;·&nbsp; <b>Iluminação:</b> ' + ilum + ' &nbsp;·&nbsp; <b>Material:</b> ' + selText('inCorpo') + (constr === 'caixa' ? ' &nbsp;·&nbsp; <b>Fundo:</b> ' + selText('inFundo') : '') + ' &nbsp;·&nbsp; <b>Acabamento:</b> ' + selText('inAcab') + '</p>';
+  if (ovAreaFace > 0) h += '<p style="margin-top:4px"><b>Nesting:</b> medidas reais aplicadas — ' + ovAreaFace.toFixed(2) + ' m² de faces, ' + ovCorteML.toFixed(1) + ' ml de corte, ' + ovChapas + ' chapa(s)</p>';
+  h += '<table><thead><tr><th>Item</th><th class="num">Qtd</th><th class="num">Unit.</th><th class="num">Total</th></tr></thead><tbody>';
+  for (var i = 0; i < c.linhas.length; i++) {
+    var vEff = (c.linhas[i][4] != null) ? c.linhas[i][4] : c.linhas[i][3];
+    h += '<tr><td>' + c.linhas[i][0] + '</td><td class="num">' + c.linhas[i][1] + '</td><td class="num">' + c.linhas[i][2] + '</td><td class="num">' + brl(vEff) + '</td></tr>';
+  }
+  for (var ia = 0; ia < c.avulsas.length; ia++) {
+    h += '<tr><td>' + c.avulsas[ia].desc + '</td><td class="num">—</td><td class="num">—</td><td class="num">' + brl(c.avulsas[ia].val) + '</td></tr>';
+  }
+  h += '<tr class="r-tot"><td colspan="3">CUSTO TOTAL</td><td class="num">' + brl(c.custo) + '</td></tr>';
+  h += '</tbody></table>';
+  h += '<div class="r-kpis">';
+  h += '<div class="r-kpi">Custo / letra<b>' + brl(c.custo / c.qtd) + '</b></div>';
+  h += '<div class="r-kpi">BDI aplicado<b>' + c.bdi.toFixed(0) + '%</b></div>';
+  h += '<div class="r-kpi">Impostos embutidos<b>' + brl(c.impostos) + '</b></div>';
+  h += '<div class="r-kpi">Preço B2B — Sul Sign → PDVEX<b>' + brl(c.pv) + '</b></div>';
+  h += '<div class="r-kpi">B2B / letra<b>' + brl(c.pv / c.qtd) + '</b></div>';
+  h += '<div class="r-kpi">Margem bruta Sul Sign<b>' + c.margem.toFixed(1) + '%</b></div>';
+  h += '</div>';
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #c9a227;padding-bottom:5px;margin:22px 0 10px">Camada PDVEX → cliente final (B2C)</h3>';
+  h += '<table><thead><tr><th>Composição B2C</th><th class="num">Valor</th></tr></thead><tbody>';
+  h += '<tr><td>Custo PDVEX (= preço B2B Sul Sign)</td><td class="num">' + brl(c.pv) + '</td></tr>';
+  h += '<tr><td>BDI PDVEX aplicado</td><td class="num">' + c.bdi2.toFixed(0) + '%</td></tr>';
+  h += '<tr><td>Margem PDVEX</td><td class="num">' + brl(c.margemPdvR) + ' (' + c.margemPdvP.toFixed(1) + '%)</td></tr>';
+  h += '<tr class="r-tot"><td>PREÇO B2C SUGERIDO (por ' + c.qtd + ' letra(s): ' + brl(c.pvB2C / c.qtd) + '/letra)</td><td class="num">' + brl(c.pvB2C) + '</td></tr>';
+  h += '</tbody></table>';
+  h += '<div class="r-tools" style="background:transparent;padding:8px 0"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button></div>';
+  h += '<div class="r-foot">Documento interno de custo — não é proposta comercial. Gerado pelo SulSign OS · Calculadora Letra Caixa v3 · CNPJ 03.952.317/0001-16</div>';
+  h += '</div>';
+  var rep = $('report');
+  rep.innerHTML = h;
+  rep.className = 'show';
+  rep.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ═══════════ GERADOR DE DESCRITIVO ═══════════ */
+function nomeMaterial(codigo){
+  var mapa = {
+    galv: 'chapa de aço galvanizado #26',
+    pvc5: 'PVC expandido 5mm', pvc10: 'PVC expandido 10mm', pvc15: 'PVC expandido 15mm', pvc20: 'PVC expandido 20mm',
+    mdf15: 'MDF 15mm', acm: 'ACM 4mm', inox: 'aço inox escovado',
+    acr_lat: 'acrílico', acr_leit: 'acrílico leitoso 3mm', acr_cor: 'acrílico colorido fosco 3mm',
+    acr_cristal: 'acrílico cristal 3mm com vinil aplicado', pvc10f: 'PVC expandido 10mm', acm_f: 'ACM 4mm',
+    print3d: 'impressão 3D'
+  };
+  return mapa[codigo] || codigo;
+}
+
+function montarDescritivo(){
+  var qtd = contaLetras();
+  var hCm = num('inAltura');
+  var pCm = num('inProf');
+  var texto = $('inTexto').value || 'logotipo';
+  var t = '';
+
+  if (constr === 'chapada') {
+    var mat = $('inCorpo').value;
+    var esp = { pvc5: '5mm', pvc10: '10mm', pvc15: '15mm', pvc20: '20mm', mdf15: '15mm', acm: '4mm' }[mat] || '';
+    t = 'Logotipo/letreiro "' + texto + '" em letras chapadas recortadas em router CNC, em ' + nomeMaterial(mat) +
+        (esp ? ' (espessura do próprio material, ' + esp + ')' : '') +
+        ', com ' + qtd + ' elemento(s), altura de ' + hCm + 'cm. Bordas limpas e uniformes, sem rebarba.';
+  } else if ($('inCorpo').value === 'print3d') {
+    var fil = $('inFilam').value.toUpperCase();
+    t = 'Logotipo/letreiro "' + texto + '" em letra caixa impressa em 3D (' + fil + '), ' + qtd + ' elemento(s), altura de ' +
+        hCm + 'cm e profundidade de ' + pCm + 'cm, parede de ' + num('inParede') + 'mm com reforços internos.';
+  } else {
+    var codF = $('inFrente').value;
+    var frenteForcada = (ilum === 'frontlit' || ilum === 'dupla');
+    var nomeF = frenteForcada && (codF === 'mesma' || codF === 'pvc10f' || codF === 'acm_f') ? 'acrílico leitoso 3mm (difusor)' : (codF === 'mesma' ? nomeMaterial($('inCorpo').value) : nomeMaterial(codF));
+    var codFu = $('inFundo').value;
+    var nomeFu = codFu === 'sem' ? null : (codFu === 'mesma' ? nomeMaterial($('inCorpo').value) : nomeMaterial(codFu));
+    t = 'Logotipo/letreiro "' + texto + '" em letra caixa com ' + qtd + ' elemento(s), altura de ' + hCm +
+        'cm e profundidade de ' + pCm + 'cm. Face em ' + nomeF + ', corpo/lateral em ' + nomeMaterial($('inCorpo').value) +
+        (nomeFu ? ', fundo em ' + nomeFu + '.' : ', sem fundo (vazada).');
+  }
+
+  var ac = $('inAcab').value;
+  if (ac === 'pintura') t += ' Acabamento em pintura automotiva na cor a definir.';
+  if (ac === 'vinil') t += ' Face adesivada em vinil impresso digital conforme identidade visual do cliente.';
+  if (ac === 'ambos') t += ' Acabamento em pintura automotiva com face adesivada em vinil impresso digital.';
+
+  if (ilum === 'frontlit') t += ' Iluminação interna frontlit em módulos de LED IP65 com fonte chaveada dimensionada, face translúcida com difusão homogênea, sem pontos aparentes.';
+  if (ilum === 'halo') t += ' Retroiluminação (efeito halo/backlight) em módulos de LED IP65 com afastamento da parede por espaçadores, fonte chaveada dimensionada.';
+  if (ilum === 'dupla') t += ' Iluminação dupla: frontlit na face translúcida e retroiluminação halo, módulos de LED IP65 com fonte chaveada dimensionada.';
+
+  if ($('inGabarito').checked) t += ' Acompanha gabarito de furação em MDF 3mm para instalação.';
+
+  if ($('inInstala').value === 'sim') {
+    t += ' Instalação inclusa' + (ilum !== 'nenhuma' ? ', com ligação à infraestrutura elétrica existente no ponto' : '') + '.';
+  } else {
+    t += ' Fornecimento sem instalação (retirada na Sul Sign), acompanhando fita dupla-face de alta performance/fixadores conforme aplicação.';
+  }
+
+  return t;
+}
+
+function gerarDescritivo(){
+  $('descTxt').value = montarDescritivo();
+  $('descBox').className = '';
+}
+
+function copiarDescritivo(){
+  var ta = $('descTxt');
+  ta.select();
+  ta.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); } catch(e) {}
+  if (navigator.clipboard) { try { navigator.clipboard.writeText(ta.value); } catch(e) {} }
+}
+
+/* ═══════════ NESTING SVG ═══════════ */
+$('inSvg').addEventListener('change', function(){ nestResult = null; });
+
+$('inFoto').addEventListener('change', function(){
+  var f = this.files[0];
+  if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function(ev){
+    fotoData = ev.target.result;
+    $('fotoPrev').src = fotoData;
+    $('fotoPrev').className = '';
+  };
+  rd.readAsDataURL(f);
+});
+
+function runNesting(){
+  var file = $('inSvg').files[0];
+  var w = $('nestWarn');
+  w.style.display = 'none';
+  if (!file) { w.style.display = 'block'; w.textContent = 'Selecione um arquivo SVG primeiro.'; return; }
+
+  var reader = new FileReader();
+  reader.onload = function(ev){
+    try { processaSvg(ev.target.result); }
+    catch (err) { w.style.display = 'block'; w.textContent = 'Erro ao ler o SVG: ' + err.message; }
+  };
+  reader.readAsText(file);
+}
+
+function processaSvg(txt){
+  var holder = $('svgHolder');
+  holder.innerHTML = txt;
+  var svg = holder.querySelector('svg');
+  var wEl = $('nestWarn');
+  if (!svg) { wEl.style.display = 'block'; wEl.textContent = 'Arquivo não contém um SVG válido.'; return; }
+  // garante renderização em tamanho natural
+  svg.removeAttribute('width'); svg.removeAttribute('height');
+  svg.style.width = '2000px'; svg.style.height = 'auto';
+
+  var els = svg.querySelectorAll('path, polygon, polyline, rect, circle, ellipse');
+  if (els.length === 0) { wEl.style.display = 'block'; wEl.textContent = 'Nenhuma forma vetorial encontrada. Exporte com curvas convertidas (um path por letra).'; return; }
+
+  var pecas = [];
+  var maxH = 0;
+  var svgRect = svg.getBoundingClientRect();
+
+  for (var i = 0; i < els.length; i++) {
+    var r = els[i].getBoundingClientRect();
+    if (r.width < 0.5 || r.height < 0.5) continue;
+    var len = 0;
+    try {
+      if (els[i].getTotalLength) {
+        var bb = els[i].getBBox();
+        var ratio = bb.width > 0 ? r.width / bb.width : 1;
+        len = els[i].getTotalLength() * ratio;
+      }
+    } catch (e) { len = (r.width + r.height) * 2; }
+    if (len === 0) len = (r.width + r.height) * 2;
+    pecas.push({ w: r.width, h: r.height, len: len, idx: pecas.length + 1 });
+    if (r.height > maxH) maxH = r.height;
+  }
+  holder.innerHTML = '';
+
+  if (pecas.length === 0 || maxH === 0) { wEl.style.display = 'block'; wEl.textContent = 'Não consegui medir as peças do SVG.'; return; }
+
+  /* escala: px → mm pela altura da maior peça */
+  var alvoMm = num('inNestAlt') * 10;
+  var fator = alvoMm / maxH;
+  var totalAreaMm2 = 0, totalCorteMm = 0;
+  for (var j = 0; j < pecas.length; j++) {
+    pecas[j].w *= fator; pecas[j].h *= fator; pecas[j].len *= fator;
+    totalAreaMm2 += pecas[j].w * pecas[j].h * 0.55; // ~55% de preenchimento dentro do bbox p/ área de material da face
+    totalCorteMm += pecas[j].len;
+  }
+
+  /* shelf packing com rotação 90° */
+  var chapaW = num('inChapaW'), chapaH = num('inChapaH'), gap = num('inGap');
+  pecas.sort(function(a, b){ return Math.max(b.w, b.h) - Math.max(a.w, a.h); });
+
+  var chapas = [];
+  function novaChapa(){ var c = { itens: [], cursorY: gap, shelfH: 0, cursorX: gap }; chapas.push(c); return c; }
+  var atual = novaChapa();
+  var falhas = 0;
+
+  for (var k = 0; k < pecas.length; k++) {
+    var p = pecas[k];
+    // orienta a peça: menor dimensão na vertical p/ shelf mais baixo, se couber na largura
+    var pw = p.w, ph = p.h, rot = false;
+    if (ph > pw && ph + gap * 2 <= chapaW) { var t = pw; pw = ph; ph = t; rot = true; }
+    if (pw + gap * 2 > chapaW && ph + gap * 2 <= chapaW) { var t2 = pw; pw = ph; ph = t2; rot = !rot; }
+    if (pw + gap * 2 > chapaW) { falhas++; continue; }
+
+    var colocada = false;
+    var tentativas = 0;
+    while (!colocada && tentativas < 200) {
+      tentativas++;
+      if (atual.cursorX + pw + gap <= chapaW && atual.cursorY + ph + gap <= chapaH) {
+        atual.itens.push({ x: atual.cursorX, y: atual.cursorY, w: pw, h: ph, idx: p.idx, rot: rot });
+        atual.cursorX += pw + gap;
+        if (ph > atual.shelfH) atual.shelfH = ph;
+        colocada = true;
+      } else if (atual.cursorX + pw + gap > chapaW) {
+        /* nova prateleira */
+        atual.cursorY += atual.shelfH + gap;
+        atual.cursorX = gap;
+        atual.shelfH = 0;
+        if (atual.cursorY + ph + gap > chapaH) { atual = novaChapa(); }
+      } else {
+        atual = novaChapa();
+      }
+    }
+    if (!colocada) falhas++;
+  }
+
+  var areaChapas = chapas.length * chapaW * chapaH;
+  var areaBBs = 0;
+  for (var m = 0; m < chapas.length; m++) {
+    for (var n = 0; n < chapas[m].itens.length; n++) {
+      areaBBs += chapas[m].itens[n].w * chapas[m].itens[n].h;
+    }
+  }
+  var aprov = areaChapas > 0 ? areaBBs / areaChapas * 100 : 0;
+
+  nestResult = {
+    pecas: pecas.length,
+    chapas: chapas.length,
+    aprov: aprov,
+    corteML: totalCorteMm / 1000,
+    areaFaceM2: totalAreaMm2 / 1000000,
+    layout: chapas, chapaW: chapaW, chapaH: chapaH
+  };
+
+  /* render KPIs */
+  $('nestKpis').className = 'kpi-grid';
+  $('nPecas').textContent = pecas.length + (falhas ? ' (' + falhas + ' não coube!)' : '');
+  $('nChapas').textContent = chapas.length;
+  $('nAprov').textContent = aprov.toFixed(1) + '%';
+  $('nCorte').textContent = (totalCorteMm / 1000).toFixed(1) + ' ml';
+  $('nArea').textContent = (totalAreaMm2 / 1000000).toFixed(2) + ' m²';
+  $('btAplicar').className = 'btn sec sm';
+  if (falhas) { wEl.style.display = 'block'; wEl.textContent = '⚠ ' + falhas + ' peça(s) maior(es) que a chapa — verifique a escala ou a dimensão da chapa.'; }
+
+  /* render canvases */
+  var cont = $('nestCanvases');
+  cont.innerHTML = '';
+  var escala = Math.min(340 / chapaW, 500 / chapaH);
+  for (var q = 0; q < chapas.length; q++) {
+    var cv = document.createElement('canvas');
+    cv.width = Math.round(chapaW * escala);
+    cv.height = Math.round(chapaH * escala);
+    cv.className = 'nest-canvas';
+    cont.appendChild(cv);
+    var ctx = cv.getContext('2d');
+    ctx.fillStyle = '#faf8f2';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.strokeStyle = '#000';
+    ctx.strokeRect(0, 0, cv.width, cv.height);
+    ctx.font = '10px sans-serif';
+    for (var r2 = 0; r2 < chapas[q].itens.length; r2++) {
+      var it = chapas[q].itens[r2];
+      ctx.fillStyle = 'rgba(201,162,39,0.35)';
+      ctx.fillRect(it.x * escala, it.y * escala, it.w * escala, it.h * escala);
+      ctx.strokeStyle = '#8a6d00';
+      ctx.strokeRect(it.x * escala, it.y * escala, it.w * escala, it.h * escala);
+      ctx.fillStyle = '#333';
+      ctx.fillText(String(it.idx) + (it.rot ? '↻' : ''), it.x * escala + 3, it.y * escala + 12);
+    }
+    var lbl = document.createElement('div');
+    lbl.className = 'footnote';
+    lbl.textContent = 'Chapa ' + (q + 1) + ' de ' + chapas.length + ' — ' + (chapaW / 1000).toFixed(2) + ' × ' + (chapaH / 1000).toFixed(2) + ' m';
+    cont.appendChild(lbl);
+  }
+}
+
+function aplicarNesting(){
+  if (!nestResult) return;
+  ovAreaFace = nestResult.areaFaceM2;
+  ovCorteML = nestResult.corteML;
+  ovChapas = nestResult.chapas;
+  $('btLimpar').className = 'btn sec sm';
+  calc();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function limparOverride(){
+  ovAreaFace = 0; ovCorteML = 0; ovChapas = 0;
+  $('btLimpar').className = 'btn sec sm hide';
+  calc();
+}
+
+$('hdrData').textContent = new Date().toLocaleDateString('pt-BR');
+calc();
+</script>
+</body>
+</html>
