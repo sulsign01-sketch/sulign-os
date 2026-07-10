@@ -404,12 +404,20 @@ function renderInsumos(){
     +'</div>'
     +'<div class="row3">'
     +'<div class="fl"><label>Quantidade</label><input type="number" id="ins-qtd" step="0.01" placeholder="1" inputmode="decimal"></div>'
-    +'<div class="fl"><label>Un.</label><select id="ins-un"><option>un</option><option>m²</option><option>ml</option><option>m</option><option>kg</option><option>l</option><option>vb</option><option>cx</option><option>rolo</option><option>h</option></select></div>'
+    +'<div class="fl"><label>Un.</label><select id="ins-un"><option>un</option><option>diária</option><option>m²</option><option>ml</option><option>m</option><option>kg</option><option>l</option><option>vb</option><option>cx</option><option>rolo</option><option>h</option></select></div>'
     +'<div class="fl"><label>R$/un.</label><input type="number" id="ins-custo" step="0.01" placeholder="0,00" inputmode="decimal" oninput="calcTotal()"></div>'
     +'</div>'
     +'<div class="row2">'
     +'<div class="fl"><label>Custo Total</label><input type="number" id="ins-total" step="0.01" placeholder="0,00" inputmode="decimal" readonly style="color:#ef9a9a;font-family:DM Mono,monospace;font-weight:700;"></div>'
-    +'<div class="fl"><label>Categoria</label><select id="ins-cat"><option>Material</option><option>Insumo</option><option>Mão de Obra</option><option>Ferramenta</option><option>Transporte</option><option>Outros</option></select></div>'
+    +'<div class="fl"><label>Categoria</label><select id="ins-cat" onchange="toggleMoPdvex()"><option>Material</option><option>Insumo</option><option>Mão de Obra</option><option>Alimentação</option><option>Comunicação Visual</option><option>Ferramenta</option><option>Transporte</option><option>Outros</option></select></div>'
+    +'</div>'
+    +'<div id="ins-mo-wrap" style="display:none;">'
+    +'<div class="row2">'
+    +'<div class="fl"><label>Tipo de MO</label><select id="ins-tipo-mo" onchange="toggleMoPdvex()"><option value="free">Free (diarista)</option><option value="fixo">Fixo (equipe)</option><option value="terceiro">Terceiro</option></select></div>'
+    +'<div class="fl"><label>Local</label><select id="ins-local-mo"><option value="galpao">Galpão</option><option value="campo">Campo</option></select></div>'
+    +'</div>'
+    +'<div class="fl" id="ins-he-wrap" style="display:none;"><label>Horas Extras (1x a hora)</label><input type="number" id="ins-he" step="0.5" placeholder="0" inputmode="decimal" oninput="calcTotal()"></div>'
+    +'<div style="font-size:10px;color:#888;margin:-4px 0 10px;">MO: Quantidade = diárias · R$/un. = valor da diária (un. "diária")</div>'
     +'</div>'
     +'<div class="fl"><label>Fornecedor / Local</label><input type="text" id="ins-forn" placeholder="Ex: Leroy, Estoque Sul Sign"></div>'
     +'<div class="fl"><label>Observação</label><input type="text" id="ins-obs" placeholder="Opcional..."></div>'
@@ -644,7 +652,23 @@ function calcTotal(){
   var qtd = parseFloat(document.getElementById('ins-qtd').value)||1;
   var cu = parseFloat(document.getElementById('ins-custo').value)||0;
   var total = document.getElementById('ins-total');
-  if(total) total.value = (qtd*cu).toFixed(2);
+  var he = 0;
+  var catEl = document.getElementById('ins-cat');
+  var heEl = document.getElementById('ins-he');
+  if(catEl && catEl.value==='Mão de Obra' && heEl){ he = parseFloat(heEl.value)||0; }
+  if(total) total.value = (qtd*cu + he*cu/8).toFixed(2);
+}
+
+/* ═══ FECHAMENTO PDVEX: campos condicionais de MO ═══ */
+function toggleMoPdvex(){
+  var cat = document.getElementById('ins-cat');
+  var wrap = document.getElementById('ins-mo-wrap');
+  var heW = document.getElementById('ins-he-wrap');
+  var tipo = document.getElementById('ins-tipo-mo');
+  var isMo = cat && cat.value==='Mão de Obra';
+  if(wrap) wrap.style.display = isMo ? 'block' : 'none';
+  if(heW) heW.style.display = (isMo && tipo && tipo.value==='fixo') ? 'block' : 'none';
+  calcTotal();
 }
 
 // ── SALVAR INSUMO ──
@@ -743,6 +767,9 @@ async function salvarInsumo(){
       fornecedor:forn,
       observacao:obs,
       tem_nota:nota,
+      tipo_mo:(cat==='Mão de Obra')?document.getElementById('ins-tipo-mo').value:null,
+      local_mo:(cat==='Mão de Obra')?document.getElementById('ins-local-mo').value:null,
+      horas_extras:(cat==='Mão de Obra')?(parseFloat(document.getElementById('ins-he').value)||null):null,
       comprovante:fotoB64||null,
       data:new Date().toISOString().split('T')[0],
       ip_criacao:ip
@@ -765,7 +792,7 @@ async function salvarInsumo(){
 
     showSt('st-ins','✓ Registrado!','ok');
     fotoB64=null; window._insSelId=null; window._insSelNome='';
-    ['ins-busca','ins-qtd','ins-custo','ins-total','ins-forn','ins-obs'].forEach(function(id){
+    ['ins-busca','ins-qtd','ins-custo','ins-total','ins-forn','ins-obs','ins-he'].forEach(function(id){
       var el=document.getElementById(id); if(el) el.value='';
     });
     var fa = document.getElementById('ins-foto-area');
