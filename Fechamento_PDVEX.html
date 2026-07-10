@@ -240,9 +240,9 @@ function classifica(ln){
     return 'MO 3º'; // terceiro ou sem classificação
   }
   if(cat==='Serviços') return 'MO 3º';
-  if(cat==='Material'||cat==='Insumo'||cat==='Verba Produção') return 'MATERIAIS';
+  if(cat==='Material'||cat==='Insumo'||cat==='Verba Produção'||cat==='Ferramenta'||cat==='Imprevisto') return 'MATERIAIS';
   if(cat==='Comunicação Visual') return 'COM. VISUAL';
-  if(cat==='Logística') return 'LOGÍSTICA';
+  if(cat==='Logística'||cat==='Transporte') return 'LOGÍSTICA';
   if(cat==='Alimentação') return 'ALIMENTAÇÃO';
   return null; // fora do fechamento
 }
