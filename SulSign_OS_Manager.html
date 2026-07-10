@@ -625,6 +625,12 @@ async function consolidarApontamento(id, jobNumero, discNome){
         comprovante:l.comprovante||null,
         periodicidade:'unica',
         tipo_lancamento:'saida',
+        // ═══ FECHAMENTO PDVEX: MO detalhada (qtd=diárias, custo_unit=vlr diária) ═══
+        diarias:(l.categoria==='Mão de Obra')?(l.quantidade||null):null,
+        valor_diaria:(l.categoria==='Mão de Obra')?(l.custo_unit||null):null,
+        horas_extras:l.horas_extras||null,
+        tipo_mo:l.tipo_mo||null,
+        local_mo:l.local_mo||null,
         origem:'consolidacao',        // rastreabilidade: veio de apontamento de produção
         apontamento_id:id             // vínculo com o apontamento de origem (dedup)
       };
