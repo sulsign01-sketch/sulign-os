@@ -282,6 +282,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <option value="Material">Material</option>
           <option value="Insumo">Insumo</option>
           <option value="Mão de Obra">Mão de Obra</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Comunicação Visual">Comunicação Visual</option>
           <option value="Logística">Logística</option>
           <option value="Imprevisto">Imprevisto</option>
         </select>
@@ -290,6 +292,44 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
         <label>Data</label>
         <input type="date" id="f-data">
       </div>
+    </div>
+    <!-- ═══ FECHAMENTO PDVEX: detalhamento de MO e O.C. ═══ -->
+    <div id="f-mo-wrap" style="display:none;">
+      <div class="row2">
+        <div class="fl">
+          <label>Tipo de MO</label>
+          <select id="f-tipo-mo">
+            <option value="free">Free (diarista)</option>
+            <option value="fixo">Fixo (equipe)</option>
+            <option value="terceiro">Terceiro (empresa)</option>
+          </select>
+        </div>
+        <div class="fl">
+          <label>Local</label>
+          <select id="f-local-mo">
+            <option value="galpao">Galpão</option>
+            <option value="campo">Campo</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="fl">
+          <label>Diárias</label>
+          <input type="number" id="f-diarias" step="0.5" placeholder="0" inputmode="decimal">
+        </div>
+        <div class="fl">
+          <label>Vlr Diária (R$)</label>
+          <input type="number" id="f-valor-diaria" step="0.01" placeholder="0,00" inputmode="decimal">
+        </div>
+      </div>
+      <div class="fl" id="f-he-wrap" style="display:none;">
+        <label>Horas Extras (pagas a 1x a hora)</label>
+        <input type="number" id="f-horas-extras" step="0.5" placeholder="0" inputmode="decimal">
+      </div>
+    </div>
+    <div class="fl" id="f-oc-wrap" style="display:none;">
+      <label>Nº O.C. (ordem de compra)</label>
+      <input type="text" id="f-oc-numero" placeholder="Ex: OC-042">
     </div>
     <div class="fl">
       <label>Fornecedor (pra quem vai o repasse)</label>
@@ -1114,6 +1154,32 @@ lsFillDatalist('ll_funcoes','lista-funcoes');
 lsFillDatalist('ll_fornecedores','lista-fornecedores');
 
 document.getElementById('f-data').valueAsDate=new Date();
+
+/* ═══ FECHAMENTO PDVEX: campos condicionais + auto-cálculo ═══ */
+function atualizaCamposPdvex(){
+  var cat=document.getElementById('f-categoria').value;
+  var mo=document.getElementById('f-mo-wrap');
+  var oc=document.getElementById('f-oc-wrap');
+  if(mo) mo.style.display=(cat==='Mão de Obra')?'block':'none';
+  if(oc) oc.style.display=(cat==='Material'||cat==='Insumo'||cat==='Verba Produção')?'block':'none';
+  var heW=document.getElementById('f-he-wrap');
+  var tipo=document.getElementById('f-tipo-mo')?document.getElementById('f-tipo-mo').value:'';
+  if(heW) heW.style.display=(cat==='Mão de Obra'&&tipo==='fixo')?'block':'none';
+}
+function calculaValorMoPdvex(){
+  var d=parseFloat(document.getElementById('f-diarias').value)||0;
+  var vd=parseFloat(document.getElementById('f-valor-diaria').value)||0;
+  var he=parseFloat(document.getElementById('f-horas-extras').value)||0;
+  if(d>0&&vd>0){
+    document.getElementById('f-valor').value=(d*vd+he*vd/8).toFixed(2);
+  }
+}
+document.getElementById('f-categoria').addEventListener('change',atualizaCamposPdvex);
+document.getElementById('f-tipo-mo').addEventListener('change',function(){atualizaCamposPdvex();calculaValorMoPdvex();});
+['f-diarias','f-valor-diaria','f-horas-extras'].forEach(function(id){
+  document.getElementById(id).addEventListener('input',calculaValorMoPdvex);
+});
+atualizaCamposPdvex();
 document.getElementById('ap-data').valueAsDate=new Date();
 
 // Busca de job
@@ -1262,6 +1328,12 @@ async function salvarLancamento(){
         pessoa:pessoa,funcao:funcao,categoria:categoria,
         data:data,fornecedor:fornecedor,descricao:descricao,valor:valor,
         bloco:(document.getElementById('f-bloco')?document.getElementById('f-bloco').value:'')||null,
+        diarias:(categoria==='Mão de Obra')?(parseFloat(document.getElementById('f-diarias').value)||null):null,
+        valor_diaria:(categoria==='Mão de Obra')?(parseFloat(document.getElementById('f-valor-diaria').value)||null):null,
+        horas_extras:(categoria==='Mão de Obra')?(parseFloat(document.getElementById('f-horas-extras').value)||null):null,
+        tipo_mo:(categoria==='Mão de Obra')?document.getElementById('f-tipo-mo').value:null,
+        local_mo:(categoria==='Mão de Obra')?document.getElementById('f-local-mo').value:null,
+        oc_numero:document.getElementById('f-oc-numero').value.trim()||null,
         comprovante:comprovanteB64,tem_nota:temNota,
         tipo_lancamento:tipoLanc,periodicidade:periodicidade,vencimento:vencimento
       };
@@ -1278,6 +1350,10 @@ async function salvarLancamento(){
       setStatus('✓ Lançamento salvo — '+new Date().toLocaleTimeString('pt-BR'),'ok');
       document.getElementById('f-descricao').value='';
       document.getElementById('f-valor').value='';
+      document.getElementById('f-diarias').value='';
+      document.getElementById('f-valor-diaria').value='';
+      document.getElementById('f-horas-extras').value='';
+      document.getElementById('f-oc-numero').value='';
       fileInput.value='';
       document.getElementById('f-tem-nota').checked=true;
     }catch(e){
