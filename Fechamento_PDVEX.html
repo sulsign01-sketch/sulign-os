@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Fechamento PDVEX — SulSign OS</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:#0a0a0a;color:#e0e0e0;font-family:'DM Sans',system-ui,sans-serif;font-size:14px;}
+.page{max-width:900px;margin:0 auto;padding:20px 14px 60px;}
+h1{font-size:18px;font-weight:700;color:#fff;margin-bottom:4px;}
+.sub{font-size:12px;color:#888;margin-bottom:20px;}
+.card{background:#141414;border:1px solid #242424;border-radius:10px;padding:16px;margin-bottom:14px;}
+label{display:block;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+select,input{width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;-webkit-appearance:none;}
+select:focus,input:focus{border-color:#52b788;}
+.btn{display:inline-block;padding:11px 18px;background:#52b788;border:none;border-radius:6px;color:#0a0a0a;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;}
+.btn:disabled{opacity:.5;}
+.btn-sec{background:#242424;color:#e0e0e0;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+th{text-align:left;color:#888;font-weight:500;padding:6px 8px;border-bottom:1px solid #242424;font-size:10px;text-transform:uppercase;letter-spacing:.5px;}
+td{padding:7px 8px;border-bottom:1px solid #1c1c1c;}
+td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.tot td{font-weight:700;color:#52b788;border-top:1px solid #2a2a2a;}
+.warn{font-size:11px;color:#ffb74d;background:#1a1408;border:1px solid #3a2e10;border-radius:6px;padding:8px 10px;margin-top:10px;line-height:1.5;}
+.ok-msg{font-size:12px;color:#52b788;margin-top:10px;display:none;}
+.err-msg{font-size:12px;color:#ef9a9a;margin-top:10px;display:none;}
+.res-line{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #1c1c1c;font-size:13px;}
+.res-line b{font-variant-numeric:tabular-nums;}
+.res-lucro{color:#52b788;font-size:15px;}
+.res-neg{color:#ef9a9a;}
+.pill{display:inline-block;font-size:10px;background:#1a2a20;color:#52b788;border-radius:10px;padding:2px 8px;margin-left:6px;}
+</style>
+</head>
+<body>
+
+<!-- ═══════════ AUTH GATE (padrão SulSign OS) ═══════════ -->
+<div id="sulsign-auth-gate" style="position:fixed;inset:0;background:#0a0a0a;z-index:99999;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',system-ui,sans-serif;">
+  <div style="width:320px;max-width:90vw;background:#141414;border:1px solid #242424;border-radius:12px;padding:28px;">
+    <div style="font-size:16px;font-weight:700;color:#fff;margin-bottom:2px;">SulSign OS</div>
+    <div style="font-size:12px;color:#888;margin-bottom:20px;">Fechamento PDVEX — acesso restrito</div>
+    <div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:#999;margin-bottom:5px;">E-MAIL</div>
+      <input type="email" id="sulsign-auth-email" style="width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;" placeholder="seu@email.com">
+    </div>
+    <div style="margin-bottom:16px;">
+      <div style="font-size:11px;color:#999;margin-bottom:5px;">SENHA</div>
+      <input type="password" id="sulsign-auth-senha" style="width:100%;background:#0a0a0a;border:1.5px solid #2a2a2a;border-radius:6px;padding:10px 12px;color:#e0e0e0;font-size:13px;outline:none;" placeholder="••••••••">
+    </div>
+    <button id="sulsign-auth-btn" style="width:100%;padding:11px;background:#52b788;border:none;border-radius:6px;color:#0a0a0a;font-size:13px;font-weight:700;cursor:pointer;">Entrar</button>
+    <div id="sulsign-auth-erro" style="font-size:11px;color:#ef9a9a;margin-top:10px;text-align:center;display:none;"></div>
+  </div>
+</div>
+
+<script src="sulsign_core.js"></script>
+<script>
+(function(){
+  var SB_AUTH_URL = SulSignCore.SUPA_URL;
+  var SB_AUTH_KEY = SulSignCore.SUPA_KEY;
+  var SESSION_KEY = 'sulsign_session';
+
+  function getStoredSession(){
+    try{ return JSON.parse(localStorage.getItem(SESSION_KEY)||'null'); }catch(e){ return null; }
+  }
+  function storeSession(s){ localStorage.setItem(SESSION_KEY, JSON.stringify(s)); }
+  function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+  function hideGate(){
+    var g=document.getElementById('sulsign-auth-gate');
+    if(g) g.style.display='none';
+    if(window.initFechamento) window.initFechamento();
+  }
+  function showError(msg){
+    var el=document.getElementById('sulsign-auth-erro');
+    el.textContent=msg; el.style.display='block';
+  }
+  function tentarLogin(){
+    var email=document.getElementById('sulsign-auth-email').value.trim();
+    var senha=document.getElementById('sulsign-auth-senha').value;
+    var btn=document.getElementById('sulsign-auth-btn');
+    if(!email||!senha){showError('Preencha e-mail e senha.');return;}
+    btn.disabled=true; btn.textContent='Entrando...';
+    fetch(SB_AUTH_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SB_AUTH_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,password:senha})
+    }).then(function(r){ return r.json().then(function(data){ return {ok:r.ok,data:data}; }); })
+    .then(function(res){
+      if(!res.ok || !res.data.access_token){
+        showError('E-mail ou senha incorretos.');
+        btn.disabled=false; btn.textContent='Entrar';
+        return;
+      }
+      storeSession({access_token:res.data.access_token,refresh_token:res.data.refresh_token,expires_at:Date.now()+((res.data.expires_in||3600)*1000),email:email});
+      window.SULSIGN_ACCESS_TOKEN = res.data.access_token;
+      hideGate();
+    }).catch(function(e){
+      showError('Erro de conexão: '+e.message);
+      btn.disabled=false; btn.textContent='Entrar';
+    });
+  }
+  function verificarSessao(){
+    var s = getStoredSession();
+    if(!s || !s.access_token || Date.now() > s.expires_at){ clearSession(); return false; }
+    window.SULSIGN_ACCESS_TOKEN = s.access_token;
+    return true;
+  }
+  window.sulsignLogout = function(){ clearSession(); window.location.reload(); };
+  if(verificarSessao()) hideGate();
+  document.getElementById('sulsign-auth-btn').addEventListener('click', tentarLogin);
+  document.getElementById('sulsign-auth-senha').addEventListener('keydown', function(e){
+    if(e.key==='Enter') tentarLogin();
+  });
+})();
+</script>
+
+<div class="page">
+  <h1>Fechamento PDVEX <span class="pill">exportador</span></h1>
+  <div class="sub">Gera o xlsx de apuração no formato PDVEX a partir dos lançamentos do job. Não altera nenhum dado.</div>
+
+  <div class="card">
+    <label for="sel-job">Job / Orçamento</label>
+    <select id="sel-job"><option value="">Carregando jobs...</option></select>
+    <button class="btn" id="btn-carregar" data-action="carregar" disabled>Carregar lançamentos</button>
+    <div class="err-msg" id="msg-erro"></div>
+  </div>
+
+  <div id="area-preview" style="display:none;">
+    <div class="card">
+      <label>Resumo dos gastos (Centro de Custo do job)</label>
+      <table id="tbl-resumo"></table>
+      <div class="warn" id="warn-nao-mapeados" style="display:none;"></div>
+      <div class="warn" id="warn-sem-detalhe" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <label>Resultado (metodologia PDVEX — apenas para o relatório)</label>
+      <div id="res-pdvex"></div>
+      <div style="font-size:10px;color:#666;margin-top:8px;">Imposto 18% flat e Infra 30% seguem a planilha da PDVEX. O BDI SulSign permanece a referência interna.</div>
+    </div>
+
+    <div class="card">
+      <button class="btn" id="btn-exportar" data-action="exportar">⬇ Gerar xlsx no formato PDVEX</button>
+      <div class="ok-msg" id="msg-ok"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   FECHAMENTO PDVEX — lógica
+   Mapeamento categoria SulSign → aba PDVEX:
+     Mão de Obra  + tipo_mo=free  + local galpao → MO FREE
+     Mão de Obra  + tipo_mo=free  + local campo  → MO FREE CAMPO
+     Mão de Obra  + tipo_mo=fixo  + local galpao → MO FIXO
+     Mão de Obra  + tipo_mo=fixo  + local campo  → MO FIXO CAMPO
+     Mão de Obra  + tipo_mo=terceiro (ou vazio)  → MO 3º
+     Serviços                                    → MO 3º
+     Material / Insumo / Verba Produção          → MATERIAIS
+     Comunicação Visual                          → COM. VISUAL
+     Logística                                   → LOGÍSTICA
+     Alimentação                                 → ALIMENTAÇÃO
+     Imposto/Comissão/Receita de Job/Estorno/Outros → fora do fechamento
+   ═══════════════════════════════════════════════════════════════ */
+var SUPA_URL = SulSignCore.SUPA_URL;
+var SUPA_KEY = SulSignCore.SUPA_KEY;
+function getAuthToken(){ return window.SULSIGN_ACCESS_TOKEN || SUPA_KEY; }
+function fmt(v){ return SulSignCore.fmt(v); }
+
+var jobsCache = [];
+var jobAtual = null;
+var dadosFechamento = null;
+
+/* ── init: carrega lista de jobs ── */
+window.initFechamento = function(){
+  fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,projeto,status,valor_nf,nf_numero&order=numero.desc',{
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+  }).then(function(r){ return r.json(); })
+  .then(function(rows){
+    jobsCache = rows||[];
+    var sel = document.getElementById('sel-job');
+    var html = '<option value="">Selecione o job...</option>';
+    var i;
+    for(i=0;i<jobsCache.length;i++){
+      var j = jobsCache[i];
+      if(j.numero==='SS-TREINO-2026_06-99') continue; // treino fora dos KPIs
+      html += '<option value="'+j.numero+'">'+j.numero+' — '+(j.cliente||'')+' — '+(j.projeto||'')+'</option>';
+    }
+    sel.innerHTML = html;
+    document.getElementById('btn-carregar').disabled = false;
+  }).catch(function(e){ mostraErro('Erro ao carregar jobs: '+e.message); });
+};
+
+function mostraErro(msg){
+  var el=document.getElementById('msg-erro');
+  el.textContent=msg; el.style.display='block';
+}
+
+/* ── delegação de ações ── */
+document.addEventListener('click', function(e){
+  var t = e.target;
+  var action = t.getAttribute ? t.getAttribute('data-action') : null;
+  if(!action) return;
+  if(action==='carregar') carregarLancamentos();
+  if(action==='exportar') exportarXlsx();
+});
+
+/* ── helpers de data / semana ── */
+function parseData(s){
+  if(!s) return null;
+  var p = String(s).slice(0,10).split('-');
+  if(p.length!==3) return null;
+  return new Date(parseInt(p[0],10), parseInt(p[1],10)-1, parseInt(p[2],10));
+}
+function pad2(n){ return (n<10?'0':'')+n; }
+function semanaLabel(d){
+  if(!d) return 'SEM DATA';
+  // semana seg–dom
+  var dow = d.getDay(); // 0=dom
+  var offset = (dow===0)?6:(dow-1);
+  var ini = new Date(d.getFullYear(), d.getMonth(), d.getDate()-offset);
+  var fim = new Date(ini.getFullYear(), ini.getMonth(), ini.getDate()+6);
+  return pad2(ini.getDate())+'/'+pad2(ini.getMonth()+1)+' a '+pad2(fim.getDate())+'/'+pad2(fim.getMonth()+1)+'/'+fim.getFullYear();
+}
+function dataBR(s){
+  var d = parseData(s);
+  if(!d) return '';
+  return pad2(d.getDate())+'/'+pad2(d.getMonth()+1)+'/'+d.getFullYear();
+}
+
+/* ── classificação ── */
+function classifica(ln){
+  var cat = (ln.categoria||'').trim();
+  var tipo = (ln.tipo_mo||'').toLowerCase();
+  var loc  = (ln.local_mo||'galpao').toLowerCase();
+  if(cat==='Mão de Obra'){
+    if(tipo==='free')  return (loc==='campo') ? 'MO FREE CAMPO' : 'MO FREE';
+    if(tipo==='fixo')  return (loc==='campo') ? 'MO FIXO CAMPO' : 'MO FIXO';
+    return 'MO 3º'; // terceiro ou sem classificação
+  }
+  if(cat==='Serviços') return 'MO 3º';
+  if(cat==='Material'||cat==='Insumo'||cat==='Verba Produção') return 'MATERIAIS';
+  if(cat==='Comunicação Visual') return 'COM. VISUAL';
+  if(cat==='Logística') return 'LOGÍSTICA';
+  if(cat==='Alimentação') return 'ALIMENTAÇÃO';
+  return null; // fora do fechamento
+}
+
+/* ── carregar lançamentos do job ── */
+function carregarLancamentos(){
+  var num = document.getElementById('sel-job').value;
+  if(!num){ mostraErro('Selecione um job.'); return; }
+  document.getElementById('msg-erro').style.display='none';
+  var btn=document.getElementById('btn-carregar');
+  btn.disabled=true; btn.textContent='Carregando...';
+
+  jobAtual = null;
+  var i;
+  for(i=0;i<jobsCache.length;i++){ if(jobsCache[i].numero===num){ jobAtual=jobsCache[i]; break; } }
+
+  fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&orcamento_numero=eq.'+encodeURIComponent(num)+'&deletado_em=is.null&order=data.asc',{
+    headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+  }).then(function(r){ return r.json(); })
+  .then(function(rows){
+    montarFechamento(rows||[]);
+    btn.disabled=false; btn.textContent='Carregar lançamentos';
+  }).catch(function(e){
+    mostraErro('Erro: '+e.message);
+    btn.disabled=false; btn.textContent='Carregar lançamentos';
+  });
+}
+
+/* ── montar estrutura do fechamento ── */
+function montarFechamento(rows){
+  var abas = {
+    'MO FREE':[], 'MO FREE CAMPO':[], 'MO FIXO':[], 'MO FIXO CAMPO':[],
+    'MO 3º':[], 'MATERIAIS':[], 'COM. VISUAL':[], 'LOGÍSTICA':[], 'ALIMENTAÇÃO':[]
+  };
+  var foraFechamento = [];
+  var moSemDetalhe = 0;
+  var i;
+  for(i=0;i<rows.length;i++){
+    var ln = rows[i];
+    var v = parseFloat(ln.valor)||0;
+    if(v===0) continue;
+    var aba = classifica(ln);
+    if(!aba){ foraFechamento.push(ln); continue; }
+    if(aba.indexOf('MO F')===0 && !(parseFloat(ln.diarias)>0)) moSemDetalhe++;
+    abas[aba].push(ln);
+  }
+  dadosFechamento = { abas: abas, fora: foraFechamento };
+
+  /* resumo na tela */
+  var ordem = ['MO FREE','MO FREE CAMPO','MO FIXO','MO FIXO CAMPO','MO 3º','MATERIAIS','COM. VISUAL','LOGÍSTICA','ALIMENTAÇÃO'];
+  var html = '<tr><th>Aba</th><th style="text-align:right;">Lanç.</th><th style="text-align:right;">Total</th></tr>';
+  var totalGastos = 0;
+  for(i=0;i<ordem.length;i++){
+    var lista = abas[ordem[i]];
+    var t = somaValores(lista);
+    totalGastos += t;
+    html += '<tr><td>'+ordem[i]+'</td><td class="num">'+lista.length+'</td><td class="num">'+fmt(t)+'</td></tr>';
+  }
+  html += '<tr class="tot"><td>TOTAL DE GASTOS</td><td></td><td class="num">'+fmt(totalGastos)+'</td></tr>';
+  document.getElementById('tbl-resumo').innerHTML = html;
+
+  /* avisos */
+  var wNM = document.getElementById('warn-nao-mapeados');
+  if(foraFechamento.length>0){
+    var soma = somaValores(foraFechamento);
+    wNM.innerHTML = '⚠ '+foraFechamento.length+' lançamento(s) fora do fechamento PDVEX ('+fmt(soma)+') — categorias Imposto, Comissão, Receita, Estorno ou Outros. Eles não entram no xlsx.';
+    wNM.style.display='block';
+  } else wNM.style.display='none';
+
+  var wSD = document.getElementById('warn-sem-detalhe');
+  if(moSemDetalhe>0){
+    wSD.innerHTML = '⚠ '+moSemDetalhe+' lançamento(s) de MO free/fixo sem diárias/valor de diária preenchidos. Vão para o xlsx apenas com o valor total — preencha os novos campos no Lançamentos para o detalhamento completo.';
+    wSD.style.display='block';
+  } else wSD.style.display='none';
+
+  /* resultado metodologia PDVEX */
+  var valorNF = parseFloat(jobAtual && jobAtual.valor_nf)||0;
+  var imposto = valorNF*0.18;
+  var bruto = valorNF-imposto;
+  var infra = bruto*0.3;
+  var lucro = bruto-totalGastos-infra;
+  var cls = (lucro>=0)?'res-lucro':'res-lucro res-neg';
+  document.getElementById('res-pdvex').innerHTML =
+    '<div class="res-line"><span>Valor NF'+(jobAtual&&jobAtual.nf_numero?(' (NF '+jobAtual.nf_numero+')'):'')+'</span><b>'+fmt(valorNF)+'</b></div>'+
+    '<div class="res-line"><span>Impostos (18%)</span><b>'+fmt(imposto)+'</b></div>'+
+    '<div class="res-line"><span>Valor Bruto</span><b>'+fmt(bruto)+'</b></div>'+
+    '<div class="res-line"><span>Infra 30%</span><b>'+fmt(infra)+'</b></div>'+
+    '<div class="res-line"><span>Total de Gastos</span><b>'+fmt(totalGastos)+'</b></div>'+
+    '<div class="res-line '+cls+'"><span>Lucro Líquido (PDVEX)</span><b>'+fmt(lucro)+'</b></div>';
+
+  document.getElementById('area-preview').style.display='block';
+}
+
+function somaValores(lista){
+  var s=0,i;
+  for(i=0;i<lista.length;i++){ s += parseFloat(lista[i].valor)||0; }
+  return s;
+}
+
+/* ═══════════ EXPORT XLSX ═══════════ */
+function exportarXlsx(){
+  if(!dadosFechamento || !jobAtual) return;
+  var wb = XLSX.utils.book_new();
+  var abas = dadosFechamento.abas;
+  var refs = {}; // aba -> célula do total (para RESULTADOS)
+
+  refs['MO FREE']       = abaMoFree(wb,'MO FREE','GALPÕES',abas['MO FREE']);
+  refs['MO FREE CAMPO'] = abaMoFree(wb,'MO FREE CAMPO','CAMPO',abas['MO FREE CAMPO']);
+  refs['MO FIXO']       = abaMoFixo(wb,'MO FIXO','GALPÕES',abas['MO FIXO']);
+  refs['MO FIXO CAMPO'] = abaMoFixo(wb,'MO FIXO CAMPO','CAMPO',abas['MO FIXO CAMPO']);
+  refs['MO 3º']         = abaSimples(wb,'MO 3º',abas['MO 3º'],false);
+  refs['MATERIAIS']     = abaSimples(wb,'MATERIAIS',abas['MATERIAIS'],true);
+  refs['COM. VISUAL']   = abaSimples(wb,'COM. VISUAL',abas['COM. VISUAL'],false);
+  refs['LOGÍSTICA']     = abaSimples(wb,'LOGÍSTICA',abas['LOGÍSTICA'],false);
+  refs['ALIMENTAÇÃO']   = abaSimples(wb,'ALIMENTAÇÃO',abas['ALIMENTAÇÃO'],false);
+  abaResultados(wb, refs);
+
+  var nomeArq = 'Fechamento_PDVEX_'+jobAtual.numero.replace(/[^A-Za-z0-9_-]/g,'_')+'.xlsx';
+  XLSX.writeFile(wb, nomeArq);
+  var ok=document.getElementById('msg-ok');
+  ok.textContent='✓ '+nomeArq+' gerado.';
+  ok.style.display='block';
+}
+
+/* aba MO FREE: SEMANA | FUNÇÃO | DIARIAS | VLR DIÁRIA | VLR TOTAL | OBS */
+function abaMoFree(wb, nome, titulo, lista){
+  var aoa = [];
+  aoa.push([titulo]);
+  aoa.push(['SEMANA','FUNÇÃO','DIARIAS','VLR DIÁRIA','VLR TOTAL','OBS']);
+  /* agrupar por semana */
+  var grupos = {}, ordemSem = [], i;
+  for(i=0;i<lista.length;i++){
+    var ln = lista[i];
+    var sem = semanaLabel(parseData(ln.data));
+    if(!grupos[sem]){ grupos[sem]=[]; ordemSem.push(sem); }
+    grupos[sem].push(ln);
+  }
+  var linhaExcel = 3; // primeira linha de dados (1-based; linha 1=título, 2=header)
+  var primeiraDado = linhaExcel, temDado = false;
+  var ws_formulas = [];
+  var s;
+  for(s=0;s<ordemSem.length;s++){
+    var sem2 = ordemSem[s];
+    var lns = grupos[sem2];
+    for(i=0;i<lns.length;i++){
+      var ln2 = lns[i];
+      var d = parseFloat(ln2.diarias)||0;
+      var vd = parseFloat(ln2.valor_diaria)||0;
+      var funcaoDesc = (ln2.funcao||ln2.pessoa||ln2.descricao||'').toUpperCase();
+      var obs = montaObs(ln2);
+      if(d>0 && vd>0){
+        aoa.push([(i===0)?sem2:'', funcaoDesc, d, vd, null, obs]);
+        ws_formulas.push({r:linhaExcel, f:'D'+linhaExcel+'*C'+linhaExcel});
+      }else{
+        aoa.push([(i===0)?sem2:'', funcaoDesc, '', '', parseFloat(ln2.valor)||0, obs||'valor consolidado']);
+      }
+      temDado = true;
+      linhaExcel++;
+    }
+  }
+  if(!temDado){ aoa.push(['','','','','','']); linhaExcel++; }
+  var linhaTotal = linhaExcel;
+  aoa.push(['TOTAL','','','',null,'']);
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  for(i=0;i<ws_formulas.length;i++){
+    ws['E'+ws_formulas[i].r] = {t:'n', f:ws_formulas[i].f};
+  }
+  ws['E'+linhaTotal] = {t:'n', f:'SUM(E'+primeiraDado+':E'+(linhaTotal-1)+')'};
+  ws['!cols'] = [{wch:20},{wch:28},{wch:9},{wch:11},{wch:12},{wch:26}];
+  XLSX.utils.book_append_sheet(wb, ws, nome);
+  return {aba:nome, cel:'E'+linhaTotal};
+}
+
+/* aba MO FIXO: DATA | DESCRITIVO | DIARIAS | HORA EXTRA (h) | VLR DIÁRIA | VLR TOTAL | TOTAL H.E. | OBS */
+function abaMoFixo(wb, nome, titulo, lista){
+  var aoa = [];
+  aoa.push([titulo]);
+  aoa.push(['DATA','DESCRITIVO','DIARIAS','HORA EXTRA (h)','VLR DIÁRIA','VLR TOTAL','TOTAL H.E.','OBS']);
+  var linhaExcel = 3, primeiraDado = 3, temDado=false, i;
+  var formulas = [];
+  for(i=0;i<lista.length;i++){
+    var ln = lista[i];
+    var d = parseFloat(ln.diarias)||0;
+    var he = parseFloat(ln.horas_extras)||0;
+    var vd = parseFloat(ln.valor_diaria)||0;
+    var nomePessoa = (ln.pessoa||ln.funcao||ln.descricao||'').toUpperCase();
+    if(d>0 && vd>0){
+      aoa.push([dataBR(ln.data), nomePessoa, d, he, vd, null, null, montaObs(ln)]);
+      formulas.push({r:linhaExcel, he:'D'+linhaExcel+'*E'+linhaExcel+'/8', tot:'E'+linhaExcel+'*C'+linhaExcel+'+G'+linhaExcel});
+    }else{
+      aoa.push([dataBR(ln.data), nomePessoa, '', '', '', parseFloat(ln.valor)||0, 0, montaObs(ln)||'valor consolidado']);
+    }
+    temDado=true; linhaExcel++;
+  }
+  if(!temDado){ aoa.push(['','','','','','','','']); linhaExcel++; }
+  var linhaTotal = linhaExcel;
+  aoa.push(['TOTAL','','','','',null,null,'']);
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  for(i=0;i<formulas.length;i++){
+    ws['G'+formulas[i].r] = {t:'n', f:formulas[i].he};
+    ws['F'+formulas[i].r] = {t:'n', f:formulas[i].tot};
+  }
+  ws['F'+linhaTotal] = {t:'n', f:'SUM(F'+primeiraDado+':F'+(linhaTotal-1)+')'};
+  ws['G'+linhaTotal] = {t:'n', f:'SUM(G'+primeiraDado+':G'+(linhaTotal-1)+')'};
+  ws['!cols'] = [{wch:12},{wch:28},{wch:9},{wch:13},{wch:11},{wch:12},{wch:11},{wch:26}];
+  XLSX.utils.book_append_sheet(wb, ws, nome);
+  return {aba:nome, cel:'F'+linhaTotal};
+}
+
+/* abas simples: DATA | DESCRITIVO | VALOR | (O.C.) | OBS */
+function abaSimples(wb, nome, lista, temOC){
+  var aoa = [];
+  var header = temOC ? ['DATA','DESCRITIVO','VALOR','O.C.','OBS'] : ['DATA','DESCRITIVO','VALOR','OBS'];
+  aoa.push(header);
+  var linhaExcel = 2, primeiraDado = 2, temDado=false, i;
+  for(i=0;i<lista.length;i++){
+    var ln = lista[i];
+    var desc = montaDescritivo(ln);
+    var v = parseFloat(ln.valor)||0;
+    if(temOC) aoa.push([dataBR(ln.data), desc, v, ln.oc_numero||'', montaObs(ln)]);
+    else      aoa.push([dataBR(ln.data), desc, v, montaObs(ln)]);
+    temDado=true; linhaExcel++;
+  }
+  if(!temDado){ aoa.push(temOC?['','','','','']:['','','','']); linhaExcel++; }
+  var linhaTotal = linhaExcel;
+  aoa.push(temOC?['TOTAL','',null,'','']:['TOTAL','',null,'']);
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['C'+linhaTotal] = {t:'n', f:'SUM(C'+primeiraDado+':C'+(linhaTotal-1)+')'};
+  ws['!cols'] = temOC ? [{wch:12},{wch:36},{wch:12},{wch:10},{wch:26}] : [{wch:12},{wch:36},{wch:12},{wch:26}];
+  XLSX.utils.book_append_sheet(wb, ws, nome);
+  return {aba:nome, cel:'C'+linhaTotal};
+}
+
+function montaDescritivo(ln){
+  var partes = [];
+  if(ln.fornecedor) partes.push(ln.fornecedor);
+  if(ln.descricao) partes.push(ln.descricao);
+  if(partes.length===0 && ln.pessoa) partes.push(ln.pessoa);
+  return partes.join(' — ');
+}
+function montaObs(ln){
+  var partes = [];
+  if(ln.bloco) partes.push('Bloco: '+ln.bloco);
+  if(ln.categoria==='Serviços') partes.push('Serviços');
+  if(ln.categoria==='Verba Produção') partes.push('Verba Produção');
+  if(ln.tem_nota===false) partes.push('sem nota');
+  return partes.join(' | ');
+}
+
+/* aba RESULTADOS — replica exatamente a lógica da planilha PDVEX */
+function abaResultados(wb, refs){
+  var aoa = [];
+  aoa.push(['Valor NF', null]);          // B1 = B10 (NF emitida)
+  aoa.push(['Impostos', null]);          // B2 = B1*0.18
+  aoa.push(['Valor Bruto', null]);       // B3 = B1-B2
+  aoa.push(['Infra 30%', null]);         // B4 = B3*0.3
+  aoa.push(['Total de Gastos', null]);   // B5 = SUM(B12:B20)
+  aoa.push(['Lucro Líquido', null]);     // B6 = B3-B5-B4
+  aoa.push([]);
+  aoa.push(['NFS EMITIDAS']);
+  aoa.push([]);
+  var nfLabel = 'NF '+((jobAtual&&jobAtual.nf_numero)||'—')+' — '+((jobAtual&&jobAtual.numero)||'');
+  aoa.push([nfLabel, parseFloat(jobAtual&&jobAtual.valor_nf)||0]); // linha 10
+  aoa.push([]);
+  aoa.push(['RESUMO DOS GASTOS']);       // linha 12; gastos nas linhas 13..21
+  var ordem = ['MO FREE','MO FREE CAMPO','MO FIXO','MO FIXO CAMPO','MO 3º','MATERIAIS','COM. VISUAL','LOGÍSTICA','ALIMENTAÇÃO'];
+  var i;
+  for(i=0;i<ordem.length;i++){ aoa.push([ordem[i], null]); } // linhas 13..21
+  var ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['B1'] = {t:'n', f:'B10'};
+  ws['B2'] = {t:'n', f:'B1*0.18'};
+  ws['B3'] = {t:'n', f:'B1-B2'};
+  ws['B4'] = {t:'n', f:'B3*0.3'};
+  ws['B5'] = {t:'n', f:'SUM(B13:B21)'};
+  ws['B6'] = {t:'n', f:'B3-B5-B4'};
+  for(i=0;i<ordem.length;i++){
+    var ref = refs[ordem[i]];
+    ws['B'+(13+i)] = {t:'n', f:"'"+ref.aba+"'!"+ref.cel};
+  }
+  ws['!cols'] = [{wch:24},{wch:16}];
+  XLSX.utils.book_append_sheet(wb, ws, 'RESULTADOS');
+}
+</script>
+</body>
+</html>
