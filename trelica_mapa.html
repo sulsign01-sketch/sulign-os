@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDVEX · Mapa de Montagem de Treliça</title>
+<style>
+:root{--verde:#2F6B50;--escuro:#245240;--tinta:#1A1F1C;--cinza:#8A938E;--claro:#EDEFEE;--papel:#fff;--fundo:#DDE2DF;--alerta:#B8860B;--erro:#C0392B;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--fundo);font-family:'Courier New',monospace;color:var(--tinta);padding:18px;}
+h1,h2{font-family:'Arial Narrow',Arial,sans-serif;}
+.top{background:var(--escuro);color:#fff;padding:12px 16px;border-radius:6px 6px 0 0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;}
+.top .m{font-weight:bold;letter-spacing:2px;}
+.top small{opacity:.75;font-size:11px;}
+.wrap{max-width:900px;margin:0 auto;}
+.card{background:var(--papel);padding:18px;box-shadow:0 3px 12px rgba(0,0,0,.12);}
+.controls{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;border-bottom:1px solid var(--claro);padding-bottom:14px;margin-bottom:14px;}
+.fl{display:flex;flex-direction:column;gap:3px;}
+.fl label{font-size:10px;letter-spacing:1px;color:var(--cinza);}
+.fl input{font-family:inherit;font-size:15px;padding:7px 9px;border:1px solid #C4CCC7;border-radius:5px;width:110px;}
+.fl.small input{width:70px;}
+.unit-toggle{display:flex;border:1px solid #C4CCC7;border-radius:5px;overflow:hidden;}
+.unit-toggle button{font-family:inherit;font-size:12px;padding:7px 12px;border:none;background:#fff;cursor:pointer;color:var(--cinza);}
+.unit-toggle button.on{background:var(--verde);color:#fff;}
+.aviso{padding:9px 12px;border-radius:5px;font-size:12px;margin-bottom:12px;line-height:1.5;}
+.aviso.warn{background:#FFF8E6;border:1px solid #E8D48A;color:#7A5B00;}
+.aviso.err{background:#FDECEA;border:1px solid #E8B0AA;color:var(--erro);}
+.aviso.info{background:var(--claro);color:#556;}
+.resumo{display:flex;gap:22px;flex-wrap:wrap;font-size:12px;margin-bottom:14px;}
+.resumo b{font-size:15px;display:block;font-family:'Arial Narrow',Arial,sans-serif;}
+.romaneio{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}
+.romaneio th{text-align:left;font-size:9px;letter-spacing:1px;color:var(--cinza);border-bottom:1.5px solid var(--tinta);padding:5px 8px;}
+.romaneio td{padding:6px 8px;border-bottom:1px solid var(--claro);}
+.sw{display:inline-block;width:16px;height:16px;border-radius:3px;border:1px solid rgba(0,0,0,.2);vertical-align:middle;margin-right:7px;}
+.romaneio .qt{text-align:center;font-weight:bold;}
+.mapa-wrap{margin-top:16px;text-align:center;}
+.sec{font-size:9px;letter-spacing:3px;color:var(--cinza);border-bottom:1px solid var(--claro);padding-bottom:4px;margin:18px 0 10px;}
+.acoes{display:flex;gap:8px;margin-top:16px;}
+.acoes button{font-family:inherit;font-size:12px;padding:8px 14px;border:1px solid var(--verde);background:#fff;color:var(--verde);border-radius:5px;cursor:pointer;}
+.acoes button:hover{background:var(--verde);color:#fff;}
+@media print{body{background:#fff;padding:0;}.controls,.acoes,.top{display:none;}.card{box-shadow:none;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <span class="m">PDVEX</span><small>MAPA DE MONTAGEM DE TRELIÇA · simulador</small>
+  </div>
+  <div class="card">
+
+    <div class="controls">
+      <div class="fl"><label>LARGURA (estrutura)</label><input id="in-L" type="text" value="500"></div>
+      <div class="fl"><label>ALTURA (estrutura)</label><input id="in-A" type="text" value="300"></div>
+      <div class="fl">
+        <label>UNIDADE</label>
+        <div class="unit-toggle">
+          <button id="u-cm" class="on" data-u="cm">cm</button>
+          <button id="u-m" data-u="m">m</button>
+        </div>
+      </div>
+      <div class="fl small"><label>SANGRIA/LADO</label><input id="in-sng" type="text" value="10"></div>
+    </div>
+
+    <div id="saida"></div>
+
+    <div class="acoes">
+      <button onclick="window.print()">🖨 Imprimir mapa</button>
+      <button onclick="copiarRomaneio()">📋 Copiar romaneio</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   PDVEXTrelica — motor de decomposição + mapa SVG
+   (mesmo bloco que será levado para o BOOK_Manager depois)
+   ═══════════════════════════════════════════════════════════════ */
+var PDVEXTrelica = (function(){
+  var CUBO = 30;
+
+  /* Catálogo default (espelha a tabela pdvex_trelica_pecas).
+     No BOOK_Manager isto é substituído pelo que vier do Supabase. */
+  var PECAS = [
+    {t:30,tipo:'cubo', hex:'#1A1A1A',nome:'PRETO'},
+    {t:40, tipo:'barra',hex:'#E6194B',nome:'VERMELHO'},
+    {t:50, tipo:'barra',hex:'#F58231',nome:'LARANJA'},
+    {t:60, tipo:'barra',hex:'#FFD100',nome:'AMARELO'},
+    {t:70, tipo:'barra',hex:'#BFEF45',nome:'LIMAO'},
+    {t:80, tipo:'barra',hex:'#3CB44B',nome:'VERDE'},
+    {t:90, tipo:'barra',hex:'#469990',nome:'VERDE-AGUA'},
+    {t:100,tipo:'barra',hex:'#42D4F4',nome:'CIANO'},
+    {t:120,tipo:'barra',hex:'#4363D8',nome:'AZUL'},
+    {t:140,tipo:'barra',hex:'#000075',nome:'MARINHO'},
+    {t:150,tipo:'barra',hex:'#911EB4',nome:'ROXO'},
+    {t:160,tipo:'barra',hex:'#C020C0',nome:'VIOLETA'},
+    {t:170,tipo:'barra',hex:'#F032E6',nome:'MAGENTA'},
+    {t:180,tipo:'barra',hex:'#FF69B4',nome:'ROSA'},
+    {t:190,tipo:'barra',hex:'#9A6324',nome:'MARROM'},
+    {t:200,tipo:'barra',hex:'#808000',nome:'OLIVA'},
+    {t:230,tipo:'barra',hex:'#A9A9A9',nome:'CINZA'},
+    {t:240,tipo:'barra',hex:'#FF7F50',nome:'CORAL'},
+    {t:300,tipo:'barra',hex:'#800000',nome:'VINHO'}
+  ];
+
+  function porTamanho(t){
+    for(var i=0;i<PECAS.length;i++) if(PECAS[i].t===t) return PECAS[i];
+    return {t:t,tipo:'barra',hex:'#666',nome:'?'+t};
+  }
+  function barras(){ var r=[]; for(var i=0;i<PECAS.length;i++) if(PECAS[i].tipo==='barra') r.push(PECAS[i].t); return r; }
+
+  /* Núcleo puro: tenta fechar um vão (cm) no MENOR nº de barras (coin-change DP).
+     Sem efeitos colaterais nem recursão — devolve lista ou null. */
+  function fecharVao(vao){
+    if(vao===0) return [];              /* só os 2 cubos, sem barra */
+    if(vao<0)   return null;
+    var B = barras(), INF = 1e9;
+    var dp = [0], esc = [-1];
+    for(var v=1; v<=vao; v++){
+      dp[v]=INF; esc[v]=-1;
+      for(var k=0;k<B.length;k++){
+        var c=B[k];
+        if(v-c>=0 && dp[v-c]+1<dp[v]){ dp[v]=dp[v-c]+1; esc[v]=c; }
+      }
+    }
+    if(dp[vao]>=INF) return null;
+    var lista=[], r=vao;
+    while(r>0){ lista.push(esc[r]); r-=esc[r]; }
+    lista.sort(function(a,b){return b-a;});
+    return lista;
+  }
+
+  /* Camada com mensagens + sugestões (chama só fecharVao, sem recursão). */
+  function decomporVao(vao){
+    var l = fecharVao(vao);
+    if(l) return {ok:true, barras:l};
+    var motivo = vao<0
+      ? 'estrutura menor que os dois cubos (mín. 60cm por lado)'
+      : 'vão de '+vao+'cm não fecha com as peças do estoque';
+    return {ok:false, motivo:motivo, sugestoes:vaosProximos(vao)};
+  }
+
+  /* vãos alcançáveis mais próximos (para sugerir ajuste de medida) */
+  function vaosProximos(vao){
+    var achaveis=[], d;
+    for(d=1; d<=120; d++){ if(vao-d>=0 && fecharVao(vao-d)){ achaveis.push(vao-d); break; } }
+    for(d=1; d<=120; d++){ if(fecharVao(vao+d)){ achaveis.push(vao+d); break; } }
+    return achaveis;
+  }
+
+  /* Decompõe a estrutura inteira (W×H em cm). */
+  function decompor(W, H){
+    var vaoH = W - 2*CUBO;   /* aresta horizontal (topo/base) */
+    var vaoV = H - 2*CUBO;   /* aresta vertical (esq/dir)     */
+    var dH = decomporVao(vaoH);
+    var dV = decomporVao(vaoV);
+    var avisos=[];
+    if(!dH.ok) avisos.push('Largura: '+dH.motivo+(dH.sugestoes&&dH.sugestoes.length?' — larguras ok próximas: '+dH.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
+    if(!dV.ok) avisos.push('Altura: '+dV.motivo+(dV.sugestoes&&dV.sugestoes.length?' — alturas ok próximas: '+dV.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
+
+    /* contagem total de peças (4 cubos + 2× cada aresta) */
+    var tally={};
+    tally[CUBO]=4;
+    function add(arr,mult){ for(var i=0;i<arr.length;i++){ tally[arr[i]]=(tally[arr[i]]||0)+mult; } }
+    if(dH.ok) add(dH.barras,2);
+    if(dV.ok) add(dV.barras,2);
+
+    var pecas=[];
+    Object.keys(tally).map(Number).sort(function(a,b){return a-b;}).forEach(function(t){
+      var p=porTamanho(t);
+      pecas.push({tamanho:t, tipo:p.tipo, hex:p.hex, nome:p.nome, qtd:tally[t]});
+    });
+
+    return {
+      W:W, H:H, vaoH:vaoH, vaoV:vaoV,
+      arestaH: dH.ok?dH.barras:null,
+      arestaV: dV.ok?dV.barras:null,
+      okH:dH.ok, okV:dV.ok,
+      pecas:pecas, avisos:avisos,
+      totalPecas: pecas.reduce(function(a,p){return a+p.qtd;},0)
+    };
+  }
+
+  /* contraste de texto sobre uma cor */
+  function textoSobre(hex){
+    var h=hex.replace('#',''); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
+    var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
+    var lum=(0.299*r+0.587*g+0.114*b);
+    return lum>150?'#111':'#fff';
+  }
+
+  /* Gera o mapa SVG do frame com as peças coloridas. */
+  function mapaSVG(d){
+    var W=d.W, H=d.H;
+    var maxW=660, maxH=440;
+    var s=Math.min(maxW/W, maxH/H); if(s>3)s=3; if(s<0.35)s=0.35;
+    var mge=58, mgt=30, mgd=26, mgb=44; /* margens p/ cotas */
+    var pw=W*s, ph=H*s, c=CUBO*s;
+    var x0=mge, y0=mgt;
+    var totalW=pw+mge+mgd, totalH=ph+mgt+mgb;
+    var svg='<svg width="100%" viewBox="0 0 '+totalW+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="max-width:'+Math.min(totalW,720)+'px">';
+
+    /* área útil (miolo) clara */
+    svg+='<rect x="'+(x0+c)+'" y="'+(y0+c)+'" width="'+(pw-2*c)+'" height="'+(ph-2*c)+'" fill="#F5F8F6" stroke="#E0E5E2"/>';
+
+    function barra(x,y,w,h,tam,horizontal){
+      var p=porTamanho(tam), tc=textoSobre(p.hex);
+      var g='<g>';
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+p.hex+'" stroke="#222" stroke-width="0.8"/>';
+      /* leve treliça: X interno */
+      g+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+w)+'" y2="'+(y+h)+'" stroke="'+tc+'" stroke-width="0.5" opacity="0.28"/>';
+      g+='<line x1="'+(x+w)+'" y1="'+y+'" x2="'+x+'" y2="'+(y+h)+'" stroke="'+tc+'" stroke-width="0.5" opacity="0.28"/>';
+      /* rótulo do tamanho */
+      var cx=x+w/2, cy=y+h/2;
+      var fs=Math.max(8, Math.min(13, (horizontal?w:h)*0.32));
+      if(fs>7){
+        g+='<text x="'+cx+'" y="'+cy+'" font-family="Arial" font-size="'+fs+'" font-weight="bold" fill="'+tc+'" text-anchor="middle" dominant-baseline="central"'+(horizontal?'':' transform="rotate(-90 '+cx+' '+cy+')"')+'>'+tam+'</text>';
+      }
+      return g+'</g>';
+    }
+    function cubo(x,y){
+      var p=porTamanho(CUBO), tc=textoSobre(p.hex);
+      return '<g><rect x="'+x+'" y="'+y+'" width="'+c+'" height="'+c+'" fill="'+p.hex+'" stroke="#000" stroke-width="1"/>'+
+        (c>16?'<text x="'+(x+c/2)+'" y="'+(y+c/2)+'" font-family="Arial" font-size="'+Math.max(7,c*0.34)+'" fill="'+tc+'" text-anchor="middle" dominant-baseline="central">30</text>':'')+'</g>';
+    }
+
+    /* arestas horizontais (topo e base) */
+    if(d.okH){
+      var xs=x0+c;
+      for(var i=0;i<d.arestaH.length;i++){ var w=d.arestaH[i]*s;
+        svg+=barra(xs,y0,w,c,d.arestaH[i],true);          /* topo */
+        svg+=barra(xs,y0+ph-c,w,c,d.arestaH[i],true);     /* base */
+        xs+=w;
+      }
+    } else {
+      svg+='<rect x="'+(x0+c)+'" y="'+y0+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      svg+='<rect x="'+(x0+c)+'" y="'+(y0+ph-c)+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+    }
+    /* arestas verticais (esq e dir) */
+    if(d.okV){
+      var ys=y0+c;
+      for(var j=0;j<d.arestaV.length;j++){ var hh=d.arestaV[j]*s;
+        svg+=barra(x0,ys,c,hh,d.arestaV[j],false);        /* esquerda */
+        svg+=barra(x0+pw-c,ys,c,hh,d.arestaV[j],false);   /* direita */
+        ys+=hh;
+      }
+    } else {
+      svg+='<rect x="'+x0+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      svg+='<rect x="'+(x0+pw-c)+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+    }
+
+    /* cubos nos 4 vértices */
+    svg+=cubo(x0,y0)+cubo(x0+pw-c,y0)+cubo(x0,y0+ph-c)+cubo(x0+pw-c,y0+ph-c);
+
+    /* cotas */
+    var cy=y0+ph+18;
+    svg+='<line x1="'+x0+'" y1="'+cy+'" x2="'+(x0+pw)+'" y2="'+cy+'" stroke="#3A4540"/>';
+    svg+='<text x="'+(x0+pw/2)+'" y="'+(cy+14)+'" font-family="Courier New" font-size="11" fill="#3A4540" text-anchor="middle">'+W+' cm</text>';
+    var cx2=x0-16;
+    svg+='<line x1="'+cx2+'" y1="'+y0+'" x2="'+cx2+'" y2="'+(y0+ph)+'" stroke="#3A4540"/>';
+    svg+='<text x="'+(cx2-6)+'" y="'+(y0+ph/2)+'" font-family="Courier New" font-size="11" fill="#3A4540" text-anchor="middle" transform="rotate(-90 '+(cx2-6)+' '+(y0+ph/2)+')">'+H+' cm</text>';
+
+    svg+='</svg>';
+    return svg;
+  }
+
+  return { CUBO:CUBO, PECAS:PECAS, decompor:decompor, mapaSVG:mapaSVG, porTamanho:porTamanho };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   UI do simulador
+   ═══════════════════════════════════════════════════════════════ */
+var UNID='cm';
+var _ultimo=null;
+
+function num(v){ var n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
+function paraCm(v){ return UNID==='m'? Math.round(num(v)*100) : Math.round(num(v)); }
+
+function atualizar(){
+  var W=paraCm(document.getElementById('in-L').value);
+  var H=paraCm(document.getElementById('in-A').value);
+  var sng=num(document.getElementById('in-sng').value);
+  var out=document.getElementById('saida');
+  if(W<=0||H<=0){ out.innerHTML='<div class="aviso info">Informe largura e altura da estrutura.</div>'; return; }
+
+  var d=PDVEXTrelica.decompor(W,H);
+  _ultimo=d;
+  var artL=W+2*sng, artA=H+2*sng;
+  var html='';
+
+  /* avisos de decomposição */
+  d.avisos.forEach(function(a){ html+='<div class="aviso err">⚠ '+a+'</div>'; });
+
+  /* resumo */
+  html+='<div class="resumo">'+
+    '<div><span style="color:var(--cinza);font-size:10px">ESTRUTURA (treliça)</span><b>'+W+' × '+H+' cm</b></div>'+
+    '<div><span style="color:var(--cinza);font-size:10px">ARTE (c/ sangria '+sng+'/lado)</span><b>'+artL+' × '+artA+' cm</b></div>'+
+    '<div><span style="color:var(--cinza);font-size:10px">VÃO HORIZONTAL</span><b>'+d.vaoH+' cm</b></div>'+
+    '<div><span style="color:var(--cinza);font-size:10px">VÃO VERTICAL</span><b>'+d.vaoV+' cm</b></div>'+
+    '<div><span style="color:var(--cinza);font-size:10px">TOTAL DE PEÇAS</span><b>'+d.totalPecas+'</b></div>'+
+  '</div>';
+
+  html+='<div class="aviso info">A treliça usa a medida da <b>estrutura</b> ('+W+'×'+H+'). A sangria de '+sng+'cm/lado entra só na <b>arte</b> ('+artL+'×'+artA+'), nunca na estrutura.</div>';
+
+  /* romaneio */
+  html+='<div class="sec">R O M A N E I O &nbsp; D E &nbsp; P E Ç A S</div>';
+  html+='<table class="romaneio"><thead><tr><th>PEÇA</th><th>COR / ETIQUETA</th><th style="text-align:center">QTD</th><th style="text-align:right">TOTAL LINEAR</th></tr></thead><tbody>';
+  d.pecas.forEach(function(p){
+    html+='<tr>'+
+      '<td><b>'+(p.tipo==='cubo'?'CUBO 30×30':p.tamanho+' cm')+'</b></td>'+
+      '<td><span class="sw" style="background:'+p.hex+'"></span>'+p.nome+'</td>'+
+      '<td class="qt">'+p.qtd+'</td>'+
+      '<td style="text-align:right;color:#777">'+(p.tamanho*p.qtd/100).toFixed(2).replace('.',',')+' m</td>'+
+    '</tr>';
+  });
+  html+='</tbody></table>';
+  if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+d.vaoH+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+d.vaoV+'cm</div>';
+
+  /* mapa */
+  html+='<div class="sec">M A P A &nbsp; D E &nbsp; M O N T A G E M</div>';
+  html+='<div class="mapa-wrap">'+PDVEXTrelica.mapaSVG(d)+'</div>';
+
+  out.innerHTML=html;
+}
+
+function copiarRomaneio(){
+  if(!_ultimo) return;
+  var t='ROMANEIO — '+_ultimo.W+'x'+_ultimo.H+'cm\n';
+  _ultimo.pecas.forEach(function(p){ t+=(p.tipo==='cubo'?'CUBO 30':p.tamanho+'cm')+'  ['+p.nome+']  x'+p.qtd+'\n'; });
+  t+='TOTAL: '+_ultimo.totalPecas+' peças';
+  navigator.clipboard.writeText(t).then(function(){ alert('Romaneio copiado.'); });
+}
+
+document.getElementById('in-L').addEventListener('input',atualizar);
+document.getElementById('in-A').addEventListener('input',atualizar);
+document.getElementById('in-sng').addEventListener('input',atualizar);
+document.getElementById('u-cm').addEventListener('click',function(){UNID='cm';this.classList.add('on');document.getElementById('u-m').classList.remove('on');atualizar();});
+document.getElementById('u-m').addEventListener('click',function(){UNID='m';this.classList.add('on');document.getElementById('u-cm').classList.remove('on');atualizar();});
+
+atualizar();
+</script>
+</body>
+</html>
