@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SulSign · Gerador de Logística de Coleta Gráfica</title>
+<style>
+:root{--verde:#8fce8f;--verdeF:#a8d5a8;--preto:#111;--cinza:#e8e8e8;--amarelo:#fffbe6;}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:13px/1.4 Arial,Helvetica,sans-serif;background:#f2f2f2;color:#111}
+#app{max-width:1060px;margin:0 auto;padding:14px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+button{background:#22262e;color:#fff;border:none;border-radius:6px;padding:8px 14px;font-size:13px;cursor:pointer;font-family:inherit}
+button.sec{background:#5a5f6a}
+button:active{transform:translateY(1px)}
+.sheet{background:#fff;padding:24px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+table{width:100%;border-collapse:collapse}
+.hdr td{padding:4px 8px;font-size:12.5px}
+.hdr .lbl{background:var(--verde);font-weight:700;width:90px;white-space:nowrap}
+.hdr .black{background:var(--preto);color:#fff;font-weight:700}
+.hdr input{width:100%;border:none;background:transparent;font:inherit;font-weight:inherit;padding:2px}
+.hdr .black input{color:#fff}
+.itens{margin-top:14px}
+.itens th{background:var(--preto);color:#fff;padding:7px 6px;font-size:12px}
+.itens td{border:1px solid #ccc;padding:6px;font-size:12.5px}
+.itens tr:nth-child(even) td{background:var(--amarelo)}
+.itens input,.itens select{width:100%;border:none;background:transparent;font:inherit;padding:2px}
+.itens .num{width:34px;text-align:center;font-weight:700;background:var(--cinza)}
+.itens .dim{width:70px;text-align:center}
+.itens .qtd{width:70px;text-align:center}
+.itens .acab{width:180px}
+.itens .del{width:30px;text-align:center;color:#c33;cursor:pointer;font-weight:700;border:none;background:transparent}
+.foot{margin-top:14px}
+.foot .cab{background:var(--cinza);font-weight:700;font-size:11.5px;padding:4px 8px}
+.foot .prazo{background:var(--amarelo);padding:10px;font-weight:700;font-size:14px;text-align:center}
+.foot input{width:100%;border:none;background:transparent;font:inherit;font-weight:inherit;text-align:center;padding:2px}
+.rodape{background:var(--verde);text-align:center;font-size:10.5px;font-style:italic;font-weight:700;padding:14px;margin-top:12px}
+.hint{color:#666;font-size:12px;margin:8px 0}
+@media print{
+  body{background:#fff}
+  .toolbar,.hint,.del,#addRow{display:none!important}
+  .sheet{box-shadow:none;padding:0}
+  .itens input,.itens select,.hdr input,.foot input{border:none}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="toolbar">
+    <button data-action="print">🖨 Imprimir / PDF</button>
+    <button data-action="addItem" class="sec">＋ Item</button>
+    <button data-action="json" class="sec">⬇ JSON</button>
+    <button data-action="importJson" class="sec">📂 Importar JSON do book</button>
+    <input type="file" id="fileIn" accept=".json" style="display:none">
+  </div>
+  <p class="hint">Preenchido automaticamente a partir do book de artes. Edite qualquer campo direto na folha. Itens estruturais (sem impressão) não entram — confira antes de enviar à gráfica.</p>
+
+  <div class="sheet">
+    <table class="hdr">
+      <tr>
+        <td class="black" style="width:150px;text-align:center">SUL SIGN GROUP</td>
+        <td class="black" colspan="3">LOGÍSTICA DE COLETA GRÁFICA</td>
+      </tr>
+      <tr>
+        <td class="lbl">COLETA</td><td><input id="h-coleta" value="MUBISYS"></td>
+        <td class="lbl">EVENTO</td><td style="background:var(--verdeF)"><input id="h-evento" value="SS-2026_07-02_MUSIC INSIDER — YT Music Download"></td>
+      </tr>
+      <tr>
+        <td class="lbl">ENDEREÇO</td><td colspan="3"><input id="h-endcol" value=""></td>
+      </tr>
+      <tr>
+        <td class="lbl">ENTREGA</td><td><input id="h-entrega" value="SUL SIGN — Benfica"></td>
+        <td class="lbl">DATA / OS</td><td style="background:var(--verdeF)"><input id="h-os" value="13/07/2026 · SS-2026_07-02_LG01"></td>
+      </tr>
+      <tr>
+        <td class="lbl">ENDEREÇO</td><td colspan="3"><input id="h-endent" value=""></td>
+      </tr>
+    </table>
+
+    <table class="itens">
+      <thead>
+        <tr><th style="width:34px">#</th><th>ITEM / MATERIAL</th><th style="width:70px">LARGURA</th><th style="width:70px">ALTURA</th><th style="width:70px">QTD</th><th style="width:180px">ACABAMENTO</th><th style="width:30px"></th></tr>
+      </thead>
+      <tbody id="tb"></tbody>
+    </table>
+
+    <table class="foot" style="width:100%">
+      <tr><td class="cab" style="width:50%">PRAZO DE ENTREGA</td><td class="cab">OBSERVAÇÕES</td></tr>
+      <tr>
+        <td class="prazo"><input id="h-prazo" value="16/07/2026 A PARTIR DAS 16H"></td>
+        <td class="prazo" style="font-weight:400;font-size:12.5px"><input id="h-obs" value="Artes finais seguem junto. Conferir medidas c/ sangria."></td>
+      </tr>
+    </table>
+
+    <div class="rodape">SUL SIGN — Comunicação Visual | Sinalização Corporativa | Cenografia | Rio de Janeiro - RJ<br>sulsign01@gmail.com | @GRUPOSULSIGN</div>
+  </div>
+</div>
+
+<script>
+/* ═══ Gerador LG — v0.1 ═══
+   Gera a Logística de Coleta Gráfica a partir dos itens do book de artes.
+   Medidas em cm = ÁREA IMPRESSA (com sangria), que é o que a gráfica produz.
+   Padrão SulSign OS: vanilla JS, var, delegação data-action. */
+
+/* Itens extraídos do book SS-2026_07-02 MUSIC INSIDER (área impressa c/ sangria).
+   Regra aplicada: só entra o que é IMPRESSO. Estruturas (treliça, totem
+   marcenaria, cabos) ficam de fora; a impressão que vai NELAS entra. */
+var itens=[
+  {mat:'LONA IMPRESSA — BACKDROP NEUTRALIZAÇÃO BANHEIRO',l:420,a:320,q:1,acab:'ILHÓSES E REFORÇO'},
+  {mat:'LONA IMPRESSA — BACKDROP DE CREDENCIAMENTO',l:520,a:320,q:1,acab:'ILHÓSES E REFORÇO'},
+  {mat:'LONA IMPRESSA — BACKDROP INSTAGRAMÁVEL',l:420,a:320,q:1,acab:'ILHÓSES E REFORÇO'},
+  {mat:'TECIDO IMPRESSO — FLÂMULAS TENDA (sem sangria/marca de corte)',l:100,a:200,q:6,acab:'IMPRESSÃO UV'},
+  {mat:'ADESIVO IMPRESSO — TOTENS SINALIZAÇÃO (dupla face = 8 artes)',l:84,a:184,q:8,acab:'CORTE RETO'},
+  {mat:'BAGUM PRETO COSTURADO — FECHAMENTO TAPADEIRA (⚠ confirmar se vai p/ gráfica ou costura própria)',l:1920,a:520,q:1,acab:'COSTURADO'}
+];
+
+function $(id){return document.getElementById(id)}
+function render(){
+  var h='';
+  itens.forEach(function(it,ix){
+    h+='<tr>'
+      +'<td class="num">'+(ix+1)+'</td>'
+      +'<td><input data-f="mat" data-ix="'+ix+'" value="'+it.mat.replace(/"/g,'&quot;')+'"></td>'
+      +'<td class="dim"><input data-f="l" data-ix="'+ix+'" value="'+it.l+'"></td>'
+      +'<td class="dim"><input data-f="a" data-ix="'+ix+'" value="'+it.a+'"></td>'
+      +'<td class="qtd"><input data-f="q" data-ix="'+ix+'" value="'+it.q+'"></td>'
+      +'<td class="acab"><input data-f="acab" data-ix="'+ix+'" value="'+it.acab.replace(/"/g,'&quot;')+'"></td>'
+      +'<td><button class="del" data-action="del" data-ix="'+ix+'">×</button></td>'
+      +'</tr>';
+  });
+  $('tb').innerHTML=h;
+}
+document.addEventListener('input',function(e){
+  var f=e.target.getAttribute('data-f');if(!f)return;
+  var ix=+e.target.getAttribute('data-ix');
+  itens[ix][f]=(f==='l'||f==='a'||f==='q')?(parseFloat(e.target.value)||0):e.target.value;
+});
+document.addEventListener('click',function(e){
+  var el=e.target.closest('[data-action]');if(!el)return;
+  var act=el.getAttribute('data-action');
+  if(act==='print')window.print();
+  if(act==='addItem'){itens.push({mat:'',l:0,a:0,q:1,acab:''});render()}
+  if(act==='del'){itens.splice(+el.getAttribute('data-ix'),1);render()}
+  if(act==='json'){
+    var payload={header:{coleta:$('h-coleta').value,evento:$('h-evento').value,endColeta:$('h-endcol').value,
+      entrega:$('h-entrega').value,endEntrega:$('h-endent').value,os:$('h-os').value,
+      prazo:$('h-prazo').value,obs:$('h-obs').value},itens:itens};
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,1)],{type:'application/json'}));
+    a.download='LG_'+($('h-os').value.split('·').pop()||'doc').trim()+'.json';
+    document.body.appendChild(a);a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+  }
+  if(act==='importJson')$('fileIn').click();
+});
+$('fileIn').addEventListener('change',function(){
+  var f=this.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);
+      /* aceita 2 formatos: o próprio JSON deste gerador, ou o JSON do BOOK_Manager
+         (array de páginas com material/substrato/impressa_l/impressa_a/qtd/obs) */
+      if(d.itens){itens=d.itens;
+        if(d.header){$('h-coleta').value=d.header.coleta||'';$('h-evento').value=d.header.evento||'';
+          $('h-endcol').value=d.header.endColeta||'';$('h-entrega').value=d.header.entrega||'';
+          $('h-endent').value=d.header.endEntrega||'';$('h-os').value=d.header.os||'';
+          $('h-prazo').value=d.header.prazo||'';$('h-obs').value=d.header.obs||'';}
+      } else if(Array.isArray(d)){
+        itens=d.filter(function(p){return p.impressa_l&&p.impressa_a})
+          .map(function(p){return{mat:((p.substrato||'')+' — '+(p.material||'')).replace(/^ — /,''),
+            l:p.impressa_l,a:p.impressa_a,q:p.qtd||1,acab:p.acabamento||p.obs||''}});
+      }
+      render();
+    }catch(err){alert('JSON inválido: '+err.message)}
+  };
+  r.readAsText(f);
+});
+render();
+</script>
+</body>
+</html>
