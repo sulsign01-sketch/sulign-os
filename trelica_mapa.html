@@ -19,6 +19,7 @@ h1,h2{font-family:'Arial Narrow',Arial,sans-serif;}
 .fl label{font-size:10px;letter-spacing:1px;color:var(--cinza);}
 .fl input{font-family:inherit;font-size:15px;padding:7px 9px;border:1px solid #C4CCC7;border-radius:5px;width:110px;}
 .fl.small input{width:70px;}
+.fl.txt input{width:200px;}
 .unit-toggle{display:flex;border:1px solid #C4CCC7;border-radius:5px;overflow:hidden;}
 .unit-toggle button{font-family:inherit;font-size:12px;padding:7px 12px;border:none;background:#fff;cursor:pointer;color:var(--cinza);}
 .unit-toggle button.on{background:var(--verde);color:#fff;}
@@ -33,12 +34,32 @@ h1,h2{font-family:'Arial Narrow',Arial,sans-serif;}
 .romaneio td{padding:6px 8px;border-bottom:1px solid var(--claro);}
 .sw{display:inline-block;width:16px;height:16px;border-radius:3px;border:1px solid rgba(0,0,0,.2);vertical-align:middle;margin-right:7px;}
 .romaneio .qt{text-align:center;font-weight:bold;}
+.romaneio tfoot td{border-top:1.5px solid var(--tinta);border-bottom:none;font-weight:bold;}
 .mapa-wrap{margin-top:16px;text-align:center;}
 .sec{font-size:9px;letter-spacing:3px;color:var(--cinza);border-bottom:1px solid var(--claro);padding-bottom:4px;margin:18px 0 10px;}
-.acoes{display:flex;gap:8px;margin-top:16px;}
+.acoes{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;}
 .acoes button{font-family:inherit;font-size:12px;padding:8px 14px;border:1px solid var(--verde);background:#fff;color:var(--verde);border-radius:5px;cursor:pointer;}
 .acoes button:hover{background:var(--verde);color:#fff;}
-@media print{body{background:#fff;padding:0;}.controls,.acoes,.top{display:none;}.card{box-shadow:none;}}
+.evt-panel{border:1px solid var(--claro);border-radius:6px;padding:12px 14px;margin-bottom:14px;background:#FAFBFA;}
+.evt-panel .ph{font-size:9px;letter-spacing:2px;color:var(--cinza);margin-bottom:8px;}
+.evt-panel .row{display:flex;gap:12px;flex-wrap:wrap;}
+.evt-print{display:none;font-size:12px;border:1px solid #333;padding:10px 14px;margin-bottom:14px;line-height:1.7;}
+.evt-print b{font-family:'Arial Narrow',Arial,sans-serif;}
+.trelica-bloco{border:1px solid #C4CCC7;border-radius:6px;padding:14px;margin-bottom:18px;position:relative;}
+.trelica-bloco .th{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;}
+.trelica-bloco .th .num{background:var(--escuro);color:#fff;font-family:'Arial Narrow',Arial,sans-serif;font-weight:bold;padding:3px 10px;border-radius:4px;font-size:13px;}
+.btn-rem{margin-left:auto;font-family:inherit;font-size:11px;border:1px solid #E8B0AA;background:#fff;color:var(--erro);border-radius:5px;padding:5px 10px;cursor:pointer;}
+.btn-rem:hover{background:var(--erro);color:#fff;}
+.btn-add{width:100%;font-family:inherit;font-size:13px;padding:11px;border:1.5px dashed var(--verde);background:#F3F8F5;color:var(--verde);border-radius:6px;cursor:pointer;margin-bottom:18px;}
+.btn-add:hover{background:var(--verde);color:#fff;}
+@media print{
+  body{background:#fff;padding:0;}
+  .controls,.acoes,.top,.btn-add,.btn-rem,.evt-panel{display:none;}
+  .evt-print{display:block;}
+  .card{box-shadow:none;}
+  .trelica-bloco{page-break-inside:avoid;border:none;border-top:1px solid #999;border-radius:0;padding:14px 0;}
+  #bloco-total{page-break-inside:avoid;}
+}
 </style>
 </head>
 <body>
@@ -48,9 +69,22 @@ h1,h2{font-family:'Arial Narrow',Arial,sans-serif;}
   </div>
   <div class="card">
 
+    <!-- DADOS DO EVENTO -->
+    <div class="evt-panel">
+      <div class="ph">DADOS DO EVENTO / PRODUÇÃO</div>
+      <div class="row">
+        <div class="fl txt"><label>EVENTO</label><input id="ev-nome" placeholder="Ex.: Feira X 2026" autocomplete="off"></div>
+        <div class="fl"><label>DATA DE MONTAGEM</label><input id="ev-montagem" type="date"></div>
+        <div class="fl"><label>DATA DO EVENTO</label><input id="ev-data" type="date"></div>
+        <div class="fl"><label>RESPONSÁVEL GALPÃO</label><input id="ev-galpao" placeholder="Nome" autocomplete="off"></div>
+        <div class="fl"><label>RESPONSÁVEL MONTADOR</label><input id="ev-montador" placeholder="Nome" autocomplete="off"></div>
+      </div>
+    </div>
+
+    <!-- cabeçalho impresso do evento -->
+    <div class="evt-print" id="evt-print"></div>
+
     <div class="controls">
-      <div class="fl"><label>LARGURA (estrutura)</label><input id="in-L" type="text" value="500"></div>
-      <div class="fl"><label>ALTURA (estrutura)</label><input id="in-A" type="text" value="300"></div>
       <div class="fl">
         <label>UNIDADE</label>
         <div class="unit-toggle">
@@ -58,14 +92,18 @@ h1,h2{font-family:'Arial Narrow',Arial,sans-serif;}
           <button id="u-m" data-u="m">m</button>
         </div>
       </div>
-      <div class="fl small"><label>SANGRIA/LADO</label><input id="in-sng" type="text" value="10"></div>
     </div>
 
-    <div id="saida"></div>
+    <div id="lista"></div>
+
+    <button class="btn-add" id="btn-add">＋ Adicionar treliça neste evento</button>
+
+    <!-- TOTAL CONSOLIDADO -->
+    <div id="bloco-total"></div>
 
     <div class="acoes">
       <button onclick="window.print()">🖨 Imprimir mapa</button>
-      <button onclick="copiarRomaneio()">📋 Copiar romaneio</button>
+      <button onclick="copiarRomaneio()">📋 Copiar romaneio consolidado</button>
     </div>
   </div>
 </div>
@@ -108,10 +146,9 @@ var PDVEXTrelica = (function(){
   }
   function barras(){ var r=[]; for(var i=0;i<PECAS.length;i++) if(PECAS[i].tipo==='barra') r.push(PECAS[i].t); return r; }
 
-  /* Núcleo puro: tenta fechar um vão (cm) no MENOR nº de barras (coin-change DP).
-     Sem efeitos colaterais nem recursão — devolve lista ou null. */
+  /* Núcleo puro: tenta fechar um vão (cm) no MENOR nº de barras (coin-change DP). */
   function fecharVao(vao){
-    if(vao===0) return [];              /* só os 2 cubos, sem barra */
+    if(vao===0) return [];
     if(vao<0)   return null;
     var B = barras(), INF = 1e9;
     var dp = [0], esc = [-1];
@@ -129,7 +166,6 @@ var PDVEXTrelica = (function(){
     return lista;
   }
 
-  /* Camada com mensagens + sugestões (chama só fecharVao, sem recursão). */
   function decomporVao(vao){
     var l = fecharVao(vao);
     if(l) return {ok:true, barras:l};
@@ -139,7 +175,6 @@ var PDVEXTrelica = (function(){
     return {ok:false, motivo:motivo, sugestoes:vaosProximos(vao)};
   }
 
-  /* vãos alcançáveis mais próximos (para sugerir ajuste de medida) */
   function vaosProximos(vao){
     var achaveis=[], d;
     for(d=1; d<=120; d++){ if(vao-d>=0 && fecharVao(vao-d)){ achaveis.push(vao-d); break; } }
@@ -147,17 +182,15 @@ var PDVEXTrelica = (function(){
     return achaveis;
   }
 
-  /* Decompõe a estrutura inteira (W×H em cm). */
   function decompor(W, H){
-    var vaoH = W - 2*CUBO;   /* aresta horizontal (topo/base) */
-    var vaoV = H - 2*CUBO;   /* aresta vertical (esq/dir)     */
+    var vaoH = W - 2*CUBO;
+    var vaoV = H - 2*CUBO;
     var dH = decomporVao(vaoH);
     var dV = decomporVao(vaoV);
     var avisos=[];
     if(!dH.ok) avisos.push('Largura: '+dH.motivo+(dH.sugestoes&&dH.sugestoes.length?' — larguras ok próximas: '+dH.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
     if(!dV.ok) avisos.push('Altura: '+dV.motivo+(dV.sugestoes&&dV.sugestoes.length?' — alturas ok próximas: '+dV.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
 
-    /* contagem total de peças (4 cubos + 2× cada aresta) */
     var tally={};
     tally[CUBO]=4;
     function add(arr,mult){ for(var i=0;i<arr.length;i++){ tally[arr[i]]=(tally[arr[i]]||0)+mult; } }
@@ -180,7 +213,6 @@ var PDVEXTrelica = (function(){
     };
   }
 
-  /* contraste de texto sobre uma cor */
   function textoSobre(hex){
     var h=hex.replace('#',''); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
     var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
@@ -188,28 +220,24 @@ var PDVEXTrelica = (function(){
     return lum>150?'#111':'#fff';
   }
 
-  /* Gera o mapa SVG do frame com as peças coloridas. */
   function mapaSVG(d){
     var W=d.W, H=d.H;
     var maxW=660, maxH=440;
     var s=Math.min(maxW/W, maxH/H); if(s>3)s=3; if(s<0.35)s=0.35;
-    var mge=58, mgt=30, mgd=26, mgb=44; /* margens p/ cotas */
+    var mge=58, mgt=30, mgd=26, mgb=44;
     var pw=W*s, ph=H*s, c=CUBO*s;
     var x0=mge, y0=mgt;
     var totalW=pw+mge+mgd, totalH=ph+mgt+mgb;
     var svg='<svg width="100%" viewBox="0 0 '+totalW+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="max-width:'+Math.min(totalW,720)+'px">';
 
-    /* área útil (miolo) clara */
     svg+='<rect x="'+(x0+c)+'" y="'+(y0+c)+'" width="'+(pw-2*c)+'" height="'+(ph-2*c)+'" fill="#F5F8F6" stroke="#E0E5E2"/>';
 
     function barra(x,y,w,h,tam,horizontal){
       var p=porTamanho(tam), tc=textoSobre(p.hex);
       var g='<g>';
       g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+p.hex+'" stroke="#222" stroke-width="0.8"/>';
-      /* leve treliça: X interno */
       g+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+w)+'" y2="'+(y+h)+'" stroke="'+tc+'" stroke-width="0.5" opacity="0.28"/>';
       g+='<line x1="'+(x+w)+'" y1="'+y+'" x2="'+x+'" y2="'+(y+h)+'" stroke="'+tc+'" stroke-width="0.5" opacity="0.28"/>';
-      /* rótulo do tamanho */
       var cx=x+w/2, cy=y+h/2;
       var fs=Math.max(8, Math.min(13, (horizontal?w:h)*0.32));
       if(fs>7){
@@ -223,24 +251,22 @@ var PDVEXTrelica = (function(){
         (c>16?'<text x="'+(x+c/2)+'" y="'+(y+c/2)+'" font-family="Arial" font-size="'+Math.max(7,c*0.34)+'" fill="'+tc+'" text-anchor="middle" dominant-baseline="central">30</text>':'')+'</g>';
     }
 
-    /* arestas horizontais (topo e base) */
     if(d.okH){
       var xs=x0+c;
       for(var i=0;i<d.arestaH.length;i++){ var w=d.arestaH[i]*s;
-        svg+=barra(xs,y0,w,c,d.arestaH[i],true);          /* topo */
-        svg+=barra(xs,y0+ph-c,w,c,d.arestaH[i],true);     /* base */
+        svg+=barra(xs,y0,w,c,d.arestaH[i],true);
+        svg+=barra(xs,y0+ph-c,w,c,d.arestaH[i],true);
         xs+=w;
       }
     } else {
       svg+='<rect x="'+(x0+c)+'" y="'+y0+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
       svg+='<rect x="'+(x0+c)+'" y="'+(y0+ph-c)+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
     }
-    /* arestas verticais (esq e dir) */
     if(d.okV){
       var ys=y0+c;
       for(var j=0;j<d.arestaV.length;j++){ var hh=d.arestaV[j]*s;
-        svg+=barra(x0,ys,c,hh,d.arestaV[j],false);        /* esquerda */
-        svg+=barra(x0+pw-c,ys,c,hh,d.arestaV[j],false);   /* direita */
+        svg+=barra(x0,ys,c,hh,d.arestaV[j],false);
+        svg+=barra(x0+pw-c,ys,c,hh,d.arestaV[j],false);
         ys+=hh;
       }
     } else {
@@ -248,10 +274,8 @@ var PDVEXTrelica = (function(){
       svg+='<rect x="'+(x0+pw-c)+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
     }
 
-    /* cubos nos 4 vértices */
     svg+=cubo(x0,y0)+cubo(x0+pw-c,y0)+cubo(x0,y0+ph-c)+cubo(x0+pw-c,y0+ph-c);
 
-    /* cotas */
     var cy=y0+ph+18;
     svg+='<line x1="'+x0+'" y1="'+cy+'" x2="'+(x0+pw)+'" y2="'+cy+'" stroke="#3A4540"/>';
     svg+='<text x="'+(x0+pw/2)+'" y="'+(cy+14)+'" font-family="Courier New" font-size="11" fill="#3A4540" text-anchor="middle">'+W+' cm</text>';
@@ -267,42 +291,78 @@ var PDVEXTrelica = (function(){
 })();
 
 /* ═══════════════════════════════════════════════════════════════
-   UI do simulador
+   UI do simulador — múltiplas treliças por evento
    ═══════════════════════════════════════════════════════════════ */
 var UNID='cm';
-var _ultimo=null;
+var trelicas=[ novaTrelica() ];   /* lista de treliças do evento */
+var _decomps=[];                  /* último resultado de cada uma */
+var _seq=1;
+
+function novaTrelica(){
+  return { id:_seq++, nome:'', L:'500', A:'300', sng:'10', qtd:'1' };
+}
 
 function num(v){ var n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
 function paraCm(v){ return UNID==='m'? Math.round(num(v)*100) : Math.round(num(v)); }
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmtData(iso){
+  if(!iso) return '';
+  var p=iso.split('-'); if(p.length!==3) return iso;
+  return p[2]+'/'+p[1]+'/'+p[0];
+}
 
-function atualizar(){
-  var W=paraCm(document.getElementById('in-L').value);
-  var H=paraCm(document.getElementById('in-A').value);
-  var sng=num(document.getElementById('in-sng').value);
-  var out=document.getElementById('saida');
-  if(W<=0||H<=0){ out.innerHTML='<div class="aviso info">Informe largura e altura da estrutura.</div>'; return; }
+/* ── render da lista de treliças ── */
+function renderLista(){
+  var html='';
+  for(var i=0;i<trelicas.length;i++){
+    var t=trelicas[i];
+    html+='<div class="trelica-bloco" data-id="'+t.id+'">';
+    html+='<div class="th">';
+    html+='<span class="num">TRELIÇA '+(i+1)+'</span>';
+    html+='<div class="fl txt"><label>IDENTIFICAÇÃO / LOCAL</label><input type="text" data-action="t-nome" data-id="'+t.id+'" value="'+esc(t.nome)+'" placeholder="Ex.: Portal entrada" autocomplete="off"></div>';
+    if(trelicas.length>1) html+='<button class="btn-rem" data-action="t-rem" data-id="'+t.id+'">✕ Remover</button>';
+    html+='</div>';
+    html+='<div class="controls" style="border-bottom:1px solid var(--claro);">';
+    html+='<div class="fl"><label>LARGURA (estrutura)</label><input type="text" inputmode="decimal" data-action="t-L" data-id="'+t.id+'" value="'+esc(t.L)+'"></div>';
+    html+='<div class="fl"><label>ALTURA (estrutura)</label><input type="text" inputmode="decimal" data-action="t-A" data-id="'+t.id+'" value="'+esc(t.A)+'"></div>';
+    html+='<div class="fl small"><label>SANGRIA/LADO</label><input type="text" inputmode="decimal" data-action="t-sng" data-id="'+t.id+'" value="'+esc(t.sng)+'"></div>';
+    html+='<div class="fl small"><label>QUANTIDADE</label><input type="text" inputmode="decimal" data-action="t-qtd" data-id="'+t.id+'" value="'+esc(t.qtd)+'"></div>';
+    html+='</div>';
+    html+='<div id="saida-'+t.id+'"></div>';
+    html+='</div>';
+  }
+  document.getElementById('lista').innerHTML=html;
+  for(var k=0;k<trelicas.length;k++) atualizarTrelica(trelicas[k], k);
+  atualizarTotal();
+}
+
+/* ── cálculo e saída de UMA treliça ── */
+function atualizarTrelica(t, idx){
+  var W=paraCm(t.L), H=paraCm(t.A), sng=num(t.sng), qtd=Math.max(1,Math.round(num(t.qtd))||1);
+  var out=document.getElementById('saida-'+t.id);
+  if(!out) return;
+  if(W<=0||H<=0){ out.innerHTML='<div class="aviso info">Informe largura e altura da estrutura.</div>'; _decomps[idx]=null; return; }
 
   var d=PDVEXTrelica.decompor(W,H);
-  _ultimo=d;
+  d.qtd=qtd; d.nome=t.nome; d.sng=sng;
+  _decomps[idx]=d;
   var artL=W+2*sng, artA=H+2*sng;
   var html='';
 
-  /* avisos de decomposição */
   d.avisos.forEach(function(a){ html+='<div class="aviso err">⚠ '+a+'</div>'; });
 
-  /* resumo */
   html+='<div class="resumo">'+
     '<div><span style="color:var(--cinza);font-size:10px">ESTRUTURA (treliça)</span><b>'+W+' × '+H+' cm</b></div>'+
     '<div><span style="color:var(--cinza);font-size:10px">ARTE (c/ sangria '+sng+'/lado)</span><b>'+artL+' × '+artA+' cm</b></div>'+
     '<div><span style="color:var(--cinza);font-size:10px">VÃO HORIZONTAL</span><b>'+d.vaoH+' cm</b></div>'+
     '<div><span style="color:var(--cinza);font-size:10px">VÃO VERTICAL</span><b>'+d.vaoV+' cm</b></div>'+
-    '<div><span style="color:var(--cinza);font-size:10px">TOTAL DE PEÇAS</span><b>'+d.totalPecas+'</b></div>'+
+    '<div><span style="color:var(--cinza);font-size:10px">QUANTIDADE</span><b>×'+qtd+'</b></div>'+
+    '<div><span style="color:var(--cinza);font-size:10px">PEÇAS/UNID</span><b>'+d.totalPecas+'</b></div>'+
   '</div>';
 
-  html+='<div class="aviso info">A treliça usa a medida da <b>estrutura</b> ('+W+'×'+H+'). A sangria de '+sng+'cm/lado entra só na <b>arte</b> ('+artL+'×'+artA+'), nunca na estrutura.</div>';
+  html+='<div class="aviso info">A treliça usa a medida da <b>estrutura</b> ('+W+'×'+H+'). A sangria de '+sng+'cm/lado entra só na <b>arte</b> ('+artL+'×'+artA+'), nunca na estrutura.'+(qtd>1?' Romaneio abaixo é <b>por unidade</b> — o total das '+qtd+' entra na tabela consolidada.':'')+'</div>';
 
-  /* romaneio */
-  html+='<div class="sec">R O M A N E I O &nbsp; D E &nbsp; P E Ç A S</div>';
+  html+='<div class="sec">R O M A N E I O &nbsp; ( P O R &nbsp; U N I D A D E )</div>';
   html+='<table class="romaneio"><thead><tr><th>PEÇA</th><th>COR / ETIQUETA</th><th style="text-align:center">QTD</th><th style="text-align:right">TOTAL LINEAR</th></tr></thead><tbody>';
   d.pecas.forEach(function(p){
     html+='<tr>'+
@@ -315,28 +375,131 @@ function atualizar(){
   html+='</tbody></table>';
   if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+d.vaoH+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+d.vaoV+'cm</div>';
 
-  /* mapa */
   html+='<div class="sec">M A P A &nbsp; D E &nbsp; M O N T A G E M</div>';
   html+='<div class="mapa-wrap">'+PDVEXTrelica.mapaSVG(d)+'</div>';
 
   out.innerHTML=html;
 }
 
-function copiarRomaneio(){
-  if(!_ultimo) return;
-  var t='ROMANEIO — '+_ultimo.W+'x'+_ultimo.H+'cm\n';
-  _ultimo.pecas.forEach(function(p){ t+=(p.tipo==='cubo'?'CUBO 30':p.tamanho+'cm')+'  ['+p.nome+']  x'+p.qtd+'\n'; });
-  t+='TOTAL: '+_ultimo.totalPecas+' peças';
-  navigator.clipboard.writeText(t).then(function(){ alert('Romaneio copiado.'); });
+/* ── tabela consolidada do evento (todas as treliças × qtd) ── */
+function consolidar(){
+  var tally={};
+  for(var i=0;i<_decomps.length;i++){
+    var d=_decomps[i];
+    if(!d) continue;
+    for(var j=0;j<d.pecas.length;j++){
+      var p=d.pecas[j];
+      tally[p.tamanho]=(tally[p.tamanho]||0)+p.qtd*d.qtd;
+    }
+  }
+  var lista=[];
+  Object.keys(tally).map(Number).sort(function(a,b){return a-b;}).forEach(function(t){
+    var p=PDVEXTrelica.porTamanho(t);
+    lista.push({tamanho:t, tipo:p.tipo, hex:p.hex, nome:p.nome, qtd:tally[t]});
+  });
+  return lista;
 }
 
-document.getElementById('in-L').addEventListener('input',atualizar);
-document.getElementById('in-A').addEventListener('input',atualizar);
-document.getElementById('in-sng').addEventListener('input',atualizar);
-document.getElementById('u-cm').addEventListener('click',function(){UNID='cm';this.classList.add('on');document.getElementById('u-m').classList.remove('on');atualizar();});
-document.getElementById('u-m').addEventListener('click',function(){UNID='m';this.classList.add('on');document.getElementById('u-cm').classList.remove('on');atualizar();});
+function atualizarTotal(){
+  var lista=consolidar();
+  var out=document.getElementById('bloco-total');
+  if(!lista.length){ out.innerHTML=''; return; }
+  var totPecas=0, totLin=0, totTrel=0;
+  for(var i=0;i<_decomps.length;i++){ if(_decomps[i]) totTrel+=_decomps[i].qtd; }
+  var html='<div class="sec">T O T A L &nbsp; D O &nbsp; E V E N T O &nbsp; · &nbsp; '+totTrel+' &nbsp; T R E L I Ç A ( S )</div>';
+  html+='<table class="romaneio"><thead><tr><th>PEÇA</th><th>COR / ETIQUETA</th><th style="text-align:center">QTD TOTAL</th><th style="text-align:right">TOTAL LINEAR</th></tr></thead><tbody>';
+  lista.forEach(function(p){
+    totPecas+=p.qtd; totLin+=p.tamanho*p.qtd/100;
+    html+='<tr>'+
+      '<td><b>'+(p.tipo==='cubo'?'CUBO 30×30':p.tamanho+' cm')+'</b></td>'+
+      '<td><span class="sw" style="background:'+p.hex+'"></span>'+p.nome+'</td>'+
+      '<td class="qt">'+p.qtd+'</td>'+
+      '<td style="text-align:right;color:#777">'+(p.tamanho*p.qtd/100).toFixed(2).replace('.',',')+' m</td>'+
+    '</tr>';
+  });
+  html+='</tbody><tfoot><tr><td colspan="2">TOTAL GERAL</td><td class="qt">'+totPecas+'</td><td style="text-align:right">'+totLin.toFixed(2).replace('.',',')+' m</td></tr></tfoot></table>';
+  out.innerHTML=html;
+}
 
-atualizar();
+/* ── cabeçalho do evento para impressão ── */
+function atualizarEvtPrint(){
+  var nome=document.getElementById('ev-nome').value;
+  var mont=fmtData(document.getElementById('ev-montagem').value);
+  var data=fmtData(document.getElementById('ev-data').value);
+  var galpao=document.getElementById('ev-galpao').value;
+  var montador=document.getElementById('ev-montador').value;
+  var h='<b>PDVEX · MAPA DE MONTAGEM DE TRELIÇA</b><br>';
+  h+='EVENTO: <b>'+(esc(nome)||'—')+'</b>';
+  if(data) h+=' &nbsp;·&nbsp; DATA DO EVENTO: <b>'+data+'</b>';
+  if(mont) h+=' &nbsp;·&nbsp; MONTAGEM: <b>'+mont+'</b>';
+  h+='<br>';
+  if(galpao)   h+='RESP. GALPÃO: <b>'+esc(galpao)+'</b> &nbsp;·&nbsp; ';
+  if(montador) h+='RESP. MONTADOR: <b>'+esc(montador)+'</b>';
+  document.getElementById('evt-print').innerHTML=h;
+}
+
+/* ── romaneio consolidado (texto) ── */
+function copiarRomaneio(){
+  var lista=consolidar();
+  if(!lista.length) return;
+  var nome=document.getElementById('ev-nome').value;
+  var t='ROMANEIO CONSOLIDADO'+(nome?' — '+nome:'')+'\n';
+  for(var i=0;i<_decomps.length;i++){
+    var d=_decomps[i];
+    if(!d) continue;
+    t+='· Treliça '+(i+1)+(d.nome?' ('+d.nome+')':'')+': '+d.W+'x'+d.H+'cm ×'+d.qtd+'\n';
+  }
+  t+='---\n';
+  var tot=0;
+  lista.forEach(function(p){ tot+=p.qtd; t+=(p.tipo==='cubo'?'CUBO 30':p.tamanho+'cm')+'  ['+p.nome+']  x'+p.qtd+'\n'; });
+  t+='TOTAL: '+tot+' peças';
+  navigator.clipboard.writeText(t).then(function(){ alert('Romaneio consolidado copiado.'); });
+}
+
+/* ── eventos (delegação) ── */
+function achaIdx(id){ for(var i=0;i<trelicas.length;i++) if(trelicas[i].id===id) return i; return -1; }
+
+document.getElementById('lista').addEventListener('input',function(e){
+  var a=e.target.getAttribute('data-action'); if(!a) return;
+  var id=parseInt(e.target.getAttribute('data-id'),10);
+  var i=achaIdx(id); if(i<0) return;
+  var t=trelicas[i];
+  if(a==='t-nome') t.nome=e.target.value;
+  if(a==='t-L')    t.L=e.target.value;
+  if(a==='t-A')    t.A=e.target.value;
+  if(a==='t-sng')  t.sng=e.target.value;
+  if(a==='t-qtd')  t.qtd=e.target.value;
+  atualizarTrelica(t,i);
+  atualizarTotal();
+});
+
+document.getElementById('lista').addEventListener('click',function(e){
+  var el=e.target.closest?e.target.closest('[data-action="t-rem"]'):e.target;
+  if(!el||el.getAttribute('data-action')!=='t-rem') return;
+  var id=parseInt(el.getAttribute('data-id'),10);
+  var i=achaIdx(id); if(i<0) return;
+  trelicas.splice(i,1);
+  _decomps.splice(i,1);
+  renderLista();
+});
+
+document.getElementById('btn-add').addEventListener('click',function(){
+  var ult=trelicas[trelicas.length-1];
+  var nt=novaTrelica();
+  if(ult){ nt.sng=ult.sng; }
+  trelicas.push(nt);
+  renderLista();
+});
+
+document.getElementById('u-cm').addEventListener('click',function(){UNID='cm';this.classList.add('on');document.getElementById('u-m').classList.remove('on');renderLista();});
+document.getElementById('u-m').addEventListener('click',function(){UNID='m';this.classList.add('on');document.getElementById('u-cm').classList.remove('on');renderLista();});
+
+['ev-nome','ev-montagem','ev-data','ev-galpao','ev-montador'].forEach(function(id){
+  document.getElementById(id).addEventListener('input',atualizarEvtPrint);
+});
+
+renderLista();
+atualizarEvtPrint();
 </script>
 </body>
 </html>
