@@ -210,6 +210,7 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
   <button data-action="salvar">💾 Salvar</button>
   <button data-action="carregar">📂 Carregar</button>
   <button data-action="baixar">⬇ HTML</button>
+  <button data-action="gerar-lg">⬇ Gerar LG</button>
   <button data-action="imprimir">🖨 PDF</button>
   <span id="status-msg"></span>
 </div>
@@ -492,6 +493,7 @@ document.addEventListener('click', function(ev){
   else if(ac==='salvar'){ salvar(); }
   else if(ac==='carregar'){ carregarLista(); }
   else if(ac==='baixar'){ baixarHTML(); }
+  else if(ac==='gerar-lg'){ gerarLG(); }
   else if(ac==='imprimir'){ window.print(); }
   else if(ac==='importar-orc'){ importarOrcPrompt(); }
   else if(ac==='fechar-modal'){ fecharModal(); }
@@ -747,6 +749,35 @@ function abrirModal(html){ document.getElementById('modal-caixa').innerHTML=html
 function fecharModal(){ document.getElementById('modal-fundo').classList.remove('aberto'); }
 
 /* ═══ BAIXAR HTML (com estado embutido) ═══ */
+/* ═══ GERAR LG (Logística de Coleta Gráfica) ═══
+   Exporta JSON no formato do LG_Generator.html: {header, itens}.
+   Medidas = área IMPRESSA (c/ sangria). Itens cuja estrutura sugere
+   apenas estrutura física continuam na lista — apagar no LG se não for gráfica. */
+function gerarLG(){
+  var itensLG = S.itens.map(function(it){
+    var imp = impressa(it);
+    var mat = ((it.substrato||'')+' — '+(it.material||it.nome||'')).replace(/^ — /,'').replace(/ — $/,'');
+    return { mat: mat.toUpperCase(), l: Math.round(imp.L), a: Math.round(imp.A),
+             q: parseFloat(String(it.qtd).replace(',','.'))||1,
+             acab: (it.obs||'').toUpperCase().slice(0,80) };
+  });
+  var payload = {
+    header:{
+      coleta:'MUBISYS', evento:(S.numero||'')+' — '+(S.titulo||''),
+      endColeta:'', entrega:'SUL SIGN — Benfica', endEntrega:'',
+      os:(S.numero||'')+'_LG01',
+      prazo:'', obs:'Gerado automaticamente do book '+(S.numero||'')+' '+(S.revisao||'')
+    },
+    itens: itensLG
+  };
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,1)],{type:'application/json'}));
+  a.download='LG_'+(S.numero||'book')+'.json';
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+  msg('LG exportada — abra o LG_Generator.html e importe o JSON.');
+}
+
 function baixarHTML(){
   var clone = document.documentElement.cloneNode(true);
   var seedEl = clone.querySelector('#seed');
