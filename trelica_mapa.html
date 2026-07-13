@@ -81,7 +81,19 @@ h1,h2{font-family:'Arial Narrow',Arial,sans-serif;}
       </div>
     </div>
 
-    <!-- cabeçalho impresso do evento -->
+    <div class="acoes-supa" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <button id="btn-salvar" style="font-family:inherit;font-size:13px;padding:9px 16px;border:none;border-radius:6px;background:#2F6B50;color:#fff;cursor:pointer">💾 Salvar</button>
+      <button id="btn-carregar" style="font-family:inherit;font-size:13px;padding:9px 16px;border:none;border-radius:6px;background:#5a5f6a;color:#fff;cursor:pointer">📂 Carregar</button>
+      <span id="supa-msg" style="align-self:center;font-size:12px;color:#2F6B50"></span>
+    </div>
+    <div id="modal-carregar" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;padding:40px 16px">
+      <div style="background:#fff;max-width:480px;width:100%;border-radius:8px;padding:18px;max-height:80vh;overflow:auto">
+        <button id="modal-fechar" style="float:right;border:none;background:transparent;font-size:18px;cursor:pointer">✕</button>
+        <h3 style="font-family:'Arial Narrow',Arial,sans-serif;margin-bottom:12px">Carregar montagem salva</h3>
+        <div id="modal-lista" style="font-size:13px"></div>
+      </div>
+    </div>
+
     <div class="evt-print" id="evt-print"></div>
 
     <div class="controls">
@@ -496,6 +508,95 @@ document.getElementById('u-m').addEventListener('click',function(){UNID='m';this
 
 ['ev-nome','ev-montagem','ev-data','ev-galpao','ev-montador'].forEach(function(id){
   document.getElementById(id).addEventListener('input',atualizarEvtPrint);
+});
+
+/* ═══ SUPABASE — salvar/carregar (tabela pdvex_trelica_montagens) ═══ */
+var SUPA_URL = (window.SulSignCore && SulSignCore.SUPA_URL) || 'https://obeamqkcuytctfczhook.supabase.co';
+var SUPA_KEY = (window.SulSignCore && SulSignCore.SUPA_KEY) || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9iZWFtcWtjdXl0Y3RmY3pob29rIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMwMDIxOTQsImV4cCI6MjA4ODU3ODE5NH0.zk88W0HUIYkp8toTsJIXFHf6IGPRPs4hKz8kT3I5QVY';
+
+function supaMsg(t){ var el=document.getElementById('supa-msg'); el.textContent=t; setTimeout(function(){ if(el.textContent===t) el.textContent=''; },6000); }
+function evId(id){ return document.getElementById(id).value; }
+function coletarEstado(){
+  return {
+    evento:evId('ev-nome'), montagem:evId('ev-montagem'), data:evId('ev-data'),
+    galpao:evId('ev-galpao'), montador:evId('ev-montador'),
+    unidade:UNID, trelicas:trelicas
+  };
+}
+function aplicarEstado(m){
+  document.getElementById('ev-nome').value=m.evento||'';
+  document.getElementById('ev-montagem').value=m.montagem||'';
+  document.getElementById('ev-data').value=m.data||'';
+  document.getElementById('ev-galpao').value=m.galpao||'';
+  document.getElementById('ev-montador').value=m.montador||'';
+  UNID=m.unidade||'cm';
+  document.getElementById('u-cm').classList.toggle('on',UNID==='cm');
+  document.getElementById('u-m').classList.toggle('on',UNID==='m');
+  trelicas = (m.trelicas&&m.trelicas.length)?m.trelicas:[novaTrelica()];
+  var mx=0; trelicas.forEach(function(t){ if(t.id>mx)mx=t.id; }); _seq=mx+1;
+  renderLista(); atualizarEvtPrint();
+}
+function supaHeaders(extra){
+  var h={'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY,'Content-Type':'application/json'};
+  if(extra) for(var k in extra) h[k]=extra[k];
+  return h;
+}
+function salvarMontagem(){
+  var nome=evId('ev-nome').trim();
+  if(!nome){ supaMsg('Preencha o campo EVENTO antes de salvar.'); document.getElementById('ev-nome').focus(); return; }
+  var estado=coletarEstado();
+  var registro={ job_numero:nome, peca_nome:'EVENTO ('+trelicas.length+' treliças)', mapa:estado };
+  fetch(SUPA_URL+'/rest/v1/pdvex_trelica_montagens?job_numero=eq.'+encodeURIComponent(nome)+'&deletado_em=is.null&select=id',
+    {headers:supaHeaders()})
+  .then(function(r){return r.json();})
+  .then(function(rows){
+    if(rows&&rows.length){
+      return fetch(SUPA_URL+'/rest/v1/pdvex_trelica_montagens?id=eq.'+rows[0].id,
+        {method:'PATCH',headers:supaHeaders({'Prefer':'return=minimal'}),body:JSON.stringify(registro)});
+    }
+    return fetch(SUPA_URL+'/rest/v1/pdvex_trelica_montagens',
+      {method:'POST',headers:supaHeaders({'Prefer':'return=minimal'}),body:JSON.stringify(registro)});
+  })
+  .then(function(r){ if(r.ok) supaMsg('Salvo: "'+nome+'" ✓'); else r.text().then(function(t){supaMsg('Erro ao salvar: '+t.slice(0,80));}); })
+  .catch(function(e){ supaMsg('Falha de rede: '+e.message); });
+}
+function abrirCarregar(){
+  var modal=document.getElementById('modal-carregar');
+  modal.style.display='flex';
+  document.getElementById('modal-lista').innerHTML='<div style="color:#8A938E">Carregando…</div>';
+  fetch(SUPA_URL+'/rest/v1/pdvex_trelica_montagens?deletado_em=is.null&select=id,job_numero,peca_nome,criado_em&order=criado_em.desc',
+    {headers:supaHeaders()})
+  .then(function(r){return r.json();})
+  .then(function(rows){
+    if(!rows||!rows.length){ document.getElementById('modal-lista').innerHTML='<div style="color:#8A938E">Nenhuma montagem salva ainda.</div>'; return; }
+    var h='';
+    rows.forEach(function(row){
+      var dt=row.criado_em?row.criado_em.slice(0,10).split('-').reverse().join('/'):'';
+      h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 6px;border-bottom:1px solid #EDEFEE">'
+        +'<div><b>'+esc(row.job_numero)+'</b><br><small style="color:#8A938E">'+esc(row.peca_nome||'')+' · '+dt+'</small></div>'
+        +'<button data-load-id="'+row.id+'" style="border:none;background:#2F6B50;color:#fff;border-radius:5px;padding:6px 12px;cursor:pointer;font-family:inherit">Abrir</button>'
+        +'</div>';
+    });
+    document.getElementById('modal-lista').innerHTML=h;
+  })
+  .catch(function(e){ document.getElementById('modal-lista').innerHTML='<div style="color:#C0392B">Erro: '+esc(e.message)+'</div>'; });
+}
+function carregarId(id){
+  fetch(SUPA_URL+'/rest/v1/pdvex_trelica_montagens?id=eq.'+id+'&select=mapa',{headers:supaHeaders()})
+  .then(function(r){return r.json();})
+  .then(function(rows){
+    if(rows&&rows.length&&rows[0].mapa){ aplicarEstado(rows[0].mapa); document.getElementById('modal-carregar').style.display='none'; supaMsg('Carregado ✓'); }
+    else supaMsg('Registro sem dados.');
+  })
+  .catch(function(e){ supaMsg('Erro ao carregar: '+e.message); });
+}
+document.getElementById('btn-salvar').addEventListener('click',salvarMontagem);
+document.getElementById('btn-carregar').addEventListener('click',abrirCarregar);
+document.getElementById('modal-fechar').addEventListener('click',function(){document.getElementById('modal-carregar').style.display='none';});
+document.getElementById('modal-carregar').addEventListener('click',function(e){ if(e.target===this) this.style.display='none'; });
+document.getElementById('modal-lista').addEventListener('click',function(e){
+  var b=e.target.closest?e.target.closest('[data-load-id]'):null;
+  if(b) carregarId(b.getAttribute('data-load-id'));
 });
 
 renderLista();
