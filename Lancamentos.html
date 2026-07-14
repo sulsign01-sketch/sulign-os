@@ -1967,9 +1967,48 @@ async function carregarContasPagar(){
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
     var data=await r.json();
-    contasPagarCache=Array.isArray(data)?data.filter(function(c){return c.status!=='Pago';}):[]; 
+    contasPagarCache=Array.isArray(data)?data.filter(function(c){return c.status!=='Pago';}):[];
+    await mesclarImpostosPendentes();
+    contasPagarCache.sort(function(a,b){return (a.vencimento||'9999-99-99')>(b.vencimento||'9999-99-99')?1:-1;});
     renderContasPagar();
   }catch(e){body.innerHTML='<div class="empty" style="color:#c62828;">Erro: '+e.message+'</div>';}
+}
+
+// Traz impostos com status Pendente para a lista A PAGAR como itens virtuais (_imposto:true).
+// Assim eles entram nos contadores (7/30/total), na seleção, no PED e na OP — sem duplicar dado no banco.
+async function mesclarImpostosPendentes(){
+  try{
+    var r=await fetch(SUPA_URL+'/rest/v1/impostos?select=*&status=eq.Pendente&deletado_em=is.null&order=vencimento.asc',{
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
+    });
+    if(!r.ok) return;
+    var imps=await r.json();
+    if(!Array.isArray(imps)) return;
+    imps.forEach(function(i){
+      var principal=parseFloat(i.valor)||0;
+      var mult=parseFloat(i.multa)||0;
+      var descImp=i.tipo+(i.competencia?' · '+String(i.competencia).replace('-','/'):'');
+      var obsImp=(i.codigo?'Cód: '+i.codigo:'')+(i.obs?(i.codigo?' · ':'')+i.obs:'');
+      contasPagarCache.push({
+        id:'imp:'+i.id,
+        _imposto:true,
+        _rawId:i.id,
+        _tipoImp:i.tipo,
+        descricao:descImp,
+        favorecido:'',
+        valor:principal+mult,
+        vencimento:i.vencimento||null,
+        categoria:'Imposto',
+        periodicidade:'unica',
+        observacao:obsImp,
+        orcamento_numero:null,
+        forma_pagamento:'DARF/GPS',
+        chave_pix:'',
+        status:i.status,
+        numero_op:null
+      });
+    });
+  }catch(e){ /* silencioso: se impostos falhar, A PAGAR segue com as contas normais */ }
 }
 
 function renderContasPagar(){
@@ -2000,11 +2039,13 @@ function renderContasPagar(){
     var urgente=dv&&dv<=d7&&dv>=hoje;
     var bord=atrasado?'#c62828':urgente?'#e65100':'#e0e0e0';
     var perBadge=c.periodicidade&&c.periodicidade!=='unica'?'<span class="tag-per">'+c.periodicidade+'</span>':'';
+    var impBadge=c._imposto?'<span style="font-size:9px;background:#ede7f6;color:#5e35b1;padding:1px 6px;border-radius:8px;font-weight:700;margin-left:6px;vertical-align:middle;">IMPOSTO</span>':'';
+    var removeCtl=c._imposto?'<span style="font-size:10px;color:#9e9e9e;">gerido em Impostos</span>':'<span data-cid="'+c.id+'" style="font-size:10px;color:#c62828;cursor:pointer;" onclick="deletarContaPagar(this.dataset.cid,this.parentNode.parentNode)">× remover</span>';
     var div=document.createElement('div');
     div.style.cssText='display:flex;justify-content:space-between;align-items:flex-start;padding:10px 12px;border-left:3px solid '+bord+';border-bottom:1px solid #f0f0f0;gap:12px;';
     div.innerHTML='<input type="checkbox" class="pp-sel-item" data-cid="'+c.id+'" style="margin-top:3px;flex-shrink:0;">'
       +'<div style="flex:1;min-width:0;">'
-      +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.numero_op?'<span style="font-size:10px;color:#1565c0;font-family:DM Mono,monospace;margin-right:6px;">'+c.numero_op+'</span>':'')+( c.descricao||'—')+perBadge+'</div>'
+      +'<div style="font-size:12px;font-weight:600;color:#333;">'+(c.numero_op?'<span style="font-size:10px;color:#1565c0;font-family:DM Mono,monospace;margin-right:6px;">'+c.numero_op+'</span>':'')+( c.descricao||'—')+perBadge+impBadge+'</div>'
       +'<div style="font-size:11px;color:#777;margin-top:2px;">'+(c.categoria||'—')+(c.favorecido?' · '+c.favorecido:'')+(c.observacao?' · '+c.observacao:'')+'</div>'
       +'<div style="font-size:10px;color:'+(atrasado?'#c62828':urgente?'#e65100':'#999')+';margin-top:3px;">'+(atrasado?'⚠ ATRASADO':'Vence')+' '+vencStr+'</div>'
       +'</div>'
@@ -2016,7 +2057,7 @@ function renderContasPagar(){
       +(c.comprovante_url?'<a href="'+c.comprovante_url+'" target="_blank" style="font-size:11px;color:#1565c0;text-decoration:none;" title="Ver comprovante">📎</a>':'')
       +'<button data-cid="'+c.id+'" onclick="pagarConta(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #2e7d32;border-radius:2px;background:#e8f5e9;color:#1b5e20;cursor:pointer;">✓ Pagar</button>'
       +'<button data-cid="'+c.id+'" onclick="gerarOP(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #1565c0;border-radius:2px;background:#e3f2fd;color:#1565c0;cursor:pointer;">📄 OP</button>'
-      +'<span data-cid="'+c.id+'" style="font-size:10px;color:#c62828;cursor:pointer;" onclick="deletarContaPagar(this.dataset.cid,this.parentNode.parentNode)">× remover</span>'
+      +removeCtl
       +'</div>';
     body.appendChild(div);
   });
@@ -2175,6 +2216,7 @@ async function gerarPedidoPagamento(){
 
     // Marca as contas como enviadas (mesmo identificador do pedido)
     for(var i=0; i<contas.length; i++){
+      if(contas[i]._imposto) continue; // imposto não tem tracking token_ponde
       await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+contas[i].id,{
         method:'PATCH',
         headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
@@ -2196,6 +2238,10 @@ async function enviarParaPonde(){
   }
 
   var contas = contasPagarCache.filter(function(c){ return selecionados.indexOf(String(c.id))>=0; });
+  var qtdImp = contas.filter(function(c){return c._imposto;}).length;
+  contas = contas.filter(function(c){ return !c._imposto; });
+  if(qtdImp){ alert(qtdImp+' imposto(s) não vão pelo Link Pondé (DARF/GPS não é pago por PIX). Use "Gerar Pedido de Pagamento" para incluí-los numa OP.'); }
+  if(!contas.length){ return; }
   var token = 'pd' + Date.now().toString(36) + Math.random().toString(36).substring(2,8);
 
   try{
@@ -2253,6 +2299,7 @@ async function confirmarPagamentoConta(){
   var st = document.getElementById('mp-pag-status');
   if(!data){st.textContent='Informe a data.';st.style.color='#c62828';return;}
   st.textContent='Salvando...';st.style.color='#888';
+  if(conta && conta._imposto){ await confirmarPagamentoImposto(conta, data, st); return; }
   try{
     await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
       method:'PATCH',
@@ -2285,6 +2332,41 @@ async function confirmarPagamentoConta(){
   }catch(e){
     st.textContent='Erro: '+e.message;st.style.color='#c62828';
   }
+}
+
+// Pagamento de imposto vindo da aba A PAGAR:
+// grava na tabela impostos (status=Pago, data_pgto editável) e posta um lançamento
+// conciliado:true para entrar no Fluxo de Caixa.
+async function confirmarPagamentoImposto(conta, data, st){
+  try{
+    await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+conta._rawId,{
+      method:'PATCH',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({status:'Pago', data_pgto:data})
+    });
+    await fetch(SUPA_URL+'/rest/v1/lancamentos',{
+      method:'POST',
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
+      body:JSON.stringify({
+        orcamento_numero:'SEM-JOB',
+        categoria:'Imposto',
+        descricao:'[IMPOSTO] '+(conta.descricao||'—'),
+        valor:conta.valor||0,
+        data:data,
+        fornecedor:conta._tipoImp||'',
+        tem_nota:true,
+        periodicidade:'unica',
+        tipo_lancamento:'saida',
+        conciliado:true
+      })
+    });
+    if(typeof impostosCache!=='undefined'&&Array.isArray(impostosCache)){
+      var it=impostosCache.find(function(x){return x.id===conta._rawId;});
+      if(it){it.status='Pago';it.data_pgto=data;}
+    }
+    st.textContent='✓ Pago!';st.style.color='#2e7d32';
+    setTimeout(function(){ fecharModalPagamento(); carregarContasPagar(); },600);
+  }catch(e){ st.textContent='Erro: '+e.message; st.style.color='#c62828'; }
 }
 
 async function pagarConta(id){
