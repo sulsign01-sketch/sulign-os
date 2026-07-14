@@ -723,19 +723,19 @@ async function carregarFluxoInv(){
     var ultDia=new Date(parseInt(partesFim[0]),parseInt(partesFim[1]),0).getDate();
     var dataFim=ate+'-'+String(ultDia).padStart(2,'0');
 
-    var r1=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.&deletado_em=is.null'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&order=data.asc',{
+    var r1=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&conciliado=eq.true&deletado_em=is.null&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var lancs=await r1.json();
     lancs=Array.isArray(lancs)?lancs:[];
 
-    var r2=await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.&deletado_em=is.null'+dataIni+'&data=lte.'+dataFim+'&order=data.asc',{
+    var r2=await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&deletado_em=is.null&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var aportes=await r2.json();
     aportes=Array.isArray(aportes)?aportes:[];
 
-    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.&deletado_em=is.null'+dataIni+'&conciliado=eq.true',{
+    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&conciliado=eq.true&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var lancsAntes=await r3.json();
@@ -858,12 +858,19 @@ function toggleFluxoInvDetalhe(mes){
   renderFluxoInvDetMes(mes);
 }
 
+function abrirComprovanteInv(id){
+  var l=(window._invFxLancs||[]).find(function(x){return String(x.id)===String(id);});
+  if(!l||!l.comprovante) return;
+  if(String(l.comprovante).indexOf('http')===0){ window.open(l.comprovante,'_blank'); return; }
+  var w=window.open(''); if(w){ w.document.write('<img src="'+l.comprovante+'" style="max-width:100%;">'); w.document.close(); }
+}
+
 function renderFluxoInvDetMes(mes){
   var saidasAporteTipos=['Retirada de Sócio','Devolução de Empréstimo'];
   var itens=[];
   (window._invFxLancs||[]).forEach(function(l){
     if((l.data||'').substring(0,7)!==mes) return;
-    itens.push({data:l.data,desc:l.descricao||'—',tipo:l.tipo_lancamento,valor:parseFloat(l.valor)||0,cat:l.categoria||'—',job:l.orcamento_numero,forn:l.fornecedor||''});
+    itens.push({id:l.id,data:l.data,desc:l.descricao||'—',tipo:l.tipo_lancamento,valor:parseFloat(l.valor)||0,cat:l.categoria||'—',job:l.orcamento_numero,forn:l.fornecedor||'',comp:l.comprovante||null});
   });
   (window._invFxAportes||[]).forEach(function(a){
     if((a.data||'').substring(0,7)!==mes) return;
@@ -888,9 +895,10 @@ function renderFluxoInvDetMes(mes){
   itens.forEach(function(it){
     var dt=it.data?new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR'):'—';
     var cor=it.tipo==='entrada'?'var(--ga)':'var(--red)';
+    var compIcon=it.comp?' <span data-id="'+it.id+'" onclick="abrirComprovanteInv(this.dataset.id)" style="cursor:pointer;" title="Ver comprovante">'+(String(it.comp).indexOf('http')===0?'📎':'🖼')+'</span>':'';
     html+='<tr style="border-bottom:1px solid #141414;">'
       +'<td style="padding:6px 10px;font-family:DM Mono,monospace;color:var(--g400);">'+dt+'</td>'
-      +'<td style="padding:6px 10px;color:var(--white);">'+esc(it.desc)+(it.forn?'<span style="color:#444;"> · '+esc(it.forn)+'</span>':'')+'</td>'
+      +'<td style="padding:6px 10px;color:var(--white);">'+esc(it.desc)+(it.forn?'<span style="color:#444;"> · '+esc(it.forn)+'</span>':'')+compIcon+'</td>'
       +'<td style="padding:6px 10px;color:var(--g400);">'+esc(it.cat)+'</td>'
       +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+cor+';">'+(it.tipo==='entrada'?'+':'-')+fmtK(it.valor)+'</td>'
       +'</tr>';
