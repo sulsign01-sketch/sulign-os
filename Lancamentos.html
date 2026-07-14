@@ -1629,6 +1629,7 @@ function renderImpostos(){
       +'<div class="imp-meta">Vencimento: <strong>'+dtVenc+'</strong>'
       +(imp.status==='Pago'?' · Pago em: <strong>'+dtPgto+'</strong>':'')+'</div>'
       +(imp.multa&&parseFloat(imp.multa)?'<div class="imp-meta">Principal: '+fmt(imp.valor)+' · Multa/Juros: '+fmt(imp.multa)+'</div>':'')
+      +(imp.comprovante_url?'<div class="imp-meta" style="margin-top:4px;">Comprovante: <a href="'+imp.comprovante_url+'" target="_blank" style="color:#1565c0;text-decoration:none;">📎 abrir</a></div>':'')
       +(imp.obs?'<div class="imp-meta" style="margin-top:4px;">Obs: '+imp.obs+'</div>':'')
       +(imp.status==='Pendente'?'<button onclick="marcarPago(\''+imp.id+'\'" style="margin-top:8px;padding:5px 12px;background:#2d6a4f;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px;">✓ Marcar como Pago</button>':'')
       +'</div>';
@@ -1672,14 +1673,19 @@ async function salvarImposto(){
 
 async function marcarPago(id){
   var hoje=new Date().toISOString().split('T')[0];
+  var link=prompt('Link do comprovante (Drive) — opcional. Deixe em branco se não tiver:','');
+  if(link===null) return; // cancelou
+  link=(link||'').trim();
+  var corpo={status:'Pago',data_pgto:hoje};
+  if(link) corpo.comprovante_url=link;
   try{
     await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+id,{
       method:'PATCH',
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json'},
-      body:JSON.stringify({status:'Pago',data_pgto:hoje})
+      body:JSON.stringify(corpo)
     });
     var item=impostosCache.find(function(i){return i.id===id;});
-    if(item){item.status='Pago';item.data_pgto=hoje;}
+    if(item){item.status='Pago';item.data_pgto=hoje;if(link)item.comprovante_url=link;}
     renderImpostos();
   }catch(e){alert('Erro ao salvar: '+e.message);}
 }
@@ -2005,7 +2011,8 @@ async function mesclarImpostosPendentes(){
         forma_pagamento:'DARF/GPS',
         chave_pix:'',
         status:i.status,
-        numero_op:null
+        numero_op:null,
+        comprovante_url:i.comprovante_url||null
       });
     });
   }catch(e){ /* silencioso: se impostos falhar, A PAGAR segue com as contas normais */ }
@@ -2299,7 +2306,7 @@ async function confirmarPagamentoConta(){
   var st = document.getElementById('mp-pag-status');
   if(!data){st.textContent='Informe a data.';st.style.color='#c62828';return;}
   st.textContent='Salvando...';st.style.color='#888';
-  if(conta && conta._imposto){ await confirmarPagamentoImposto(conta, data, st); return; }
+  if(conta && conta._imposto){ await confirmarPagamentoImposto(conta, data, url, st); return; }
   try{
     await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
       method:'PATCH',
@@ -2337,12 +2344,14 @@ async function confirmarPagamentoConta(){
 // Pagamento de imposto vindo da aba A PAGAR:
 // grava na tabela impostos (status=Pago, data_pgto editável) e posta um lançamento
 // conciliado:true para entrar no Fluxo de Caixa.
-async function confirmarPagamentoImposto(conta, data, st){
+async function confirmarPagamentoImposto(conta, data, url, st){
   try{
+    var corpoImp={status:'Pago', data_pgto:data};
+    if(url) corpoImp.comprovante_url=url;
     await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+conta._rawId,{
       method:'PATCH',
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({status:'Pago', data_pgto:data})
+      body:JSON.stringify(corpoImp)
     });
     await fetch(SUPA_URL+'/rest/v1/lancamentos',{
       method:'POST',
