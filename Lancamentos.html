@@ -2327,7 +2327,8 @@ async function confirmarPagamentoConta(){
           tem_nota:true,
           periodicidade:'unica',
           tipo_lancamento:'saida',
-          conciliado:true
+          conciliado:true,
+          comprovante:url||null
         })
       });
     }
@@ -2366,7 +2367,8 @@ async function confirmarPagamentoImposto(conta, data, url, st){
         tem_nota:true,
         periodicidade:'unica',
         tipo_lancamento:'saida',
-        conciliado:true
+        conciliado:true,
+        comprovante:url||null
       })
     });
     if(typeof impostosCache!=='undefined'&&Array.isArray(impostosCache)){
@@ -2890,6 +2892,13 @@ function toggleFluxoDetalhe(mes){
   renderFluxoDetalheMes(mes);
 }
 
+function abrirComprovanteFluxo(id){
+  var l=(window._fluxoLancsCache||[]).find(function(x){return String(x.id)===String(id);});
+  if(!l||!l.comprovante) return;
+  if(String(l.comprovante).indexOf('http')===0){ window.open(l.comprovante,'_blank'); return; }
+  var w=window.open(''); if(w){ w.document.write('<img src="'+l.comprovante+'" style="max-width:100%;">'); w.document.close(); }
+}
+
 function renderFluxoDetalheMes(mes){
   var saidasAportesTipos = ['Retirada de Sócio','Devolução de Empréstimo'];
   var itens = [];
@@ -2900,7 +2909,7 @@ function renderFluxoDetalheMes(mes){
       id: l.id, data: l.data, desc: l.descricao||'—', tipo: l.tipo_lancamento,
       valor: parseFloat(l.valor)||0, cat: l.categoria||'—',
       job: l.orcamento_numero, forn: l.fornecedor||'', origem: 'lancamento',
-      conciliado: l.conciliado
+      conciliado: l.conciliado, comp: l.comprovante||null
     });
   });
   (window._fluxoAportesCache||[]).forEach(function(a){
@@ -2977,9 +2986,11 @@ function renderFluxoDetalheMes(mes){
       jobCell = '<td style="padding:6px 10px;font-family:DM Mono,monospace;font-size:10px;">'+jobLabel+'</td>';
     }
 
+    var compIcon = it.comp ? ' <span data-id="'+it.id+'" onclick="abrirComprovanteFluxo(this.dataset.id)" style="cursor:pointer;" title="Ver comprovante">'+(String(it.comp).indexOf('http')===0?'📎':'🖼')+'</span>' : '';
+
     html += '<tr style="border-bottom:1px solid #f2f2f2;">'
       +'<td style="padding:6px 10px;font-family:DM Mono,monospace;color:#666;">'+dt+'</td>'
-      +'<td style="padding:6px 10px;">'+it.desc+(it.forn?' <span style="color:#aaa;">· '+it.forn+'</span>':'')+'</td>'
+      +'<td style="padding:6px 10px;">'+it.desc+(it.forn?' <span style="color:#aaa;">· '+it.forn+'</span>':'')+compIcon+'</td>'
       +catCell
       +jobCell
       +'<td style="padding:6px 10px;text-align:right;font-family:DM Mono,monospace;font-weight:600;color:'+(it.tipo==='entrada'?'#2e7d32':'#c62828')+';">'+(it.tipo==='entrada'?'+':'-')+fmt(it.valor)+'</td>'
