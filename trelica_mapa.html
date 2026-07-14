@@ -194,7 +194,9 @@ var PDVEXTrelica = (function(){
     return achaveis;
   }
 
-  function decompor(W, H){
+  function decompor(W, H, nDiv){
+    nDiv = (nDiv===2||nDiv===3||nDiv===4) ? nDiv : 1;   /* divisões no eixo horizontal */
+    var nRef = nDiv>1 ? nDiv-1 : 0;                      /* reforços verticais internos */
     var vaoH = W - 2*CUBO;
     var vaoV = H - 2*CUBO;
     var dH = decomporVao(vaoH);
@@ -203,11 +205,14 @@ var PDVEXTrelica = (function(){
     if(!dH.ok) avisos.push('Largura: '+dH.motivo+(dH.sugestoes&&dH.sugestoes.length?' — larguras ok próximas: '+dH.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
     if(!dV.ok) avisos.push('Altura: '+dV.motivo+(dV.sugestoes&&dV.sugestoes.length?' — alturas ok próximas: '+dV.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
 
+    if(nRef>0 && !dV.ok) avisos.push('Reforço: depende do vão vertical, que não fecha — ajuste a altura.');
+
     var tally={};
     tally[CUBO]=4;
     function add(arr,mult){ for(var i=0;i<arr.length;i++){ tally[arr[i]]=(tally[arr[i]]||0)+mult; } }
     if(dH.ok) add(dH.barras,2);
     if(dV.ok) add(dV.barras,2);
+    if(dV.ok && nRef>0) add(dV.barras,nRef);   /* reforços verticais internos, sem cubo */
 
     var pecas=[];
     Object.keys(tally).map(Number).sort(function(a,b){return a-b;}).forEach(function(t){
@@ -220,6 +225,7 @@ var PDVEXTrelica = (function(){
       arestaH: dH.ok?dH.barras:null,
       arestaV: dV.ok?dV.barras:null,
       okH:dH.ok, okV:dV.ok,
+      nDiv:nDiv, nRef:(dV.ok?nRef:0),
       pecas:pecas, avisos:avisos,
       totalPecas: pecas.reduce(function(a,p){return a+p.qtd;},0)
     };
@@ -286,6 +292,19 @@ var PDVEXTrelica = (function(){
       svg+='<rect x="'+(x0+pw-c)+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
     }
 
+    if(d.okV && d.nRef>0){
+      for(var rk=1; rk<d.nDiv; rk++){
+        var xc = x0 + c + (pw-2*c)*(rk/d.nDiv);
+        var xr = xc - c/2;
+        var ys2 = y0+c;
+        for(var vj=0; vj<d.arestaV.length; vj++){
+          var hh2 = d.arestaV[vj]*s;
+          svg+=barra(xr, ys2, c, hh2, d.arestaV[vj], false);
+          ys2+=hh2;
+        }
+      }
+    }
+
     svg+=cubo(x0,y0)+cubo(x0+pw-c,y0)+cubo(x0,y0+ph-c)+cubo(x0+pw-c,y0+ph-c);
 
     var cy=y0+ph+18;
@@ -306,12 +325,12 @@ var PDVEXTrelica = (function(){
    UI do simulador — múltiplas treliças por evento
    ═══════════════════════════════════════════════════════════════ */
 var UNID='cm';
-var trelicas=[ novaTrelica() ];   /* lista de treliças do evento */
-var _decomps=[];                  /* último resultado de cada uma */
 var _seq=1;
+var _decomps=[];                  /* último resultado de cada uma */
+var trelicas=[ novaTrelica() ];   /* lista de treliças do evento */
 
 function novaTrelica(){
-  return { id:_seq++, nome:'', L:'500', A:'300', sng:'10', qtd:'1' };
+  return { id:_seq++, nome:'', L:'500', A:'300', sng:'10', qtd:'1', ref:'0' };
 }
 
 function num(v){ var n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
@@ -339,6 +358,13 @@ function renderLista(){
     html+='<div class="fl"><label>ALTURA (estrutura)</label><input type="text" inputmode="decimal" data-action="t-A" data-id="'+t.id+'" value="'+esc(t.A)+'"></div>';
     html+='<div class="fl small"><label>SANGRIA/LADO</label><input type="text" inputmode="decimal" data-action="t-sng" data-id="'+t.id+'" value="'+esc(t.sng)+'"></div>';
     html+='<div class="fl small"><label>QUANTIDADE</label><input type="text" inputmode="decimal" data-action="t-qtd" data-id="'+t.id+'" value="'+esc(t.qtd)+'"></div>';
+    var rf=t.ref||'0';
+    html+='<div class="fl"><label>REFORÇO (eixo)</label><select data-action="t-ref" data-id="'+t.id+'" style="font-family:inherit;font-size:14px;padding:7px 6px;border:1px solid #C4CCC7;border-radius:5px;width:150px;background:#fff;">'
+      +'<option value="0"'+(rf==='0'?' selected':'')+'>Sem reforço</option>'
+      +'<option value="2"'+(rf==='2'?' selected':'')+'>2× — 1 reforço</option>'
+      +'<option value="3"'+(rf==='3'?' selected':'')+'>3× — 2 reforços</option>'
+      +'<option value="4"'+(rf==='4'?' selected':'')+'>4× — 3 reforços</option>'
+      +'</select></div>';
     html+='</div>';
     html+='<div id="saida-'+t.id+'"></div>';
     html+='</div>';
@@ -355,7 +381,8 @@ function atualizarTrelica(t, idx){
   if(!out) return;
   if(W<=0||H<=0){ out.innerHTML='<div class="aviso info">Informe largura e altura da estrutura.</div>'; _decomps[idx]=null; return; }
 
-  var d=PDVEXTrelica.decompor(W,H);
+  var nDiv=parseInt(t.ref,10); if(!(nDiv===2||nDiv===3||nDiv===4)) nDiv=1;
+  var d=PDVEXTrelica.decompor(W,H,nDiv);
   d.qtd=qtd; d.nome=t.nome; d.sng=sng;
   _decomps[idx]=d;
   var artL=W+2*sng, artA=H+2*sng;
@@ -370,6 +397,7 @@ function atualizarTrelica(t, idx){
     '<div><span style="color:var(--cinza);font-size:10px">VÃO VERTICAL</span><b>'+d.vaoV+' cm</b></div>'+
     '<div><span style="color:var(--cinza);font-size:10px">QUANTIDADE</span><b>×'+qtd+'</b></div>'+
     '<div><span style="color:var(--cinza);font-size:10px">PEÇAS/UNID</span><b>'+d.totalPecas+'</b></div>'+
+    (d.nRef>0?'<div><span style="color:var(--cinza);font-size:10px">REFORÇOS (vert.)</span><b>'+d.nRef+' × '+d.vaoV+'cm</b></div>':'')+
   '</div>';
 
   html+='<div class="aviso info">A treliça usa a medida da <b>estrutura</b> ('+W+'×'+H+'). A sangria de '+sng+'cm/lado entra só na <b>arte</b> ('+artL+'×'+artA+'), nunca na estrutura.'+(qtd>1?' Romaneio abaixo é <b>por unidade</b> — o total das '+qtd+' entra na tabela consolidada.':'')+'</div>';
@@ -385,7 +413,7 @@ function atualizarTrelica(t, idx){
     '</tr>';
   });
   html+='</tbody></table>';
-  if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+d.vaoH+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+d.vaoV+'cm</div>';
+  if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+d.vaoH+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+d.vaoV+'cm'+(d.nRef>0?' · '+d.nRef+' reforço(s) vertical(is) idêntico(s) à vertical, sem cubo':'')+'</div>';
 
   html+='<div class="sec">M A P A &nbsp; D E &nbsp; M O N T A G E M</div>';
   html+='<div class="mapa-wrap">'+PDVEXTrelica.mapaSVG(d)+'</div>';
@@ -482,6 +510,15 @@ document.getElementById('lista').addEventListener('input',function(e){
   if(a==='t-sng')  t.sng=e.target.value;
   if(a==='t-qtd')  t.qtd=e.target.value;
   atualizarTrelica(t,i);
+  atualizarTotal();
+});
+
+document.getElementById('lista').addEventListener('change',function(e){
+  var a=e.target.getAttribute('data-action'); if(a!=='t-ref') return;
+  var id=parseInt(e.target.getAttribute('data-id'),10);
+  var i=achaIdx(id); if(i<0) return;
+  trelicas[i].ref=e.target.value;
+  atualizarTrelica(trelicas[i],i);
   atualizarTotal();
 });
 
