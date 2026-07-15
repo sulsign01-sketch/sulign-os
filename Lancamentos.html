@@ -282,16 +282,31 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <option value="Material">Material</option>
           <option value="Insumo">Insumo</option>
           <option value="Mão de Obra">Mão de Obra</option>
-          <option value="Alimentação">Alimentação</option>
-          <option value="Comunicação Visual">Comunicação Visual</option>
+          <option value="Serviços">Serviços</option>
           <option value="Logística">Logística</option>
+          <option value="Alimentação">Alimentação</option>
+          <option value="Imposto">Imposto</option>
+          <option value="Comissão">Comissão</option>
+          <option value="Comunicação Visual">Comunicação Visual</option>
+          <option value="Verba Produção">Verba Produção</option>
+          <option value="Receita de Job">Receita de Job</option>
+          <option value="Aporte">Aporte</option>
+          <option value="Estorno">Estorno</option>
           <option value="Imprevisto">Imprevisto</option>
+          <option value="Outros">Outros</option>
         </select>
       </div>
+      <div class="fl">
+        <label>Subcategoria</label>
+        <select id="f-subcategoria"><option value="">—</option></select>
+      </div>
+    </div>
+    <div class="row2">
       <div class="fl">
         <label>Data</label>
         <input type="date" id="f-data">
       </div>
+      <div class="fl"></div>
     </div>
     <!-- ═══ FECHAMENTO PDVEX: detalhamento de MO e O.C. ═══ -->
     <div id="f-mo-wrap" style="display:none;">
@@ -433,7 +448,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       </div>
       <div class="fl">
         <label>Subcategoria</label>
-        <input type="text" id="ff-subcategoria" placeholder="Ex: Receita Federal">
+        <select id="ff-subcategoria"><option value="">—</option></select>
       </div>
     </div>
     <div class="fl">
@@ -1155,6 +1170,47 @@ lsFillDatalist('ll_fornecedores','lista-fornecedores');
 
 document.getElementById('f-data').valueAsDate=new Date();
 
+/* ═══ SUBCATEGORIAS: dominio controlado por categoria ═══ */
+var SUBCATS={
+  'Material':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
+  'Insumo':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
+  'Mão de Obra':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
+  'Serviços':['Contabilidade','Juridico','TI','Consultoria','Manutencao','Terceirizado'],
+  'Logística':['Frete','Combustivel','Estacionamento','Pedagio','Transporte Equipe'],
+  'Alimentação':['Equipe','Cliente'],
+  'Imposto':['Simples Nacional','ISS','INSS','FGTS','IRRF','Outros'],
+  'Comissão':['Vendedor','Agencia','BV'],
+  'Comunicação Visual':['Impressao','Recorte','Instalacao'],
+  'Verba Produção':['Adiantamento','Prestacao de Contas'],
+  'Receita de Job':['Sinal','Saldo','Parcela','Integral'],
+  'Aporte':['Socio Dudu','Socio Carlos','Socio Ponde','Socio Jovita'],
+  'Estorno':['Devolucao Fornecedor','Ajuste Bancario','Reembolso'],
+  'Imprevisto':[],
+  'Outros':[],
+  'Impostos':['Simples Nacional','ISS','INSS','FGTS','IRRF','Outros'],
+  'Aporte de Sócio':['Socio Dudu','Socio Carlos','Socio Ponde','Socio Jovita'],
+  'Aluguel':['Galpao','Escritorio','Equipamento'],
+  'Energia':['Light','Gerador'],
+  'Água':['CEDAE'],
+  'Internet':['Link Principal','Backup','Telefonia'],
+  'Software':['Licenca','Assinatura','Nuvem'],
+  'Manutenção':['Predial','Veiculo','Maquinario','Informatica'],
+  'Transporte':['Frete','Combustivel','Aplicativo','Pedagio'],
+  'Seguro':['Predial','Veiculo','Responsabilidade Civil']
+};
+function popularSubcat(selCatId,selSubId,manter){
+  var c=document.getElementById(selCatId), s2=document.getElementById(selSubId);
+  if(!c||!s2)return;
+  var atual=manter||s2.value||'';
+  var lista=SUBCATS[c.value]||[];
+  var h='<option value="">—</option>';
+  for(var i=0;i<lista.length;i++){
+    h+='<option value="'+lista[i]+'">'+lista[i]+'</option>';
+  }
+  s2.innerHTML=h;
+  if(atual){ s2.value=atual; }
+}
+
 /* ═══ FECHAMENTO PDVEX: campos condicionais + auto-cálculo ═══ */
 function atualizaCamposPdvex(){
   var cat=document.getElementById('f-categoria').value;
@@ -1174,7 +1230,12 @@ function calculaValorMoPdvex(){
     document.getElementById('f-valor').value=(d*vd+he*vd/8).toFixed(2);
   }
 }
-document.getElementById('f-categoria').addEventListener('change',atualizaCamposPdvex);
+document.getElementById('f-categoria').addEventListener('change',function(){atualizaCamposPdvex();popularSubcat('f-categoria','f-subcategoria');});
+popularSubcat('f-categoria','f-subcategoria');
+if(document.getElementById('ff-categoria')){
+  document.getElementById('ff-categoria').addEventListener('change',function(){popularSubcat('ff-categoria','ff-subcategoria');});
+  popularSubcat('ff-categoria','ff-subcategoria');
+}
 document.getElementById('f-tipo-mo').addEventListener('change',function(){atualizaCamposPdvex();calculaValorMoPdvex();});
 ['f-diarias','f-valor-diaria','f-horas-extras'].forEach(function(id){
   document.getElementById(id).addEventListener('input',calculaValorMoPdvex);
@@ -1326,6 +1387,7 @@ async function salvarLancamento(){
       var payload={
         orcamento_numero:jobSelecionado.numero,
         pessoa:pessoa,funcao:funcao,categoria:categoria,
+        subcategoria:(document.getElementById('f-subcategoria')?document.getElementById('f-subcategoria').value:'')||null,
         data:data,fornecedor:fornecedor,descricao:descricao,valor:valor,
         bloco:(document.getElementById('f-bloco')?document.getElementById('f-bloco').value:'')||null,
         diarias:(categoria==='Mão de Obra')?(parseFloat(document.getElementById('f-diarias').value)||null):null,
@@ -1420,7 +1482,7 @@ function renderLista(){
     var isConc=!!l.conciliado;
     var perTag=l.periodicidade&&l.periodicidade!=='unica'?'<span class="tag-per">'+l.periodicidade+'</span>':'';
     div.innerHTML='<div style="flex:1;min-width:0;">'
-      +'<div class="li-desc"><strong>'+(l.orcamento_numero||'—')+'</strong>'+(l.bloco?' <span style="font-size:10px;color:#e65100;">▦ '+l.bloco+'</span>':'')+' · '+(l.categoria||'—')+' · '+l.descricao
+      +'<div class="li-desc"><strong>'+(l.orcamento_numero||'—')+'</strong>'+(l.bloco?' <span style="font-size:10px;color:#e65100;">▦ '+l.bloco+'</span>':'')+' · '+(l.categoria||'—')+(l.subcategoria?' › '+l.subcategoria:'')+' · '+l.descricao
       +(semNota?'<span class="tag-sn">SEM NOTA</span>':'')+perTag+'</div>'
       +'<div class="li-meta">'+dt+' · '+(l.pessoa||'—')+(l.fornecedor?' · '+l.fornecedor:'')
       +(l.data_conciliacao?' · <span style="color:#2e7d32;font-size:10px;">conc. '+new Date(l.data_conciliacao).toLocaleDateString('pt-BR')+'</span>':'')+'</div>'
