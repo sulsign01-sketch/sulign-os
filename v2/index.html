@@ -327,61 +327,6 @@ var SS20 = {
   cache: {}             // cache de dados por sessão de página
 };
 
-/* ── AUTH (mesma sessão do Painel_Financeiro v1) ── */
-(function(){
-  var KEY='sulsign_session';
-  function getS(){ try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){return null;} }
-  function setS(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
-  function clearS(){ localStorage.removeItem(KEY); window.SULSIGN_ACCESS_TOKEN=null; }
-
-  function hideGate(email){
-    document.getElementById('ss-gate').className='off';
-    document.getElementById('foot-user').textContent = email||'';
-    SS20.boot();
-  }
-  function showErr(m){
-    var e=document.getElementById('gate-err');
-    e.style.display='block'; e.textContent=m;
-  }
-  function login(){
-    var email=document.getElementById('gate-email').value.trim();
-    var senha=document.getElementById('gate-senha').value;
-    var btn=document.getElementById('gate-btn');
-    if(!email||!senha){ showErr('Preencha e-mail e senha.'); return; }
-    btn.disabled=true; btn.textContent='Entrando…';
-    fetch(SulSignCore.SUPA_URL+'/auth/v1/token?grant_type=password',{
-      method:'POST',
-      headers:{'apikey':SulSignCore.SUPA_KEY,'Content-Type':'application/json'},
-      body:JSON.stringify({email:email,password:senha})
-    }).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
-    .then(function(res){
-      if(!res.ok || !res.d.access_token){
-        showErr('E-mail ou senha incorretos.');
-        btn.disabled=false; btn.textContent='Entrar';
-        return;
-      }
-      setS({access_token:res.d.access_token,refresh_token:res.d.refresh_token,expires_at:Date.now()+((res.d.expires_in||3600)*1000),email:email});
-      window.SULSIGN_ACCESS_TOKEN=res.d.access_token;
-      hideGate(email);
-    }).catch(function(e){
-      showErr('Erro de conexão: '+e.message);
-      btn.disabled=false; btn.textContent='Entrar';
-    });
-  }
-
-  window.ss20Logout=function(){ clearS(); window.location.reload(); };
-
-  document.getElementById('gate-btn').addEventListener('click', login);
-  document.getElementById('gate-senha').addEventListener('keydown', function(e){ if(e.key==='Enter')login(); });
-
-  // sessão existente?
-  var s=getS();
-  if(s && s.access_token && Date.now()<s.expires_at){
-    window.SULSIGN_ACCESS_TOKEN=s.access_token;
-    hideGate(s.email);
-  }
-})();
-
 /* ── FETCH SUPABASE ── */
 SS20.sb=function(path){
   var tk=window.SULSIGN_ACCESS_TOKEN||SulSignCore.SUPA_KEY;
@@ -543,6 +488,67 @@ SS20.boot=function(){
   SS20.renderNav();
   SS20.go('dash');
 };
+
+/* ── AUTH (mesma sessão do Painel_Financeiro v1) ── */
+(function(){
+  var KEY='sulsign_session';
+  function getS(){ try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){return null;} }
+  function setS(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+  function clearS(){ localStorage.removeItem(KEY); window.SULSIGN_ACCESS_TOKEN=null; }
+
+  function hideGate(email){
+    document.getElementById('ss-gate').className='off';
+    document.getElementById('foot-user').textContent = email||'';
+    try{
+      SS20.boot();
+    }catch(err){
+      document.getElementById('ss-content').innerHTML=
+        '<div class="err-view">Falha ao iniciar a plataforma: '+(err&&err.message?err.message:err)
+        +'<br><br>Recarregue a página. Se persistir, use as ferramentas v1 normalmente.</div>';
+    }
+  }
+  function showErr(m){
+    var e=document.getElementById('gate-err');
+    e.style.display='block'; e.textContent=m;
+  }
+  function login(){
+    var email=document.getElementById('gate-email').value.trim();
+    var senha=document.getElementById('gate-senha').value;
+    var btn=document.getElementById('gate-btn');
+    if(!email||!senha){ showErr('Preencha e-mail e senha.'); return; }
+    btn.disabled=true; btn.textContent='Entrando…';
+    fetch(SulSignCore.SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SulSignCore.SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,password:senha})
+    }).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok || !res.d.access_token){
+        showErr('E-mail ou senha incorretos.');
+        btn.disabled=false; btn.textContent='Entrar';
+        return;
+      }
+      setS({access_token:res.d.access_token,refresh_token:res.d.refresh_token,expires_at:Date.now()+((res.d.expires_in||3600)*1000),email:email});
+      window.SULSIGN_ACCESS_TOKEN=res.d.access_token;
+      hideGate(email);
+    }).catch(function(e){
+      showErr('Erro de conexão: '+e.message);
+      btn.disabled=false; btn.textContent='Entrar';
+    });
+  }
+
+  window.ss20Logout=function(){ clearS(); window.location.reload(); };
+
+  document.getElementById('gate-btn').addEventListener('click', login);
+  document.getElementById('gate-senha').addEventListener('keydown', function(e){ if(e.key==='Enter')login(); });
+
+  // sessão existente?
+  var s=getS();
+  if(s && s.access_token && Date.now()<s.expires_at){
+    window.SULSIGN_ACCESS_TOKEN=s.access_token;
+    hideGate(s.email);
+  }
+})();
 
 </script>
 </body>
