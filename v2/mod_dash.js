@@ -23,8 +23,8 @@
       SS20.sb('lancamentos?select=valor,tipo_lancamento,categoria,orcamento_numero,data,conciliado&deletado_em=is.null')
     ]).then(function(r){
       var data={ orcs:r[0].filter(function(o){return !isTreino(o.numero);}),
-                 pagar:r[1].filter(function(c){return !isTreino(c.job);}),
-                 receber:r[2].filter(function(c){return !isTreino(c.job);}),
+                 pagar:r[1].filter(function(c){return !isTreino(c.orcamento_numero);}),
+                 receber:r[2].filter(function(c){return !isTreino(c.orcamento_numero);}),
                  lanc:r[3].filter(function(l){return !isTreino(l.orcamento_numero);}) };
       SS20.cache.dash=data;
       return data;
