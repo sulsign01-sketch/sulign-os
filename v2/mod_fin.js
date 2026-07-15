@@ -24,8 +24,8 @@
       SS20.sb('orcamentos?select=numero,cliente,projeto,bdi,grupos,status,valor_nf,data_nf,nf_numero,sinal_recebido,saldo_recebido&order=numero.desc')
     ]).then(function(r){
       var data={
-        pagar:r[0].filter(function(x){return !isTreino(x.job);}),
-        receber:r[1].filter(function(x){return !isTreino(x.job);}),
+        pagar:r[0].filter(function(x){return !isTreino(x.orcamento_numero);}),
+        receber:r[1].filter(function(x){return !isTreino(x.orcamento_numero);}),
         fixas:r[2],
         orcs:r[3].filter(function(x){return !isTreino(x.numero);})
       };
@@ -95,8 +95,8 @@
       var venc=x.vencimento?new Date(x.vencimento+'T00:00:00'):null;
       var late=venc&&venc<hoje;
       return '<tr><td style="'+(late?'color:var(--danger);font-weight:600':'')+'">'+dstr(x.vencimento)+'</td>'
-        +'<td>'+esc(x.fornecedor||x.descricao||'—')+'</td>'
-        +'<td style="font-size:10.5px;color:var(--mut)">'+esc(x.job||'')+'</td>'
+        +'<td>'+esc(x.favorecido||x.descricao||'—')+'</td>'
+        +'<td style="font-size:10.5px;color:var(--mut)">'+esc(x.orcamento_numero&&x.orcamento_numero!=='SEM-JOB'?x.orcamento_numero:'')+'</td>'
         +'<td style="text-align:right;font-weight:600">'+fmt(parseFloat(x.valor)||0)+'</td></tr>';
     },['Venc.','Fornecedor','Job','Valor']), pagarPend.length>12?('+ '+(pagarPend.length-12)+' na lista completa'):'');
 
@@ -104,7 +104,7 @@
     h+=card('Contas a receber (pendentes)', tbl(receberPend.slice(0,12),function(x){
       return '<tr><td>'+dstr(x.vencimento)+'</td>'
         +'<td>'+esc(x.cliente||x.descricao||'—')+'</td>'
-        +'<td style="font-size:10.5px;color:var(--mut)">'+esc(x.job||'')+'</td>'
+        +'<td style="font-size:10.5px;color:var(--mut)">'+esc(x.orcamento_numero&&x.orcamento_numero!=='SEM-JOB'?x.orcamento_numero:'')+'</td>'
         +'<td style="text-align:right;font-weight:600;color:var(--ok)">'+fmt(parseFloat(x.valor)||0)+'</td></tr>';
     },['Venc.','Cliente','Job','Valor']), receberPend.length>12?('+ '+(receberPend.length-12)+' na lista completa'):'');
 
