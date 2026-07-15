@@ -210,7 +210,7 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
   <button data-action="salvar">💾 Salvar</button>
   <button data-action="carregar">📂 Carregar</button>
   <button data-action="baixar">⬇ HTML</button>
-  <button data-action="gerar-lg">⬇ Gerar LG</button>
+  <button data-action="gerar-lg">🚚 Gerar LG</button>
   <button data-action="imprimir">🖨 PDF</button>
   <span id="status-msg"></span>
 </div>
@@ -770,12 +770,22 @@ function gerarLG(){
     },
     itens: itensLG
   };
-  var a=document.createElement('a');
-  a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,1)],{type:'application/json'}));
-  a.download='LG_'+(S.numero||'book')+'.json';
-  document.body.appendChild(a); a.click();
-  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
-  msg('LG exportada — abra o LG_Generator.html e importe o JSON.');
+  /* entrega direta: grava o payload e abre o gerador já montado.
+     localStorage (nao sessionStorage) p/ funcionar mesmo se o popup for
+     bloqueado e o usuario abrir o LG na mao depois. */
+  try{ localStorage.setItem('ss_lg_payload', JSON.stringify(payload)); }catch(e){}
+  var w = window.open('LG_Generator.html','_blank');
+  if(!w){
+    /* popup bloqueado: cai no download do JSON como antes */
+    var a=document.createElement('a');
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(payload,null,1)],{type:'application/json'}));
+    a.download='LG_'+(S.numero||'book')+'.json';
+    document.body.appendChild(a); a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); },500);
+    msg('Popup bloqueado — JSON baixado. Abra o LG_Generator e importe.');
+    return;
+  }
+  msg('LG aberta em nova aba com os itens do book.');
 }
 
 function baixarHTML(){
