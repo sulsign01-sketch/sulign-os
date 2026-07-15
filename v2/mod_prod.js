@@ -38,12 +38,12 @@
     return Promise.all([
       SS20.sb('ordens_servico?select=*&deletado_em=is.null&order=created_at.desc'),
       SS20.sb('orcamentos?select=numero,cliente,projeto,status&order=numero.desc'),
-      SS20.sb('lancamentos?select=valor,fornecedor,job,os_num&deletado_em=is.null')
+      SS20.sb('lancamentos?select=valor,fornecedor,orcamento_numero&deletado_em=is.null')
     ]).then(function(r){
       var data={
         oss:r[0].filter(function(o){return !isTreino(o.num)&&!isTreino(o.orcamento_numero);}),
         orcs:{},
-        lanc:r[2].filter(function(l){return !isTreino(l.job);})
+        lanc:r[2].filter(function(l){return !isTreino(l.orcamento_numero);})
       };
       r[1].forEach(function(o){data.orcs[o.numero]=o;});
       SS20.cache.prod=data;
@@ -64,7 +64,7 @@
     /* indexar lançamentos por OS (os_num se existir; senão por job=orcamento) */
     var lancPorOs={};
     d.lanc.forEach(function(l){
-      var k=l.os_num||l.job;
+      var k=l.orcamento_numero;
       if(!k)return;
       if(!lancPorOs[k])lancPorOs[k]=[];
       lancPorOs[k].push(l);
