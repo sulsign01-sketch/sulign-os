@@ -759,8 +759,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div style="margin-top:20px;border-top:1px solid #e8e8e8;padding-top:14px;" id="pp-lista-wrap">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#555;cursor:pointer;"><input type="checkbox" onchange="toggleSelTodasContas(this.checked)"> Selecionar todas</label>
-        <button onclick="gerarPedidoPagamento()" style="font-size:11px;font-weight:700;padding:6px 12px;border:none;border-radius:4px;background:#111;color:#00ff88;cursor:pointer;">&#128196; Gerar Pedido de Pagamento</button>
-        <button onclick="enviarParaPonde()" style="font-size:11px;padding:6px 12px;border:1px solid #ccc;border-radius:4px;background:#fff;color:#555;cursor:pointer;">&#128242; Enviar Link Pond&eacute;</button>
+        <button onclick="gerarPedidoPagamento()" style="font-size:11px;font-weight:700;padding:6px 12px;border:none;border-radius:4px;background:#111;color:#00ff88;cursor:pointer;">&#128196; Gerar Ordem de Pagamento</button>
       </div>
       <div id="pp-body"><div class="empty">Carregando...</div></div>
     </div>
@@ -2283,64 +2282,37 @@ async function gerarPedidoPagamento(){
     document.body.removeChild(a);
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 5000);
 
-    // Marca as contas como enviadas (mesmo identificador do pedido)
+    // Marca todas as contas do lote (imposto incluido) com o mesmo pedido
     for(var i=0; i<contas.length; i++){
-      if(contas[i]._imposto) continue; // imposto não tem tracking token_ponde
+      var nOp = numPedido+'/'+p2(i+1);
       await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+contas[i].id,{
         method:'PATCH',
         headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({token_ponde: numPedido, enviado_ponde_em: new Date().toISOString()})
+        body:JSON.stringify({token_ponde: numPedido, numero_op: nOp, enviado_ponde_em: new Date().toISOString()})
       });
     }
     await carregarContasPagar();
-    alert('Pedido '+numPedido+' gerado: '+contas.length+' OP(s) · '+fmt(total)+'. Arquivo baixado — é só mandar no WhatsApp do Pondé.');
+
+    var link = 'https://sulsign01-sketch.github.io/sulign-os/Pagamentos_Ponde.html?token='+numPedido;
+    var msg = '*'+numPedido+'* — '+contas.length+' pagamento(s) · '+fmt(total)+'\n\n';
+    for(var j=0; j<contas.length; j++){
+      var cj = contas[j];
+      var vj = cj.vencimento ? new Date(cj.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      msg += '• '+(cj.descricao||'—')+' — '+fmt(parseFloat(cj.valor)||0)+' (vence '+vj+')\n';
+    }
+    msg += '\nAbra, pague e anexe o comprovante:\n'+link;
+
+    if(confirm('Ordem '+numPedido+' gerada: '+contas.length+' OP(s) · '+fmt(total)+'.\n\nOK = abrir WhatsApp com o link.\nCancelar = so copiar o link.')){
+      window.open('https://wa.me/?text='+encodeURIComponent(msg), '_blank');
+    }else{
+      prompt('Link da ordem de pagamento:', link);
+    }
   }catch(e){
     alert('Erro ao gerar pedido: '+e.message);
   }
 }
 
-async function enviarParaPonde(){
-  var selecionados = Array.from(document.querySelectorAll('.pp-sel-item:checked')).map(function(cb){ return cb.dataset.cid; });
-  if(!selecionados.length){
-    alert('Selecione ao menos uma conta para enviar.');
-    return;
-  }
-
-  var contas = contasPagarCache.filter(function(c){ return selecionados.indexOf(String(c.id))>=0; });
-  var qtdImp = contas.filter(function(c){return c._imposto;}).length;
-  contas = contas.filter(function(c){ return !c._imposto; });
-  if(qtdImp){ alert(qtdImp+' imposto(s) não vão pelo Link Pondé (DARF/GPS não é pago por PIX). Use "Gerar Pedido de Pagamento" para incluí-los numa OP.'); }
-  if(!contas.length){ return; }
-  var token = 'pd' + Date.now().toString(36) + Math.random().toString(36).substring(2,8);
-
-  try{
-    // Salva o mesmo token em todas as contas selecionadas (lote compartilha um link)
-    for(var i=0; i<contas.length; i++){
-      await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+contas[i].id,{
-        method:'PATCH',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({token_ponde: token, enviado_ponde_em: new Date().toISOString()})
-      });
-    }
-
-    var link = 'https://sulsign01-sketch.github.io/sulign-os/Pagamentos_Ponde.html?token='+token;
-    var total = contas.reduce(function(a,c){ return a+(parseFloat(c.valor)||0); }, 0);
-
-    var msg = '💰 *Contas a pagar* ('+contas.length+' item'+(contas.length>1?'s':'')+' · '+fmt(total)+')\n\n';
-    contas.forEach(function(c){
-      var venc = c.vencimento ? new Date(c.vencimento+'T12:00:00').toLocaleDateString('pt-BR') : '—';
-      msg += '• '+c.descricao+' — '+fmt(parseFloat(c.valor)||0)+' (vence '+venc+')\n';
-    });
-    msg += '\nAcesse e marque como pago: '+link;
-
-    var waUrl = 'https://wa.me/?text=' + encodeURIComponent(msg);
-    window.open(waUrl, '_blank');
-
-    await carregarContasPagar();
-  }catch(e){
-    alert('Erro ao enviar: '+e.message);
-  }
-}
+/* enviarParaPonde() removido: fluxo unificado em gerarPedidoPagamento() */
 
 var _pagarContaId = null;
 
