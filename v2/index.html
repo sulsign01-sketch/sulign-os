@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SulSign OS 2.0 — Sul Sign Group</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ══ CSS BASE (herdado da demo comercial) ══ */
+
+:root{
+  --ink:#1A1C22; --ink2:#2A2D36; --paper:#F5F4F0; --panel:#FFFFFF;
+  --accent:#FF5A1F; --accent-soft:#FFEDE4;
+  --ok:#1E9E5A; --ok-soft:#E3F5EB;
+  --warn:#D97706; --warn-soft:#FCF0DC;
+  --danger:#D23B2F; --danger-soft:#FBE7E4;
+  --blue:#2563EB; --blue-soft:#E5EDFC;
+  --line:#E4E2DC; --mut:#6B6E76;
+  --radius:10px;
+  --font-d:"Archivo",system-ui,sans-serif;
+  --font-b:"Inter",system-ui,sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font-b);background:var(--paper);color:var(--ink);font-size:14px;line-height:1.5}
+button{font-family:inherit;cursor:pointer}
+.app{display:flex;min-height:100vh}
+
+/* ── Sidebar ── */
+.side{width:232px;background:var(--ink);color:#C9CBD1;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;flex-shrink:0}
+.brand{padding:20px 18px 14px;border-bottom:1px solid #2E313A}
+.brand h1{font-family:var(--font-d);font-weight:800;font-size:17px;letter-spacing:.3px;color:#fff}
+.brand h1 span{color:var(--accent)}
+.brand small{display:block;margin-top:3px;font-size:10.5px;color:#8B8E97;letter-spacing:.6px;text-transform:uppercase}
+.nav{flex:1;overflow-y:auto;padding:10px 8px}
+.nav-sec{font-size:10px;letter-spacing:1.2px;text-transform:uppercase;color:#70737C;padding:12px 12px 5px}
+.nav button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;color:#C9CBD1;padding:9px 12px;border-radius:8px;font-size:13.5px;font-weight:500}
+.nav button:hover{background:var(--ink2);color:#fff}
+.nav button.on{background:var(--accent);color:#fff;font-weight:600}
+.nav .ic{width:20px;text-align:center;font-size:15px}
+.side-foot{padding:14px 18px;border-top:1px solid #2E313A;font-size:11px;color:#8B8E97}
+.demo-tag{display:inline-block;background:var(--accent);color:#fff;font-size:10px;font-weight:700;letter-spacing:.8px;padding:2px 8px;border-radius:20px;margin-bottom:6px}
+
+/* ── Main ── */
+.main{flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:12px 26px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}
+.topbar .tenant{font-family:var(--font-d);font-weight:700;font-size:15px}
+.topbar .tenant em{font-style:normal;color:var(--mut);font-weight:500;font-size:12px;margin-left:8px}
+.topbar .sp{flex:1}
+.pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
+.pill.demo{background:var(--warn-soft);color:var(--warn);border:1px dashed var(--warn)}
+.content{padding:24px 26px 60px;max-width:1180px;width:100%}
+.pg-head{margin-bottom:18px}
+.pg-head h2{font-family:var(--font-d);font-weight:800;font-size:24px;letter-spacing:-.3px}
+.pg-head p{color:var(--mut);margin-top:3px;max-width:640px}
+
+/* ── Cards / grids ── */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:20px}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.kpi .lb{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);font-weight:600}
+.kpi .vl{font-family:var(--font-d);font-weight:800;font-size:23px;margin-top:4px;letter-spacing:-.4px}
+.kpi .dt{font-size:11.5px;margin-top:2px;color:var(--mut)}
+.kpi .dt.up{color:var(--ok)} .kpi .dt.dn{color:var(--danger)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card h3{font-family:var(--font-d);font-weight:700;font-size:15px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+
+/* ── Tables ── */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);padding:8px 10px;border-bottom:1px solid var(--line);font-weight:600}
+td{padding:9px 10px;border-bottom:1px solid #EFEEE9;vertical-align:middle}
+tr.click{cursor:pointer} tr.click:hover td{background:#FAF9F6}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:20px}
+.t-orc{background:var(--blue-soft);color:var(--blue)}
+.t-apr{background:var(--ok-soft);color:var(--ok)}
+.t-prod{background:var(--accent-soft);color:var(--accent)}
+.t-ent{background:#EDEBFE;color:#6D28D9}
+.t-fat{background:#DBEAFE;color:#1D4ED8}
+.t-pago{background:var(--ok-soft);color:var(--ok)}
+.t-warn{background:var(--warn-soft);color:var(--warn)}
+.t-dang{background:var(--danger-soft);color:var(--danger)}
+.t-mut{background:#EFEEE9;color:var(--mut)}
+
+/* ── Lifeline (assinatura) ── */
+.lifeline{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:6px 0 2px}
+.ll-step{display:flex;flex-direction:column;align-items:center;min-width:96px;position:relative;background:none;border:none;color:var(--ink)}
+.ll-step::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0}
+.ll-step:first-child::before{display:none}
+.ll-step.done::before{background:var(--ok)}
+.ll-step.now::before{background:var(--ok)}
+.ll-dot{width:26px;height:26px;border-radius:50%;background:var(--panel);border:2px solid var(--line);z-index:1;display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--mut)}
+.ll-step.done .ll-dot{background:var(--ok);border-color:var(--ok);color:#fff}
+.ll-step.now .ll-dot{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 0 0 4px var(--accent-soft)}
+.ll-lb{font-size:10.5px;font-weight:600;margin-top:6px;color:var(--mut);text-align:center;line-height:1.25}
+.ll-step.done .ll-lb,.ll-step.now .ll-lb{color:var(--ink)}
+.ll-step.link{cursor:pointer}.ll-step.link:hover .ll-lb{color:var(--accent)}
+
+/* ── Misc ── */
+.btn{background:var(--ink);color:#fff;border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600}
+.btn:hover{background:var(--ink2)}
+.btn.acc{background:var(--accent)} .btn.acc:hover{background:#E44D14}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--ink)}
+.btn.sm{padding:5px 11px;font-size:12px}
+.toolrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.search{border:1px solid var(--line);border-radius:8px;padding:8px 12px;font-size:13px;font-family:inherit;min-width:220px;background:var(--panel)}
+.bar-wrap{background:#EFEEE9;border-radius:20px;height:8px;overflow:hidden;min-width:70px}
+.bar{height:100%;border-radius:20px;background:var(--ok)}
+.bar.w{background:var(--warn)} .bar.d{background:var(--danger)}
+.mini{font-size:11.5px;color:var(--mut)}
+.crumb{font-size:12px;color:var(--mut);margin-bottom:10px}
+.crumb a{color:var(--accent);cursor:pointer;text-decoration:none;font-weight:600}
+
+/* ── Kanban CRM ── */
+.kanban{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:1000px){.kanban{grid-template-columns:repeat(2,1fr)}}
+.kcol{background:#EFEEE9;border-radius:var(--radius);padding:10px}
+.kcol h4{font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:8px;display:flex;justify-content:space-between}
+.kcard{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer}
+.kcard:hover{border-color:var(--accent)}
+.kcard b{font-size:13px;display:block}
+.kcard .mini{margin-top:2px}
+.kcard .vl{font-family:var(--font-d);font-weight:700;font-size:13.5px;margin-top:5px}
+
+/* ── Planos ── */
+.plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.plan{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;display:flex;flex-direction:column;position:relative}
+.plan.core{border:2px solid var(--accent)}
+.plan .best{position:absolute;top:-10px;left:16px;background:var(--accent);color:#fff;font-size:10px;font-weight:700;letter-spacing:.8px;padding:2px 10px;border-radius:20px}
+.plan h4{font-family:var(--font-d);font-weight:800;font-size:16px}
+.plan .pr{font-family:var(--font-d);font-weight:800;font-size:26px;margin:8px 0 2px;letter-spacing:-.5px}
+.plan .pr small{font-size:12px;font-weight:600;color:var(--mut)}
+.plan ul{list-style:none;margin:12px 0;flex:1}
+.plan li{padding:4px 0 4px 22px;position:relative;font-size:13px}
+.plan li::before{content:"✓";position:absolute;left:0;color:var(--ok);font-weight:700}
+.footnote{font-size:12px;color:var(--mut);margin-top:14px;padding:12px 14px;background:var(--warn-soft);border-radius:8px;border:1px dashed var(--warn)}
+@media(max-width:760px){.side{display:none}.content{padding:16px}.sp-top,.sp-hero,.sp-line{padding-left:20px;padding-right:20px}}
+/* ═══════════ WOW PACK ═══════════ */
+@keyframes rise{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:none}}
+@keyframes pulseDot{0%,100%{box-shadow:0 0 0 0 rgba(255,90,31,.55)}70%{box-shadow:0 0 0 9px rgba(255,90,31,0)}}
+@keyframes glowSweep{0%{background-position:0% 50%}100%{background-position:200% 50%}}
+@keyframes floatIn{from{opacity:0;transform:translateY(26px) scale(.98)}to{opacity:1;transform:none}}
+.content>*{animation:rise .5s cubic-bezier(.22,.9,.3,1) both}
+.content>*:nth-child(2){animation-delay:.07s}
+.content>*:nth-child(3){animation-delay:.14s}
+.content>*:nth-child(4){animation-delay:.21s}
+.card,.kpi,.plan,.kcard{box-shadow:0 1px 2px rgba(20,22,28,.05),0 8px 24px -18px rgba(20,22,28,.25);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease}
+.card:hover,.kpi:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(20,22,28,.06),0 16px 34px -18px rgba(20,22,28,.35)}
+.kcard:hover{transform:translateY(-2px)}
+.nav button.on{box-shadow:0 6px 18px -6px rgba(255,90,31,.65)}
+.kpi .vl{font-variant-numeric:tabular-nums}
+.spark{display:block;margin-top:8px}
+.spark polyline{fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spark.g polyline{stroke:var(--ok)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:700;letter-spacing:.8px;color:var(--accent)}
+.live i{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:pulseDot 1.6s infinite}
+.feed{list-style:none}
+.feed li{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid #EFEEE9;font-size:13px;align-items:flex-start}
+.feed li:last-child{border:none}
+.feed .fdot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0;background:var(--ok)}
+.feed .fdot.o{background:var(--accent);animation:pulseDot 1.8s infinite}
+.feed .fdot.b{background:var(--blue)}
+.feed time{margin-left:auto;color:var(--mut);font-size:11.5px;white-space:nowrap;padding-left:10px}
+.chart{display:flex;align-items:flex-end;gap:10px;height:150px;padding-top:8px}
+.chart .cg{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end}
+.chart .cbars{display:flex;gap:3px;align-items:flex-end;height:100%;width:100%;justify-content:center}
+.chart .cb{width:38%;max-width:26px;border-radius:5px 5px 0 0;background:var(--ok);transition:height .8s cubic-bezier(.22,.9,.3,1)}
+.chart .cb.s{background:#E8B4AB;background:var(--danger);opacity:.75}
+.chart .cl{font-size:10.5px;color:var(--mut);font-weight:600}
+
+/* ── Splash ── */
+#splash{position:fixed;inset:0;z-index:100;background:#0D0E12;color:#EDEDEF;display:flex;flex-direction:column;overflow:hidden}
+#splash::before{content:"";position:absolute;inset:-30%;background:radial-gradient(ellipse 45% 38% at 68% 22%,rgba(255,90,31,.22),transparent 60%),radial-gradient(ellipse 40% 34% at 22% 82%,rgba(37,99,235,.14),transparent 60%);pointer-events:none}
+#splash.hide{opacity:0;transform:scale(1.03);transition:opacity .55s ease,transform .55s ease;pointer-events:none}
+.sp-top{padding:26px 40px;display:flex;align-items:center;gap:12px;position:relative;z-index:2}
+.sp-top b{font-family:var(--font-d);font-weight:800;font-size:18px}
+.sp-top b span{color:var(--accent)}
+.sp-hero{flex:1;display:flex;flex-direction:column;justify-content:center;padding:0 40px;max-width:1050px;margin:0 auto;width:100%;position:relative;z-index:2}
+.sp-eyebrow{font-size:12px;letter-spacing:2.5px;text-transform:uppercase;color:var(--accent);font-weight:700;margin-bottom:18px;animation:floatIn .7s .1s both}
+.sp-hero h1{font-family:var(--font-d);font-stretch:87%;font-weight:800;font-size:clamp(38px,6.2vw,72px);line-height:1.02;letter-spacing:-1.5px;animation:floatIn .7s .22s both}
+.sp-hero h1 em{font-style:normal;background:linear-gradient(100deg,#FF5A1F,#FF9A62,#FF5A1F);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:glowSweep 3.2s linear infinite}
+.sp-hero p{font-size:clamp(15px,1.7vw,19px);color:#A6A9B2;max-width:640px;margin-top:20px;line-height:1.55;animation:floatIn .7s .34s both}
+.sp-stats{display:flex;gap:34px;margin-top:38px;flex-wrap:wrap;animation:floatIn .7s .46s both}
+.sp-stats div b{display:block;font-family:var(--font-d);font-weight:800;font-size:30px;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.sp-stats div span{font-size:12px;color:#8B8E97;letter-spacing:.4px}
+.sp-cta{margin-top:44px;display:flex;gap:14px;align-items:center;animation:floatIn .7s .58s both}
+.sp-cta .btn.acc{font-size:15px;padding:14px 30px;border-radius:12px;box-shadow:0 12px 34px -8px rgba(255,90,31,.6)}
+.sp-cta .mini{color:#8B8E97}
+.sp-line{padding:26px 40px 34px;position:relative;z-index:2;animation:floatIn .7s .7s both}
+.sp-line .ll-lb{color:#8B8E97}
+.sp-line .ll-step.done .ll-lb,.sp-line .ll-step.now .ll-lb{color:#EDEDEF}
+.sp-line .ll-dot{background:#181A20;border-color:#2E313A;color:#8B8E97}
+
+.sw{width:38px;height:21px;border-radius:20px;background:var(--ok);position:relative;display:inline-block;flex-shrink:0;box-shadow:inset 0 1px 2px rgba(0,0,0,.15)}
+.sw::after{content:"";position:absolute;width:17px;height:17px;background:#fff;border-radius:50%;top:2px;right:2px;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.sw.off{background:#C9CBD1}.sw.off::after{right:auto;left:2px}
+.track{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.track .lvl{background:#F0EFEA;border:1px solid var(--line);border-radius:8px;padding:8px 12px;text-align:center;min-width:104px}
+.track .lvl b{display:block;font-size:12.5px}
+.track .lvl span{font-size:11px;color:var(--mut)}
+.track .arr{color:var(--mut)}
+.check-ok{color:var(--ok);font-weight:700}.check-no{color:var(--danger);font-weight:700}
+
+.tl{list-style:none;position:relative;padding-left:22px}
+.tl::before{content:"";position:absolute;left:7px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl li{position:relative;padding:7px 0 7px 8px;font-size:13px}
+.tl li::before{content:"";position:absolute;left:-19px;top:13px;width:10px;height:10px;border-radius:50%;background:var(--ok);border:2px solid #fff;box-shadow:0 0 0 2px var(--ok)}
+.tl li.now::before{background:var(--accent);box-shadow:0 0 0 2px var(--accent);animation:pulseDot 1.8s infinite}
+.tl li.next::before{background:#fff;box-shadow:0 0 0 2px var(--line)}
+.tl li.next{color:var(--mut)}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.foto{aspect-ratio:4/3;border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:22px;background:linear-gradient(135deg,#ECEAE4,#DDDAD2);border:1px solid var(--line)}
+.foto span{font-size:9.5px;color:var(--mut);margin-top:3px;font-weight:600;text-align:center;padding:0 4px}
+.portal-frame{border:2px solid var(--ink);border-radius:14px;overflow:hidden;box-shadow:0 20px 50px -24px rgba(20,22,28,.4)}
+.portal-bar{background:var(--ink);color:#C9CBD1;padding:9px 16px;font-size:11.5px;display:flex;gap:8px;align-items:center}
+.portal-bar i{width:9px;height:9px;border-radius:50%;background:#3B3E47;display:inline-block}
+.portal-body{padding:18px;background:#FBFAF8}
+.esgring{display:flex;gap:20px;flex-wrap:wrap}
+.roadcard{border:1.5px dashed var(--line);border-radius:var(--radius);padding:18px;background:linear-gradient(160deg,#fff, #FBFAF6)}
+.roadcard h4{font-family:var(--font-d);font-weight:800;font-size:15px;display:flex;gap:8px;align-items:center}
+.roadcard p{font-size:13px;color:var(--mut);margin-top:6px}
+.roadgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:820px){.roadgrid{grid-template-columns:1fr}}
+
+.gantt{position:relative;overflow-x:auto}
+.g-inner{min-width:760px;position:relative}
+.g-axis{display:flex;border-bottom:1px solid var(--line);margin-left:180px}
+.g-axis span{flex:1;text-align:center;font-size:9.5px;color:var(--mut);padding:4px 0;border-left:1px solid #F1EFEA;font-weight:600}
+.g-row{display:flex;align-items:center;min-height:34px;border-bottom:1px solid #F3F2ED}
+.g-lb{width:180px;flex-shrink:0;font-size:12px;padding-right:10px}
+.g-lb b{display:block;font-size:12px}
+.g-lb span{font-size:10.5px;color:var(--mut)}
+.g-track{flex:1;position:relative;height:20px}
+.g-bar{position:absolute;top:1px;height:18px;border-radius:5px;font-size:9.5px;font-weight:700;color:#fff;display:flex;align-items:center;padding:0 7px;white-space:nowrap;overflow:hidden;box-shadow:0 2px 6px -2px rgba(20,22,28,.35)}
+.g-bar.prj{background:#6D28D9}.g-bar.prd{background:var(--accent)}.g-bar.cvv{background:#2563EB}
+.g-bar.logi{background:#0E9AA7}.g-bar.mont{background:var(--ink)}.g-bar.evt{background:var(--ok)}
+.g-bar.conf{outline:2px solid var(--danger);outline-offset:1px}
+.g-today{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);z-index:5}
+.g-today::after{content:"HOJE";position:absolute;top:-15px;left:-14px;font-size:8.5px;font-weight:800;color:var(--danger);letter-spacing:.5px}
+.g-legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:var(--mut)}
+.g-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+
+
+
+/* ══ ADIÇÕES v2 REAL ══ */
+.pill.live{background:var(--ok-soft);color:var(--ok);border:1px solid var(--ok)}
+.pill.legado{background:var(--blue-soft);color:var(--blue)}
+.nav button .tag-mini{margin-left:auto;font-size:8.5px;font-weight:700;letter-spacing:.5px;padding:1px 6px;border-radius:10px}
+.tag-mini.tv2{background:var(--accent);color:#fff}
+.tag-mini.tlg{background:#3A3D47;color:#B8BAC2}
+.tag-mini.tpl{background:transparent;color:#5A5D66;border:1px solid #3A3D47}
+.loading-view{padding:60px 20px;text-align:center;color:var(--mut);font-size:13px}
+.placeholder-view{padding:50px 30px;max-width:640px}
+.placeholder-view h2{font-family:var(--font-d);font-size:20px;margin-bottom:10px}
+.placeholder-view p{color:var(--mut);font-size:13.5px;line-height:1.7;margin-bottom:14px}
+.err-view{padding:40px;color:var(--danger);font-size:13px}
+
+/* ══ AUTH GATE ══ */
+#ss-gate{position:fixed;inset:0;background:var(--ink);z-index:9999;display:flex;align-items:center;justify-content:center}
+#ss-gate.off{display:none}
+.gate-box{background:var(--panel);border-radius:14px;padding:34px 30px;width:340px;max-width:92vw}
+.gate-box h1{font-family:var(--font-d);font-weight:800;font-size:22px;margin-bottom:2px}
+.gate-box h1 span{color:var(--accent)}
+.gate-box small{display:block;color:var(--mut);font-size:11px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:22px}
+.gate-box label{display:block;font-size:11px;font-weight:600;color:var(--mut);margin:12px 0 4px}
+.gate-box input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;font-size:14px;font-family:inherit}
+.gate-box input:focus{outline:none;border-color:var(--accent)}
+.gate-box button{width:100%;margin-top:18px;padding:11px;background:var(--accent);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600}
+.gate-box button:disabled{opacity:.6}
+.gate-err{color:var(--danger);font-size:12px;margin-top:10px;display:none}
+</style>
+</head>
+<body>
+
+<!-- ══ GATE DE AUTENTICAÇÃO (sessão compartilhada com painéis v1) ══ -->
+<div id="ss-gate">
+  <div class="gate-box">
+    <h1>SulSign <span>OS 2.0</span></h1>
+    <small>Plataforma de Gestão · Sul Sign Group</small>
+    <label>E-mail</label>
+    <input id="gate-email" type="email" autocomplete="username" inputmode="email">
+    <label>Senha</label>
+    <input id="gate-senha" type="password" autocomplete="current-password">
+    <button id="gate-btn" type="button">Entrar</button>
+    <div class="gate-err" id="gate-err"></div>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <h1>SulSign <span>OS</span></h1>
+      <small>2.0 · Sul Sign Group</small>
+    </div>
+    <nav class="nav" id="ss-nav"></nav>
+    <div class="side-foot">
+      <span id="foot-user">—</span><br>
+      <a href="#" data-action="logout" style="color:#8B8E97">Sair</a>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <span class="tenant">Sul Sign Group <em>CNPJ 03.952.317/0001-16</em></span>
+      <span class="sp"></span>
+      <span class="pill live" id="pill-conn">● Supabase</span>
+    </div>
+    <div class="content" id="ss-content">
+      <div class="loading-view">Carregando…</div>
+    </div>
+  </main>
+</div>
+
+<script src="../sulsign_core.js"></script>
+<script>
+/* ═══════════════════════════════════════════════════════════════
+   SULSIGN OS 2.0 — SHELL
+   Auth compartilhada (sulsign_session) + roteador + carregador de módulos.
+   Módulos reais: mod_<view>.js registram em SS20.modules[view].
+   ═══════════════════════════════════════════════════════════════ */
+var SS20 = {
+  modules: {},          // módulos v2 registrados
+  loaded: {},           // scripts já injetados
+  view: 'dash',
+  cache: {}             // cache de dados por sessão de página
+};
+
+/* ── AUTH (mesma sessão do Painel_Financeiro v1) ── */
+(function(){
+  var KEY='sulsign_session';
+  function getS(){ try{return JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){return null;} }
+  function setS(s){ localStorage.setItem(KEY, JSON.stringify(s)); }
+  function clearS(){ localStorage.removeItem(KEY); window.SULSIGN_ACCESS_TOKEN=null; }
+
+  function hideGate(email){
+    document.getElementById('ss-gate').className='off';
+    document.getElementById('foot-user').textContent = email||'';
+    SS20.boot();
+  }
+  function showErr(m){
+    var e=document.getElementById('gate-err');
+    e.style.display='block'; e.textContent=m;
+  }
+  function login(){
+    var email=document.getElementById('gate-email').value.trim();
+    var senha=document.getElementById('gate-senha').value;
+    var btn=document.getElementById('gate-btn');
+    if(!email||!senha){ showErr('Preencha e-mail e senha.'); return; }
+    btn.disabled=true; btn.textContent='Entrando…';
+    fetch(SulSignCore.SUPA_URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',
+      headers:{'apikey':SulSignCore.SUPA_KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email:email,password:senha})
+    }).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      if(!res.ok || !res.d.access_token){
+        showErr('E-mail ou senha incorretos.');
+        btn.disabled=false; btn.textContent='Entrar';
+        return;
+      }
+      setS({access_token:res.d.access_token,refresh_token:res.d.refresh_token,expires_at:Date.now()+((res.d.expires_in||3600)*1000),email:email});
+      window.SULSIGN_ACCESS_TOKEN=res.d.access_token;
+      hideGate(email);
+    }).catch(function(e){
+      showErr('Erro de conexão: '+e.message);
+      btn.disabled=false; btn.textContent='Entrar';
+    });
+  }
+
+  window.ss20Logout=function(){ clearS(); window.location.reload(); };
+
+  document.getElementById('gate-btn').addEventListener('click', login);
+  document.getElementById('gate-senha').addEventListener('keydown', function(e){ if(e.key==='Enter')login(); });
+
+  // sessão existente?
+  var s=getS();
+  if(s && s.access_token && Date.now()<s.expires_at){
+    window.SULSIGN_ACCESS_TOKEN=s.access_token;
+    hideGate(s.email);
+  }
+})();
+
+/* ── FETCH SUPABASE ── */
+SS20.sb=function(path){
+  var tk=window.SULSIGN_ACCESS_TOKEN||SulSignCore.SUPA_KEY;
+  return fetch(SulSignCore.SUPA_URL+'/rest/v1/'+path,{
+    headers:{'apikey':SulSignCore.SUPA_KEY,'Authorization':'Bearer '+tk}
+  }).then(function(r){
+    if(r.status===401){ window.ss20Logout(); throw new Error('Sessão expirada'); }
+    if(!r.ok) throw new Error('Supabase '+r.status);
+    return r.json();
+  });
+};
+
+/* ── NAVEGAÇÃO ──
+   tipo: v2 = módulo real desta plataforma
+         lg = ferramenta legada (abre em nova aba)
+         pl = planejado (placeholder com roadmap) */
+SS20.NAV=[
+  {sec:'Gestão'},
+  {v:'dash', ic:'◧', lbl:'Visão geral',        tipo:'v2'},
+  {v:'fin',  ic:'◍', lbl:'Financeiro',          tipo:'v2'},
+  {v:'ckp',  ic:'◈', lbl:'Painel dos Sócios',   tipo:'lg', url:'../CEO_Dashboard.html'},
+  {sec:'Comercial'},
+  {v:'orc',  ic:'▤', lbl:'Orçamentos',          tipo:'lg', url:'../ORC_Manager.html'},
+  {v:'crm',  ic:'☰', lbl:'CRM / Pipeline',      tipo:'pl'},
+  {v:'mkt',  ic:'◎', lbl:'Marketing',           tipo:'pl'},
+  {v:'ptl',  ic:'🖥', lbl:'Portal do Cliente',  tipo:'pl'},
+  {sec:'Operação'},
+  {v:'prod', ic:'⚒', lbl:'Produção / OS',       tipo:'lg', url:'../SulSign_OS_Manager.html'},
+  {v:'lanc', ic:'✎', lbl:'Lançamentos',         tipo:'lg', url:'../Lancamentos.html'},
+  {v:'book', ic:'▥', lbl:'Book de Artes',       tipo:'lg', url:'../BOOK_Manager.html'},
+  {v:'simt', ic:'▦', lbl:'Sim. Treliças',       tipo:'lg', url:'../Simulador_Trelicas.html'},
+  {v:'simp', ic:'▧', lbl:'Sim. Praticáveis',    tipo:'lg', url:'../Simulador_Praticaveis.html'},
+  {v:'simw', ic:'▨', lbl:'Sim. Tapadeiras',     tipo:'lg', url:'../Simulador_Tapadeiras.html'},
+  {v:'cron', ic:'📅', lbl:'Cronograma',         tipo:'pl'},
+  {v:'dob',  ic:'📋', lbl:'Diário de Obra',     tipo:'pl'},
+  {v:'alm',  ic:'▣', lbl:'Almoxarifado',        tipo:'pl'},
+  {v:'cmp',  ic:'⇄', lbl:'Compras',             tipo:'pl'},
+  {v:'log',  ic:'➔', lbl:'Logística',           tipo:'pl'},
+  {v:'atv',  ic:'⚙', lbl:'Ativos & Manutenção', tipo:'pl'},
+  {sec:'Pessoas & Governança'},
+  {v:'rh',   ic:'♟', lbl:'RH',                  tipo:'pl'},
+  {v:'dp',   ic:'⏱', lbl:'Depto. Pessoal',      tipo:'pl'},
+  {v:'jur',  ic:'§', lbl:'Contratos & Jurídico',tipo:'pl'},
+  {v:'auto', ic:'⚡', lbl:'Automações',         tipo:'pl'}
+];
+
+SS20.PLACEHOLDER_INFO={
+  crm:'Pipeline comercial com etapas, follow-ups e histórico por cliente. Entrará após a consolidação da base de peças (Fase 2 do roadmap).',
+  mkt:'Gestão de campanhas e portfólio. Planejado.',
+  ptl:'Área externa para o cliente acompanhar o job, aprovar artes e receber arquivos.',
+  cron:'Cronograma consolidado de todos os jobs em produção (dados das OS).',
+  dob:'Registro fotográfico e ocorrências diárias por obra/montagem.',
+  alm:'Controle de estoque de insumos e sobras aproveitáveis.',
+  cmp:'Fluxo de compras integrado às OS e ao Lançamentos (pedidos → cotação → ordem de pagamento).',
+  log:'Roteirização de entregas e montagens, controle de frete.',
+  atv:'Inventário de ferramentas e equipamentos, manutenções preventivas.',
+  rh:'Cadastro de equipe, freelancers e avaliações por job.',
+  dp:'Controle de diárias, horas extras e fechamento de MO (base já existe no Fechamento PDVEX).',
+  jur:'Repositório de contratos, vencimentos e pendências.',
+  auto:'Fase 3 do roadmap: Edge Functions, gravação autenticada de orçamentos e agentes.'
+};
+
+SS20.renderNav=function(){
+  var h='';
+  SS20.NAV.forEach(function(it){
+    if(it.sec){ h+='<div class="nav-sec">'+it.sec+'</div>'; return; }
+    var tag = it.tipo==='v2' ? '<span class="tag-mini tv2">v2</span>'
+            : it.tipo==='lg' ? '<span class="tag-mini tlg">v1</span>'
+            : '<span class="tag-mini tpl">plan</span>';
+    h+='<button data-action="nav" data-view="'+it.v+'" class="'+(SS20.view===it.v?'on':'')+'">'
+      +'<span class="ic">'+it.ic+'</span>'+it.lbl+tag+'</button>';
+  });
+  document.getElementById('ss-nav').innerHTML=h;
+};
+
+SS20.go=function(view){
+  var item=null;
+  SS20.NAV.forEach(function(it){ if(it.v===view) item=it; });
+  if(!item) return;
+
+  if(item.tipo==='lg'){
+    window.open(item.url,'_blank');
+    return; // não muda a view atual
+  }
+
+  SS20.view=view;
+  SS20.renderNav();
+  var c=document.getElementById('ss-content');
+
+  if(item.tipo==='pl'){
+    c.innerHTML='<div class="placeholder-view"><h2>'+item.lbl+'</h2>'
+      +'<p>'+(SS20.PLACEHOLDER_INFO[view]||'Módulo planejado.')+'</p>'
+      +'<p style="font-size:12px;color:var(--mut)">Este módulo faz parte do plano de migração SulSign OS 2.0. '
+      +'As ferramentas atuais continuam disponíveis no menu lateral (tag <b>v1</b>).</p></div>';
+    return;
+  }
+
+  // módulo v2 real
+  if(SS20.modules[view]){
+    c.innerHTML='<div class="loading-view">Carregando dados…</div>';
+    SS20.modules[view].render(c);
+    return;
+  }
+  if(SS20.loaded[view]){
+    c.innerHTML='<div class="err-view">Falha ao carregar o módulo mod_'+view+'.js</div>';
+    return;
+  }
+  c.innerHTML='<div class="loading-view">Carregando módulo…</div>';
+  var s=document.createElement('script');
+  s.src='mod_'+view+'.js';
+  s.onload=function(){
+    SS20.loaded[view]=true;
+    if(SS20.modules[view]) SS20.modules[view].render(document.getElementById('ss-content'));
+    else document.getElementById('ss-content').innerHTML='<div class="err-view">Módulo mod_'+view+'.js não registrou render().</div>';
+  };
+  s.onerror=function(){
+    SS20.loaded[view]=true;
+    document.getElementById('ss-content').innerHTML='<div class="err-view">Não foi possível carregar mod_'+view+'.js</div>';
+  };
+  document.body.appendChild(s);
+};
+
+/* ── DELEGAÇÃO DE EVENTOS ── */
+document.addEventListener('click', function(e){
+  var el=e.target;
+  while(el && el!==document && !el.getAttribute('data-action')) el=el.parentNode;
+  if(!el || el===document) return;
+  var act=el.getAttribute('data-action');
+  if(act==='nav'){ SS20.go(el.getAttribute('data-view')); }
+  else if(act==='logout'){ e.preventDefault(); window.ss20Logout(); }
+  else if(act==='go-view'){ SS20.go(el.getAttribute('data-view')); }
+});
+
+/* ── BOOT (após login) ── */
+SS20.boot=function(){
+  SS20.renderNav();
+  SS20.go('dash');
+};
+
+</script>
+</body>
+</html>
