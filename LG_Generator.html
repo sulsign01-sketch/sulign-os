@@ -115,6 +115,25 @@ var itens=[
 ];
 
 function $(id){return document.getElementById(id)}
+
+/* ═══ HANDOFF DO BOOK ═══
+   Se o BOOK_Manager gravou um payload, ele manda na tela e a seed embutida
+   e ignorada. A chave e consumida (removida) p/ nao "grudar" na proxima visita. */
+var __hand = null;
+try{ __hand = localStorage.getItem('ss_lg_payload'); }catch(e){}
+if(__hand){
+  try{
+    var __d = JSON.parse(__hand);
+    if(__d && __d.itens && __d.itens.length){ itens = __d.itens; window.__LG_HEADER = __d.header||null; }
+  }catch(e){}
+  try{ localStorage.removeItem('ss_lg_payload'); }catch(e){}
+}
+function aplicarHeader(h){
+  if(!h) return;
+  var map={coleta:'h-coleta',evento:'h-evento',endColeta:'h-endcol',entrega:'h-entrega',
+           endEntrega:'h-endent',os:'h-os',prazo:'h-prazo',obs:'h-obs'};
+  for(var k in map){ var el=$(map[k]); if(el && h[k]) el.value=h[k]; }
+}
 function render(){
   var h='';
   itens.forEach(function(it,ix){
@@ -176,6 +195,7 @@ $('fileIn').addEventListener('change',function(){
   };
   r.readAsText(f);
 });
+aplicarHeader(window.__LG_HEADER);
 render();
 </script>
 </body>
