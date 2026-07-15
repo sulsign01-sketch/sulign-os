@@ -258,6 +258,139 @@
     </div>
   </div>
 
+  <!-- ═══ 2.5 ESTRUTURA DE SUSTENTAÇÃO ═══ -->
+  <div class="card">
+    <h2>2.5 · Estrutura de sustentação</h2>
+    <div class="row">
+      <div class="field" style="flex:0 0 auto">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+          <input type="checkbox" id="estOn" data-action="calc"> Incluir estrutura
+        </label>
+      </div>
+      <div class="field">
+        <label>Tipo</label>
+        <select id="estTipo" data-action="calc">
+          <option value="quadro">Quadro de metalon</option>
+          <option value="autoport">Pé-direito autoportante</option>
+          <option value="fixdir">Fixação direta (tenda/treliça de terceiros)</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="estCampos" class="hide">
+      <div class="row">
+        <div class="field">
+          <label>Largura do quadro (cm)</label>
+          <input type="number" id="estL" value="335" min="10" data-action="calc">
+          <div class="hint">Vão total da estrutura</div>
+        </div>
+        <div class="field">
+          <label>Altura do quadro (cm)</label>
+          <input type="number" id="estA" value="160" min="10" data-action="calc">
+        </div>
+        <div class="field">
+          <label>Recuo / afastamento (cm)</label>
+          <input type="number" id="estRecuo" value="10" min="0" data-action="calc">
+          <div class="hint">Braços de profundidade</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Seção do metalon</label>
+          <select id="estPerfil" data-action="calc">
+            <option value="15x15x18" data-w="15" data-h="15" data-preco="24.99">15 × 15 NA18 — R$ 24,99/vara</option>
+            <option value="20x20x18" data-w="20" data-h="20" data-preco="30.87" selected>20 × 20 NA18 — R$ 30,87/vara</option>
+            <option value="25x25x18" data-w="25" data-h="25" data-preco="39.31">25 × 25 NA18 — R$ 39,31/vara</option>
+            <option value="30x20x18" data-w="30" data-h="20" data-preco="40.07">30 × 20 NA18 — R$ 40,07/vara</option>
+            <option value="30x30x18" data-w="30" data-h="30" data-preco="46.32">30 × 30 NA18 — R$ 46,32/vara</option>
+            <option value="40x20x18" data-w="40" data-h="20" data-preco="47.74">40 × 20 NA18 — R$ 47,74/vara</option>
+            <option value="40x40x18" data-w="40" data-h="40" data-preco="61.82">40 × 40 NA18 — R$ 61,82/vara</option>
+            <option value="50x30x18" data-w="50" data-h="30" data-preco="64.61">50 × 30 NA18 — R$ 64,61/vara</option>
+            <option value="50x50x18" data-w="50" data-h="50" data-preco="78.67">50 × 50 NA18 — R$ 78,67/vara</option>
+            <option value="70x30x18" data-w="70" data-h="30" data-preco="79.23">70 × 30 NA18 — R$ 79,23/vara</option>
+            <option value="100x40x18" data-w="100" data-h="40" data-preco="175.02">100 × 40 NA18 — R$ 175,02/vara</option>
+            <option value="100x100x18" data-w="100" data-h="100" data-preco="264.37">100 × 100 NA18 — R$ 264,37/vara</option>
+            <option value="20x20x16" data-w="20" data-h="20" data-preco="36.89">20 × 20 NA16 — R$ 36,89/vara</option>
+            <option value="25x25x16" data-w="25" data-h="25" data-preco="48.51">25 × 25 NA16 — R$ 48,51/vara</option>
+            <option value="30x20x16" data-w="30" data-h="20" data-preco="48.95">30 × 20 NA16 — R$ 48,95/vara</option>
+            <option value="30x30x16" data-w="30" data-h="30" data-preco="59.64">30 × 30 NA16 — R$ 59,64/vara</option>
+            <option value="40x20x16" data-w="40" data-h="20" data-preco="59.51">40 × 20 NA16 — R$ 59,51/vara</option>
+            <option value="40x40x16" data-w="40" data-h="40" data-preco="81.51">40 × 40 NA16 — R$ 81,51/vara</option>
+            <option value="50x30x16" data-w="50" data-h="30" data-preco="82.53">50 × 30 NA16 — R$ 82,53/vara</option>
+            <option value="50x50x16" data-w="50" data-h="50" data-preco="99.34">50 × 50 NA16 — R$ 99,34/vara</option>
+            <option value="70x30x16" data-w="70" data-h="30" data-preco="101.33">70 × 30 NA16 — R$ 101,33/vara</option>
+            <option value="70x70x16" data-w="70" data-h="70" data-preco="140.24">70 × 70 NA16 — R$ 140,24/vara</option>
+            <option value="80x80x16" data-w="80" data-h="80" data-preco="195.07">80 × 80 NA16 — R$ 195,07/vara</option>
+            <option value="100x100x16" data-w="100" data-h="100" data-preco="213.52">100 × 100 NA16 — R$ 213,52/vara</option>
+            <option value="100x50x14" data-w="100" data-h="50" data-preco="199.17">100 × 50 NA14 — R$ 199,17/vara</option>
+            <option value="100x40x14" data-w="100" data-h="40" data-preco="175.02">100 × 40 NA14 — R$ 175,02/vara</option>
+            <option value="80x80x12" data-w="80" data-h="80" data-preco="261.33">80 × 80 NA12 — R$ 261,33/vara</option>
+            <option value="100x50x12" data-w="100" data-h="50" data-preco="378.75">100 × 50 NA12 — R$ 378,75/vara</option>
+          </select>
+          <div class="hint" id="estHintPerfil"></div>
+        </div>
+        <div class="field">
+          <label>Preço da vara 6m (R$)</label>
+          <input type="number" id="estPrecoVara" value="30.87" step="0.01" data-action="calc">
+          <div class="hint">Preenche pela seção; edite se necessário</div>
+        </div>
+        <div class="field">
+          <label>Módulo de montante (cm)</label>
+          <input type="number" id="estModulo" value="100" min="20" data-action="calc">
+        </div>
+        <div class="field">
+          <label>Travessas horizontais</label>
+          <input type="number" id="estTrav" value="2" min="0" data-action="calc">
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:0 0 auto">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="checkbox" id="estPintura" checked data-action="calc"> Pintura (preto)
+          </label>
+        </div>
+        <div class="field">
+          <label>Pintura estrutura (R$/m²)</label>
+          <input type="number" id="pPinturaEst" value="45" data-action="calc">
+        </div>
+        <div class="field">
+          <label>Serralheiro (dias)</label>
+          <input type="number" id="estDias" value="1" step="0.5" min="0" data-action="calc">
+        </div>
+        <div class="field">
+          <label>Diária serralheiro (R$)</label>
+          <input type="number" id="pDiariaSerr" value="350" data-action="calc">
+        </div>
+        <div class="field">
+          <label>Perda de corte (%)</label>
+          <input type="number" id="estPerda" value="10" min="0" data-action="calc">
+        </div>
+      </div>
+    </div>
+
+    <div id="estFixDir" class="hide">
+      <div class="row">
+        <div class="field">
+          <label>Parafusaria / abraçadeiras (R$)</label>
+          <input type="number" id="estFixMat" value="120" data-action="calc">
+        </div>
+        <div class="field">
+          <label>Serralheiro (dias)</label>
+          <input type="number" id="estFixDias" value="0.5" step="0.5" min="0" data-action="calc">
+        </div>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:8px">
+      <div class="field" style="flex:1 1 100%">
+        <label>Observação da estrutura (sai no memorial/descritivo)</label>
+        <input type="text" id="estObs" placeholder="Ex.: Confirmar altura final com estrutura" data-action="calc">
+      </div>
+    </div>
+
+    <div class="footnote" id="estResumo">Estrutura desligada.</div>
+  </div>
+
   <!-- ═══ 3. RESULTADO ═══ -->
   <div class="card">
     <h2>3 · Resultado</h2>
@@ -334,7 +467,6 @@
         <div class="field"><label>Galvanizada #26 (R$/m²)</label><input type="number" id="pGalv" value="95" data-action="calc"></div>
         <div class="field"><label>PVC exp. 5mm (R$/m²)</label><input type="number" id="pPvc5" value="52" data-action="calc"></div>
         <div class="field"><label>PVC exp. 10mm (R$/m²)</label><input type="number" id="pPvc10" value="90" data-action="calc"></div>
-        <div class="field"><label>PVC exp. 15mm (R$/m²)</label><input type="number" id="pPvc15" value="130" data-action="calc"></div>
         <div class="field"><label>PVC exp. 15mm (R$/m²)</label><input type="number" id="pPvc15" value="130" data-action="calc"></div>
         <div class="field"><label>PVC exp. 20mm (R$/m²)</label><input type="number" id="pPvc20" value="175" data-action="calc"></div>
         <div class="field"><label>MDF 15mm (R$/m²)</label><input type="number" id="pMdf15" value="58" data-action="calc"></div>
@@ -512,6 +644,10 @@ document.body.addEventListener('input', function(e){
   if (e.target.getAttribute('data-action') === 'calc') calc();
 });
 document.body.addEventListener('change', function(e){
+  if (e.target.id === 'estPerfil') {
+    var oe = e.target.options[e.target.selectedIndex];
+    $('estPrecoVara').value = oe.getAttribute('data-preco');
+  }
   if (e.target.getAttribute('data-action') === 'calc') calc();
   if (e.target.getAttribute('data-fn') === 'nestmat') {
     var o = e.target.options[e.target.selectedIndex];
@@ -626,7 +762,80 @@ function precoMat(codigo){
   return 0;
 }
 
+/* ═══ ESTRUTURA DE SUSTENTAÇÃO ═══ */
+var estPerfilTravado = false;   // usuário editou o preço manualmente
+
+function estSyncUI(){
+  var on = $('estOn').checked;
+  var tipo = $('estTipo').value;
+  $('estCampos').className = (on && tipo !== 'fixdir') ? '' : 'hide';
+  $('estFixDir').className = (on && tipo === 'fixdir') ? '' : 'hide';
+  var op = $('estPerfil').options[$('estPerfil').selectedIndex];
+  var w = parseFloat(op.getAttribute('data-w'));
+  var h = parseFloat(op.getAttribute('data-h'));
+  $('estHintPerfil').textContent = 'Perímetro p/ pintura: ' + (2 * (w + h) / 1000).toFixed(3) + ' m²/ml';
+}
+
+function estPerimetroPerfil(){
+  var op = $('estPerfil').options[$('estPerfil').selectedIndex];
+  var w = parseFloat(op.getAttribute('data-w'));
+  var h = parseFloat(op.getAttribute('data-h'));
+  return 2 * (w + h) / 1000;   // mm -> m, área de pintura por metro linear
+}
+
+function calcEstrutura(addLinha){
+  var res = $('estResumo');
+  if (!$('estOn').checked) { res.textContent = 'Estrutura desligada.'; return; }
+
+  var tipo = $('estTipo').value;
+  var obs = $('estObs').value.trim();
+
+  if (tipo === 'fixdir') {
+    var vFixMat = num('estFixMat');
+    var vFixMo = num('estFixDias') * num('pDiariaSerr');
+    if (vFixMat > 0) addLinha('Estrutura · parafusaria/abraçadeiras', '1 vb', '—', vFixMat);
+    if (vFixMo > 0) addLinha('Estrutura · M.O. serralheiro (fixação)', num('estFixDias') + ' d', brl(num('pDiariaSerr')) + '/d', vFixMo);
+    res.textContent = 'Fixação direta em estrutura de terceiros — sem metalon.' + (obs ? ' | ' + obs : '');
+    return;
+  }
+
+  var L = num('estL') / 100;
+  var A = num('estA') / 100;
+  var recuo = num('estRecuo') / 100;
+  var modulo = num('estModulo') / 100;
+  if (L <= 0 || A <= 0 || modulo <= 0) { res.textContent = 'Preencha largura, altura e módulo.'; return; }
+
+  var nMont = Math.ceil(L / modulo) + 1;
+  var mlMont = nMont * A;
+  var mlTrav = num('estTrav') * L;
+  var mlRecuo = (recuo > 0) ? nMont * recuo * 2 : 0;   // braço superior + inferior por montante
+  var mlPes = (tipo === 'autoport') ? nMont * 0.6 : 0; // sapatas/pés
+
+  var mlBruto = mlMont + mlTrav + mlRecuo + mlPes;
+  var mlTotal = mlBruto * (1 + num('estPerda') / 100);
+  var varas = Math.ceil(mlTotal / 6);
+  var vMetalon = varas * num('estPrecoVara');
+
+  addLinha('Estrutura · metalon ' + selText('estPerfil').split(' —')[0] + ' (' + mlTotal.toFixed(1) + ' ml)', varas, brl(num('estPrecoVara')) + '/vara', vMetalon);
+
+  var m2Pint = 0, vPint = 0;
+  if ($('estPintura').checked) {
+    m2Pint = mlTotal * estPerimetroPerfil();
+    vPint = m2Pint * num('pPinturaEst');
+    addLinha('Estrutura · pintura preta', m2Pint.toFixed(2) + ' m²', brl(num('pPinturaEst')) + '/m²', vPint);
+  }
+
+  var vSerr = num('estDias') * num('pDiariaSerr');
+  if (vSerr > 0) addLinha('Estrutura · M.O. serralheiro', num('estDias') + ' d', brl(num('pDiariaSerr')) + '/d', vSerr);
+
+  res.textContent = nMont + ' montantes @ ' + num('estModulo') + 'cm · ' + num('estTrav') + ' travessas · ' +
+    mlBruto.toFixed(1) + ' ml + ' + num('estPerda') + '% perda = ' + mlTotal.toFixed(1) + ' ml → ' + varas + ' varas de 6m · ' +
+    (m2Pint > 0 ? m2Pint.toFixed(2) + ' m² de pintura · ' : '') +
+    'Subtotal ' + brl(vMetalon + vPint + vSerr) + (obs ? ' | ' + obs : '');
+}
+
 function calc(){
+  estSyncUI();
   var qtd = contaLetras();
   var H = num('inAltura') / 100;
   var P = num('inProf') / 100;
@@ -779,6 +988,9 @@ function calc(){
   /* ── consumíveis ── */
   var vCons = mpTotal * num('pConsum') / 100;
   addLinha('Consumíveis (' + num('pConsum') + '% MP)', '—', '—', vCons);
+
+  /* ── ESTRUTURA DE SUSTENTAÇÃO (grupo separado) ── */
+  calcEstrutura(addLinha);
 
   /* ── M.O. montagem ── */
   var fatorMont = constr === 'chapada' ? 0.4 : 1;
@@ -1067,6 +1279,22 @@ function montarDescritivo(){
     t += ' Instalação inclusa' + (ilum !== 'nenhuma' ? ', com ligação à infraestrutura elétrica existente no ponto' : '') + '.';
   } else {
     t += ' Fornecimento sem instalação (retirada na Sul Sign), acompanhando fita dupla-face de alta performance/fixadores conforme aplicação.';
+  }
+
+  /* estrutura de sustentação */
+  if ($('estOn').checked) {
+    var tpE = $('estTipo').value;
+    if (tpE === 'fixdir') {
+      t += ' Fixação direta em estrutura de terceiros (tenda/treliça), com parafusaria e abraçadeiras adequadas ao perfil existente.';
+    } else {
+      var secao = selText('estPerfil').split(' —')[0];
+      t += ' Acompanha estrutura de sustentação' + (tpE === 'autoport' ? ' autoportante' : '') +
+           ' em metalon ' + secao + ', quadro de ' + num('estL') + ' × ' + num('estA') + 'cm' +
+           (num('estRecuo') > 0 ? ', com afastamento de ' + num('estRecuo') + 'cm' : '') +
+           ($('estPintura').checked ? ', pintada na cor preta.' : ', sem pintura.');
+    }
+    var obsE = $('estObs').value.trim();
+    if (obsE) t += ' Obs.: ' + obsE + '.';
   }
 
   return t;
