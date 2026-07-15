@@ -394,6 +394,21 @@ SS20.sb=function(path){
   });
 };
 
+/* ── ESCRITA SUPABASE (POST/PATCH) ── */
+SS20.sbw=function(path,method,body){
+  var tk=window.SULSIGN_ACCESS_TOKEN||SulSignCore.SUPA_KEY;
+  return fetch(SulSignCore.SUPA_URL+'/rest/v1/'+path,{
+    method:method,
+    headers:{'apikey':SulSignCore.SUPA_KEY,'Authorization':'Bearer '+tk,
+             'Content-Type':'application/json','Prefer':'return=minimal'},
+    body:JSON.stringify(body)
+  }).then(function(r){
+    if(r.status===401){ window.ss20Logout(); throw new Error('Sessão expirada'); }
+    if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+': '+t.slice(0,140)); });
+    return true;
+  });
+};
+
 /* ── NAVEGAÇÃO ──
    tipo: v2 = módulo real desta plataforma
          lg = ferramenta legada (abre em nova aba)
@@ -407,7 +422,7 @@ SS20.NAV=[
   {sec:'Comercial'},
   {v:'orc',  ic:'▤', lbl:'Orçamentos',          tipo:'v2'},
   {v:'calc', ic:'∑', lbl:'Calc. Letra Caixa',   tipo:'lg', url:'../CALC_LetraCaixa.html'},
-  {v:'crm',  ic:'☰', lbl:'CRM / Pipeline',      tipo:'pl'},
+  {v:'crm',  ic:'☰', lbl:'CRM / Pipeline',      tipo:'v2'},
   {v:'mkt',  ic:'◎', lbl:'Marketing',           tipo:'pl'},
   {v:'ptl',  ic:'🖥', lbl:'Portal do Cliente',  tipo:'pl'},
   {sec:'Operação'},
@@ -422,8 +437,8 @@ SS20.NAV=[
   {v:'simw', ic:'▨', lbl:'Sim. Tapadeiras',     tipo:'lg', url:'../Simulador_Tapadeiras.html'},
   {v:'simm', ic:'▩', lbl:'Piso Macaquinho',     tipo:'lg', url:'../Simulador_PisoMacaquinho.html'},
   {v:'cron', ic:'📅', lbl:'Cronograma',         tipo:'v2'},
-  {v:'dob',  ic:'📋', lbl:'Diário de Obra',     tipo:'pl'},
-  {v:'alm',  ic:'▣', lbl:'Almoxarifado',        tipo:'pl'},
+  {v:'dob',  ic:'📋', lbl:'Diário de Obra',     tipo:'v2'},
+  {v:'alm',  ic:'▣', lbl:'Almoxarifado',        tipo:'v2'},
   {v:'cmp',  ic:'⇄', lbl:'Compras',             tipo:'v2'},
   {v:'log',  ic:'➔', lbl:'Logística',           tipo:'pl'},
   {v:'atv',  ic:'⚙', lbl:'Ativos & Manutenção', tipo:'pl'},
