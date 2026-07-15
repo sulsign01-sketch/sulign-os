@@ -5,6 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>Pagamentos — Sul Sign Group</title>
 <style>
+.pixbox{display:flex;align-items:center;gap:8px;background:#f5f5f5;border:1px solid #e0e0e0;border-radius:5px;padding:7px 9px;margin-top:7px;}
+.pixlab{font-size:9px;font-weight:700;color:#888;letter-spacing:.5px;}
+.pixval{flex:1;font-family:monospace;font-size:12px;word-break:break-all;color:#111;}
+.btn-copy{border:none;background:#111;color:#fff;font-size:10px;font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;flex-shrink:0;}
+.cmp-box{margin-top:10px;padding-top:10px;border-top:1px dashed #ddd;}
+.cmp-lab{font-size:10px;font-weight:700;color:#666;margin-bottom:5px;}
+.cmp-file{font-size:11px;width:100%;}
+.cmp-prev{max-width:100%;max-height:130px;border-radius:4px;margin-top:6px;display:none;}
+.cmp-or{font-size:9px;color:#aaa;text-align:center;margin:7px 0;}
   *{box-sizing:border-box;margin:0;padding:0;}
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
   body{font-family:'DM Sans',system-ui,sans-serif;background:#0a0a0a;color:#e0e0e0;min-height:100vh;}
@@ -89,7 +98,15 @@
     </div>
     <div class="fl">
       <label>Observação (opcional)</label>
-      <textarea id="mp-obs" placeholder="Ex: paguei via PIX, comprovante no WhatsApp..."></textarea>
+      <textarea id="mp-obs" placeholder="Ex: paguei via PIX pelo C6..."></textarea>
+      <div class="cmp-box">
+        <div class="cmp-lab">Comprovante (foto ou PDF)</div>
+        <input type="file" id="mp-file" class="cmp-file" accept="image/*,application/pdf">
+        <img id="mp-prev" class="cmp-prev">
+        <div class="cmp-or">— ou —</div>
+        <div class="cmp-lab">Link do Drive</div>
+        <input type="text" id="mp-link" placeholder="https://drive.google.com/..." style="width:100%;font-size:12px;padding:6px;border:1px solid #ddd;border-radius:4px;">
+      </div>
     </div>
     <div class="btn-row">
       <button class="btn-cancel" onclick="fecharModal()">Cancelar</button>
@@ -167,7 +184,12 @@ function render(){
         +'</div>'
         +'<div class="item-val">'+fmt(v)+'</div>'
       +'</div>'
-      +'<div class="item-venc '+vencClass+'">'+(atrasado?'⚠ Venceu em ':'Vence em ')+vencStr+'</div>'
+      +'<div class="item-venc '+vencClass+'">'+(atrasado?'⚠ Venceu em ':'Vence em ')+vencStr
+        +(c.numero_op?' &middot; <b>'+esc(c.numero_op)+'</b>':'')
+        +(c.orcamento_numero&&c.orcamento_numero!=='SEM-JOB'?' &middot; '+esc(c.orcamento_numero):'')+'</div>'
+      +(c.chave_pix?'<div class="pixbox"><div class="pixlab">'+esc((c.forma_pagamento||'PIX'))+'</div>'
+        +'<div class="pixval" id="pix'+c.id+'">'+esc(c.chave_pix)+'</div>'
+        +'<button class="btn-copy" onclick="copiar('+c.id+',this)">Copiar</button></div>':'')
       +(c.observacao?'<div class="item-obs">'+esc(c.observacao)+'</div>':'')
       +(pago
         ? '<div class="item-tag tag-pago">✓ Pago'+(c.data_pagamento?' em '+new Date(c.data_pagamento+'T12:00:00').toLocaleDateString('pt-BR'):'')+'</div>'
@@ -177,10 +199,30 @@ function render(){
   lista.innerHTML = html;
 }
 
+function copiar(id,btn){
+  var el=document.getElementById('pix'+id);
+  if(!el)return;
+  var txt=el.textContent;
+  function ok(){ btn.textContent='Copiado!'; setTimeout(function(){btn.textContent='Copiar';},1500); }
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok,function(){fallback(txt,ok);});
+  }else{ fallback(txt,ok); }
+}
+function fallback(txt,cb){
+  var t=document.createElement('textarea');
+  t.value=txt; t.style.position='fixed'; t.style.opacity='0';
+  document.body.appendChild(t); t.select();
+  try{ document.execCommand('copy'); cb(); }catch(e){ prompt('Copie:',txt); }
+  document.body.removeChild(t);
+}
+
 function abrirModal(id){
   _idAtual = id;
   document.getElementById('mp-data').value = new Date().toISOString().split('T')[0];
   document.getElementById('mp-obs').value = '';
+  document.getElementById('mp-file').value = '';
+  document.getElementById('mp-link').value = '';
+  document.getElementById('mp-prev').style.display='none';
   document.getElementById('mp-status').textContent = '—';
   document.getElementById('modal-pag').classList.add('open');
 }
@@ -190,22 +232,86 @@ function fecharModal(){
   _idAtual = null;
 }
 
+/* comprime imagem para ~200KB antes de guardar */
+function comprimir(file){
+  return new Promise(function(res,rej){
+    if(file.type.indexOf('image/')!==0){
+      var fr0=new FileReader();
+      fr0.onload=function(){res(fr0.result);};
+      fr0.onerror=rej; fr0.readAsDataURL(file);
+      return;
+    }
+    var fr=new FileReader();
+    fr.onload=function(){
+      var img=new Image();
+      img.onload=function(){
+        var mx=1280, w=img.width, h=img.height;
+        if(w>mx||h>mx){ var e=mx/Math.max(w,h); w=Math.round(w*e); h=Math.round(h*e); }
+        var cv=document.createElement('canvas');
+        cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        res(cv.toDataURL('image/jpeg',0.62));
+      };
+      img.onerror=rej; img.src=fr.result;
+    };
+    fr.onerror=rej; fr.readAsDataURL(file);
+  });
+}
+
+function b64ToBlob(d){
+  var p=d.split(','), m=p[0].match(/:(.*?);/)[1], b=atob(p[1]);
+  var n=b.length, u=new Uint8Array(n);
+  while(n--){ u[n]=b.charCodeAt(n); }
+  return new Blob([u],{type:m});
+}
+
+document.getElementById('mp-file').addEventListener('change',function(){
+  var f=this.files[0], pv=document.getElementById('mp-prev');
+  if(!f||f.type.indexOf('image/')!==0){ pv.style.display='none'; return; }
+  comprimir(f).then(function(d){ pv.src=d; pv.style.display='block'; });
+});
+
 async function confirmarPagamento(){
   if(!_idAtual) return;
   var data = document.getElementById('mp-data').value;
   var obs = document.getElementById('mp-obs').value.trim();
+  var link = document.getElementById('mp-link').value.trim();
+  var file = document.getElementById('mp-file').files[0];
   var st = document.getElementById('mp-status');
   if(!data){ st.textContent='Informe a data.'; st.className='status err'; return; }
+  if(!file && !link){
+    if(!confirm('Sem comprovante anexado. Confirmar mesmo assim?')) return;
+  }
 
   st.textContent = 'Salvando...'; st.className = 'status';
   try{
+    var comp = null;
+    if(file){
+      st.textContent='Enviando comprovante...';
+      var d64 = await comprimir(file);
+      var ext = file.type==='application/pdf' ? 'pdf' : 'jpg';
+      var path = _idAtual+'_'+Date.now()+'.'+ext;
+      var up = await fetch(SUPA_URL+'/storage/v1/object/comprovantes/'+path,{
+        method:'POST',
+        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY},
+        body: b64ToBlob(d64)
+      });
+      if(up.ok){ comp = path; }
+      else { comp = d64; }  /* fallback: base64 comprimido */
+      st.textContent='Salvando...';
+    }
+    var body = {
+      pago_por_ponde: true,
+      status: 'Pago',
+      data_pagamento: data,
+      obs_ponde: obs
+    };
+    if(comp) body.comprovante_ponde = comp;
+    if(link) body.comprovante_link = link;
+
     var r = await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+_idAtual, {
       method:'PATCH', headers:H,
-      body: JSON.stringify({
-        pago_por_ponde: true,
-        data_pagamento: data,
-        obs_ponde: obs
-      })
+      body: JSON.stringify(body)
     });
     if(!r.ok) throw new Error('HTTP '+r.status);
     st.textContent = '✓ Confirmado!'; st.className = 'status ok';
