@@ -20,12 +20,12 @@
       SS20.sb('orcamentos?select=numero,cliente,agencia,projeto,bdi,grupos,status,valor_nf,updated_at&order=numero.desc'),
       SS20.sb('contas_pagar?select=*&status=eq.Pendente&order=vencimento.asc&deletado_em=is.null'),
       SS20.sb('contas_receber?select=*&order=vencimento.asc&deletado_em=is.null'),
-      SS20.sb('lancamentos?select=valor,tipo,categoria,job,data,conciliado&deletado_em=is.null')
+      SS20.sb('lancamentos?select=valor,tipo_lancamento,categoria,orcamento_numero,data,conciliado&deletado_em=is.null')
     ]).then(function(r){
       var data={ orcs:r[0].filter(function(o){return !isTreino(o.numero);}),
                  pagar:r[1].filter(function(c){return !isTreino(c.job);}),
                  receber:r[2].filter(function(c){return !isTreino(c.job);}),
-                 lanc:r[3].filter(function(l){return !isTreino(l.job);}) };
+                 lanc:r[3].filter(function(l){return !isTreino(l.orcamento_numero);}) };
       SS20.cache.dash=data;
       return data;
     });
@@ -82,7 +82,7 @@
       var dt=new Date(l.data+'T00:00:00');
       if(dt<mesIni||dt>hoje)return;
       var v=parseFloat(l.valor)||0;
-      if((l.tipo||'')==='Receita'||(l.categoria||'')==='Receita de Job')entMes+=v;
+      if((l.tipo_lancamento||'')==='Receita'||(l.categoria||'')==='Receita de Job')entMes+=v;
       else saiMes+=v;
     });
 
