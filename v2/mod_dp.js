@@ -20,9 +20,9 @@
 
   function fetchAll(){
     if(SS20.cache.dp) return Promise.resolve(SS20.cache.dp);
-    return SS20.sb('lancamentos?select=valor,categoria,job,data,pessoa,funcao,descricao,diarias,valor_diaria,horas_extras,tipo_mo,local_mo&deletado_em=is.null')
+    return SS20.sb('lancamentos?select=valor,categoria,orcamento_numero,data,pessoa,funcao,descricao,diarias,valor_diaria,horas_extras,tipo_mo,local_mo&deletado_em=is.null')
       .then(function(rows){
-        var data=rows.filter(function(l){return !isTreino(l.job)&&ehMO(l);});
+        var data=rows.filter(function(l){return !isTreino(l.orcamento_numero)&&ehMO(l);});
         SS20.cache.dp=data;
         return data;
       });
@@ -57,7 +57,7 @@
       var di=val(l.diarias),he=val(l.horas_extras),vd=val(l.valor_diaria);
       var v=val(l.valor)||((di*vd)+(he*vd/8));
       p.diarias+=di; p.he+=he; p.valor+=v;
-      if(l.job)p.jobs[l.job]=(p.jobs[l.job]||0)+v;
+      if(l.orcamento_numero)p.jobs[l.orcamento_numero]=(p.jobs[l.orcamento_numero]||0)+v;
       if(l.tipo_mo)p.tipos[l.tipo_mo]=1;
       totDiarias+=di; totHE+=he; totValor+=v;
     });
@@ -67,9 +67,9 @@
     /* por job */
     var porJob={};
     filt.forEach(function(l){
-      if(!l.job)return;
+      if(!l.orcamento_numero)return;
       var v=val(l.valor)||((val(l.diarias)*val(l.valor_diaria))+(val(l.horas_extras)*val(l.valor_diaria)/8));
-      porJob[l.job]=(porJob[l.job]||0)+v;
+      porJob[l.orcamento_numero]=(porJob[l.orcamento_numero]||0)+v;
     });
     var jobs=Object.keys(porJob).map(function(k){return {j:k,v:porJob[k]};})
       .sort(function(a,b){return b.v-a.v;});
