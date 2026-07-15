@@ -82,7 +82,8 @@
       var dt=new Date(l.data+'T00:00:00');
       if(dt<mesIni||dt>hoje)return;
       var v=parseFloat(l.valor)||0;
-      if((l.tipo_lancamento||'')==='Receita'||(l.categoria||'')==='Receita de Job')entMes+=v;
+      var tp=(l.tipo_lancamento||'').toLowerCase();
+      if(tp==='entrada')entMes+=v;
       else saiMes+=v;
     });
 
