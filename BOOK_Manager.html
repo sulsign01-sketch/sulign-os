@@ -178,7 +178,24 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
 
 /* ══ PRINT ══ */
 @page{size:A4;margin:0;}
+.so-print{display:none;}
+.indice-lista{display:flex;flex-wrap:wrap;gap:1.5mm;}
+.indice-item{flex:1 1 calc(50% - 1mm);max-width:calc(50% - 1mm);display:flex;align-items:baseline;gap:3mm;
+  padding:2mm 3mm;background:var(--cinza-claro);border-radius:2px;cursor:pointer;}
+.indice-item:hover{background:var(--verde-claro);}
+.ind-cod{font-family:'Courier New',monospace;font-weight:bold;font-size:10px;white-space:nowrap;}
+.ind-nome{font-size:10px;font-weight:bold;flex:1;}
+.ind-setor{font-size:8px;color:var(--cinza);white-space:nowrap;}
+.box-imp .val{color:#C0271D;}
+.img-multi{display:flex;flex-wrap:wrap;gap:2mm;}
+.img-multi .img-slot{flex:1 1 100%;}
+.img-multi.varias .img-slot.tem-img{flex:1 1 calc(50% - 1mm);max-width:calc(50% - 1mm);}
+.img-multi.varias .img-slot.tem-img img{max-height:44mm;object-fit:contain;}
+.img-slot.slot-add{min-height:12mm;font-size:9px;flex:1 1 100%;}
 @media print{
+  .so-print{display:inline !important;}
+  .pg-indice.sem-planta{display:none;}
+  .indice-item{cursor:default;}
   body{background:#fff;}
   #toolbar,#btn-add-flutuante,.item-ctrl,#modal-fundo{display:none !important;}
   #doc{padding:0;gap:0;}
@@ -223,7 +240,7 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
   <div id="modal-caixa"></div>
 </div>
 
-<input type="file" id="input-img" accept="image/*" style="display:none">
+<input type="file" id="input-img" accept="image/*" multiple style="display:none">
 
 <script id="seed" type="application/json">null</script>
 
@@ -240,9 +257,10 @@ var TIPOS = {
 
 /* ═══ ESTADO ═══ */
 function itemNovo(){
-  return { codigo:'', nome:'NOVO ITEM', material:'', substrato:'', estrutura:'',
+  return { codigo:'', nome:'NOVO ITEM', setor:'', local:'', material:'', acabamento:'', substrato:'', estrutura:'',
     qtd:'1', visL:100, visA:100, sangria:2, impManual:false, impL:104, impA:104,
-    obs:'', instalacao:'', render:'', arte:'' };
+    forma:'ret', fp1:0,
+    obs:'', instalacao:'', render:[], arte:[] };
 }
 function estadoInicial(){
   return {
@@ -250,7 +268,7 @@ function estadoInicial(){
     titulo:'Título do Projeto', local:'Rio de Janeiro - RJ',
     cliente:'', agencia:'', periodo:'', montagem:'', desmontagem:'',
     instagram:'@gruposulsign', email:'contato@sulsign.com.br',
-    logo:'', itens:[ itemNovo() ]
+    logo:'', planta:'', itens:[ itemNovo() ]
   };
 }
 var S = estadoInicial();
@@ -272,6 +290,86 @@ function impressa(it){
 }
 function codigoAuto(i){ var n=i+1; return 'P'+(n<10?'0':'')+n; }
 
+/* Código automático: sigla do nome da peça (1ª letra + 2 consoantes) + sequencial por sigla.
+   Ex.: BACKDROP→BCK-01, TOTEM→TTM-01, 2º TOTEM→TTM-02. Editável: se preenchido manual, respeita. */
+function siglaDe(nome){
+  var s = String(nome||'').toUpperCase();
+  try{ s = s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(e){}
+  s = s.replace(/[^A-Z0-9]/g,'');
+  if(!s) return 'PC';
+  var sig = s.charAt(0), i2, c;
+  for(i2=1; i2<s.length && sig.length<3; i2++){
+    c = s.charAt(i2);
+    if('AEIOU'.indexOf(c)===-1) sig += c;
+  }
+  if(sig.length<3) sig = (s+'XX').substring(0,3);
+  return sig;
+}
+function codigoLogico(idx){
+  var sig = siglaDe(S.itens[idx].nome), n=1, j;
+  for(j=0; j<idx; j++){
+    if(!String(S.itens[j].codigo||'').trim() && siglaDe(S.itens[j].nome)===sig) n++;
+  }
+  return sig+'-'+(n<10?'0':'')+n;
+}
+
+/* Imagens como array (retrocompatível com string dos books antigos) */
+function imgsDe(it, campo){
+  var v = it[campo];
+  if(v instanceof Array) return v;
+  if(v) return [v];
+  return [];
+}
+
+/* ═══ FORMAS DA ÁREA VISUAL (faca permanece retangular = bounding box L×A) ═══ */
+var FORMAS = {
+  ret:     { lbl:'Retângulo',         p1:null },
+  trap:    { lbl:'Trapézio',          p1:'BASE MENOR / TOPO (CM)' },
+  tri:     { lbl:'Triângulo',         p1:null },
+  elipse:  { lbl:'Elipse / Círculo',  p1:null },
+  telhado: { lbl:'Telhado (5 lados)', p1:'ALTURA DA PAREDE (CM)' },
+  arco:    { lbl:'Arco (topo curvo)', p1:'ALTURA DA PARTE RETA (CM)' }
+};
+function formaDe(it){ return (it && FORMAS[it.forma]) ? it.forma : 'ret'; }
+function fp1Valida(it){
+  var f=formaDe(it), L=num(it.visL), A=num(it.visA), p=num(it.fp1);
+  if(f==='trap'){ if(p<=0||p>L) p=L; return p; }
+  if(f==='telhado'||f==='arco'){ if(p<0) p=0; if(p>A) p=A; return p; }
+  return 0;
+}
+function areaVisual(it){
+  var f=formaDe(it), L=num(it.visL), A=num(it.visA), p=fp1Valida(it);
+  if(f==='trap')    return (L+p)/2*A;
+  if(f==='tri')     return L*A/2;
+  if(f==='elipse')  return Math.PI*L*A/4;
+  if(f==='telhado') return L*p + L*(A-p)/2;
+  if(f==='arco')    return L*p + Math.PI*L*(A-p)/4;
+  return L*A;
+}
+function fmtM2(cm2){ return (cm2/10000).toFixed(2).replace('.',','); }
+function pathForma(it, x, y, w, h){
+  var f=formaDe(it), L=num(it.visL)||1, A=num(it.visA)||1, p=fp1Valida(it);
+  if(f==='trap'){
+    var tw=(p/L)*w, off=(w-tw)/2;
+    return 'M'+x+' '+(y+h)+' L'+(x+off)+' '+y+' L'+(x+off+tw)+' '+y+' L'+(x+w)+' '+(y+h)+' Z';
+  }
+  if(f==='tri') return 'M'+x+' '+(y+h)+' L'+(x+w/2)+' '+y+' L'+(x+w)+' '+(y+h)+' Z';
+  if(f==='elipse'){
+    var cx=x+w/2, cy=y+h/2, rx=w/2, ry=h/2;
+    return 'M'+(cx-rx)+' '+cy+' A'+rx+' '+ry+' 0 1 0 '+(cx+rx)+' '+cy+' A'+rx+' '+ry+' 0 1 0 '+(cx-rx)+' '+cy+' Z';
+  }
+  if(f==='telhado'){
+    var yp = y + h*(1 - (A>0?p/A:0));
+    return 'M'+x+' '+(y+h)+' L'+x+' '+yp+' L'+(x+w/2)+' '+y+' L'+(x+w)+' '+yp+' L'+(x+w)+' '+(y+h)+' Z';
+  }
+  if(f==='arco'){
+    var yr = y + h*(1 - (A>0?p/A:0));
+    var ry2 = Math.max(0.01, yr - y);
+    return 'M'+x+' '+(y+h)+' L'+x+' '+yr+' A'+(w/2)+' '+ry2+' 0 0 1 '+(x+w)+' '+yr+' L'+(x+w)+' '+(y+h)+' Z';
+  }
+  return null;
+}
+
 /* ═══ DIAGRAMA SVG ═══ */
 function svgDiagrama(it){
   var imp = impressa(it);
@@ -290,8 +388,28 @@ function svgDiagrama(it){
   /* hachura leve */
   s += '<defs><pattern id="hx" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line x1="0" y1="0" x2="0" y2="7" stroke="#CBE8D6" stroke-width="1.4"/></pattern></defs>';
   s += '<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="url(#hx)" opacity="0.8"/>';
-  /* área visual (interna tracejada) */
-  s += '<rect x="'+(x+mL)+'" y="'+(y+mA)+'" width="'+(w-2*mL)+'" height="'+(h-2*mA)+'" fill="none" stroke="#2F6B50" stroke-width="1.6" stroke-dasharray="6 4"/>';
+  /* área visual (interna tracejada) — forma real */
+  var vx=x+mL, vy=y+mA, vw=w-2*mL, vh=h-2*mA;
+  var fpath = pathForma(it, vx, vy, vw, vh);
+  if(fpath){
+    /* bounding box de referência bem leve + forma em destaque */
+    s += '<rect x="'+vx+'" y="'+vy+'" width="'+vw+'" height="'+vh+'" fill="none" stroke="#9DBFAE" stroke-width="0.8" stroke-dasharray="2 3"/>';
+    s += '<path d="'+fpath+'" fill="#FFFFFF" fill-opacity="0.55" stroke="#2F6B50" stroke-width="1.6" stroke-dasharray="6 4"/>';
+    /* cota do parâmetro extra */
+    var ff=formaDe(it), pp=fp1Valida(it), Lr=num(it.visL)||1, Ar=num(it.visA)||1;
+    if(ff==='trap'){
+      var tw=(pp/Lr)*vw, off=(vw-tw)/2;
+      s += '<text x="'+(vx+vw/2)+'" y="'+(vy-5)+'" text-anchor="middle" font-size="9" font-family="Courier New" fill="#2F6B50">'+fmtDim(pp)+' cm</text>';
+      s += '<line x1="'+(vx+off)+'" y1="'+(vy-2)+'" x2="'+(vx+off+tw)+'" y2="'+(vy-2)+'" stroke="#2F6B50" stroke-width="0.8"/>';
+    }
+    if(ff==='telhado'||ff==='arco'){
+      var yp2 = vy + vh*(1 - (Ar>0?pp/Ar:0));
+      s += '<line x1="'+(vx+vw+3)+'" y1="'+yp2+'" x2="'+(vx+vw+3)+'" y2="'+(vy+vh)+'" stroke="#2F6B50" stroke-width="0.8"/>';
+      s += '<text x="'+(vx+vw+8)+'" y="'+((yp2+vy+vh)/2+3)+'" font-size="9" font-family="Courier New" fill="#2F6B50">'+fmtDim(pp)+'</text>';
+    }
+  }else{
+    s += '<rect x="'+vx+'" y="'+vy+'" width="'+vw+'" height="'+vh+'" fill="none" stroke="#2F6B50" stroke-width="1.6" stroke-dasharray="6 4"/>';
+  }
   /* cota horizontal (embaixo) */
   var cy = y+h+16;
   s += '<line x1="'+x+'" y1="'+cy+'" x2="'+(x+w)+'" y2="'+cy+'" stroke="#3A4540" stroke-width="1"/>';
@@ -343,25 +461,29 @@ function renderCapa(){
   '</div>';
 }
 
-function slotImg(idx, campo, rotulo, src){
-  if(src){
-    return '<div class="img-slot tem-img" data-idx="'+idx+'">'+
-      '<img src="'+src+'">'+
-      '<button class="btn-x" data-action="remover-img" data-idx="'+idx+'" data-campo="'+campo+'">✕ remover</button>'+
+function slotImg(idx, campo, rotulo, it){
+  var arr = imgsDe(it, campo);
+  var h = '<div class="img-multi'+(arr.length>1?' varias':'')+'">';
+  for(var k=0;k<arr.length;k++){
+    h += '<div class="img-slot tem-img" data-idx="'+idx+'">'+
+      '<img src="'+arr[k]+'">'+
+      '<button class="btn-x" data-action="remover-img" data-idx="'+idx+'" data-campo="'+campo+'" data-pos="'+k+'">✕ remover</button>'+
     '</div>';
   }
-  return '<div class="img-slot" data-action="upload-img" data-idx="'+idx+'" data-campo="'+campo+'">'+
-    '⊕ Clique para inserir<br>'+rotulo+'</div>';
+  h += '<div class="img-slot'+(arr.length?' slot-add':'')+'" data-action="upload-img" data-idx="'+idx+'" data-campo="'+campo+'">'+
+    (arr.length ? '⊕ adicionar outra' : '⊕ Clique para inserir<br>'+rotulo)+'</div>';
+  h += '</div>';
+  return h;
 }
 
 function renderItem(it, i){
   var T = TIPOS[S.tipo];
-  var cod = it.codigo || codigoAuto(i);
+  var cod = it.codigo || codigoLogico(i);
   var imp = impressa(it);
   var ehManual = S.tipo==='instalacao';
   var h = '<div class="page pg-item" data-idx="'+i+'">';
   h += '<div class="pg-head">'+
-    '<div class="pg-cod" contenteditable data-item="'+i+'" data-field="codigo" data-ph="'+codigoAuto(i)+'">'+esc(it.codigo)+'</div>'+
+    '<div class="pg-cod" contenteditable data-item="'+i+'" data-field="codigo" data-ph="'+codigoLogico(i)+'">'+esc(it.codigo)+'</div>'+
     '<div class="pg-titulo" contenteditable data-item="'+i+'" data-field="nome" data-ph="Nome do item">'+esc(it.nome)+'</div>'+
     '<div class="pg-proj">'+esc(S.titulo)+'</div>'+
     '<div class="pg-rev">'+esc(S.revisao)+'</div>'+
@@ -370,15 +492,30 @@ function renderItem(it, i){
   /* coluna esquerda */
   h += '<div class="col-esq">';
   h += '<div class="sec-rot">E S P E C I F I C A Ç Õ E S &nbsp; T É C N I C A S</div>';
-  h += '<div class="spec"><div class="rot">MATERIAL / MÍDIA</div><div class="val" contenteditable data-item="'+i+'" data-field="material" data-ph="—">'+esc(it.material)+'</div></div>';
-  h += '<div class="spec"><div class="rot">SUBSTRATO</div><div class="val" contenteditable data-item="'+i+'" data-field="substrato" data-ph="—">'+esc(it.substrato)+'</div></div>';
-  h += '<div class="spec"><div class="rot">ESTRUTURA</div><div class="val" contenteditable data-item="'+i+'" data-field="estrutura" data-ph="—">'+esc(it.estrutura)+'</div></div>';
+  h += '<div class="spec"><div class="rot">SETOR</div><div class="val" contenteditable data-item="'+i+'" data-field="setor" data-ph="—">'+esc(it.setor)+'</div></div>';
+  h += '<div class="spec"><div class="rot">LOCAL</div><div class="val" contenteditable data-item="'+i+'" data-field="local" data-ph="—">'+esc(it.local)+'</div></div>';
+  h += '<div class="spec"><div class="rot">CÓDIGO <small style="letter-spacing:0;text-transform:none;color:#aaa">(auto — edite p/ fixar)</small></div><div class="val" contenteditable data-item="'+i+'" data-field="codigo" data-ph="'+codigoLogico(i)+'">'+esc(it.codigo||codigoLogico(i))+'</div></div>';
   h += '<div class="spec"><div class="rot">QUANTIDADE</div><div class="val"><span contenteditable data-item="'+i+'" data-field="qtd">'+esc(it.qtd)+'</span> un.</div></div>';
+  h += '<div class="spec"><div class="rot">MATERIAL / MÍDIA</div><div class="val" contenteditable data-item="'+i+'" data-field="material" data-ph="—">'+esc(it.material)+'</div></div>';
+  h += '<div class="spec"><div class="rot">ACABAMENTO</div><div class="val" contenteditable data-item="'+i+'" data-field="acabamento" data-ph="—">'+esc(it.acabamento||it.substrato)+'</div></div>';
+  h += '<div class="spec"><div class="rot">ESTRUTURA</div><div class="val" contenteditable data-item="'+i+'" data-field="estrutura" data-ph="—">'+esc(it.estrutura)+'</div></div>';
   h += '<div class="sec-rot">D I M E N S Õ E S</div>';
-  h += '<div class="dim-box destaque"><div class="rot">ÁREA VISUAL</div><div class="val">'+
+  var fk = formaDe(it);
+  var opts = '';
+  for(var fk2 in FORMAS){ opts += '<option value="'+fk2+'"'+(fk2===fk?' selected':'')+'>'+FORMAS[fk2].lbl+'</option>'; }
+  h += '<div class="dim-box"><div class="rot">FORMATO DA ÁREA VISUAL</div><div class="val" style="font-size:12px">'+
+       '<span class="so-print">'+FORMAS[fk].lbl+'</span>'+
+       '<select class="sec-oculta-print" data-action="mudar-forma" data-idx="'+i+'" style="font-size:12px;padding:2px;border:1px solid #ccc;border-radius:3px;background:#fff">'+opts+'</select>'+
+       '</div></div>';
+  if(FORMAS[fk].p1){
+    h += '<div class="dim-box"><div class="rot">'+FORMAS[fk].p1+'</div><div class="val">'+
+         '<span contenteditable data-item="'+i+'" data-field="fp1" data-dim="1">'+fmtDim(num(it.fp1))+'</span> cm</div></div>';
+  }
+  h += '<div class="dim-box destaque"><div class="rot">'+(fk==='ret'?'DIMENSÃO ÁREA VISÍVEL':'DIM. ÁREA VISÍVEL (L × A MÁX)')+'</div><div class="val">'+
        '<span contenteditable data-item="'+i+'" data-field="visL" data-dim="1">'+fmtDim(num(it.visL))+'</span> × '+
-       '<span contenteditable data-item="'+i+'" data-field="visA" data-dim="1">'+fmtDim(num(it.visA))+'</span> cm</div></div>';
-  h += '<div class="dim-box"><div class="rot">ÁREA IMPRESSA (C/ SANGRIA)</div><div class="val">';
+       '<span contenteditable data-item="'+i+'" data-field="visA" data-dim="1">'+fmtDim(num(it.visA))+'</span> cm</div>'+
+       '<div style="font-size:8px;color:var(--cinza);margin-top:1mm">Área real: <span class="area-real-val">'+fmtM2(areaVisual(it))+'</span> m² / un.</div></div>';
+  h += '<div class="dim-box box-imp"><div class="rot" style="color:#C0271D">DIMENSÃO FINAL (C/ SANGRIA)</div><div class="val">';
   if(it.impManual){
     h += '<span contenteditable data-item="'+i+'" data-field="impL" data-dim="1">'+fmtDim(num(it.impL))+'</span> × '+
          '<span contenteditable data-item="'+i+'" data-field="impA" data-dim="1">'+fmtDim(num(it.impA))+'</span> cm';
@@ -401,9 +538,9 @@ function renderItem(it, i){
   h += '<div class="sec-rot">D I A G R A M A &nbsp; T É C N I C O</div>';
   h += '<div class="diagrama-wrap" data-diagrama="'+i+'">'+svgDiagrama(it)+'</div>';
   h += '<div class="sec-rot">R E F E R Ê N C I A &nbsp; V I S U A L &nbsp; <small style="letter-spacing:0;text-transform:none">(render)</small></div>';
-  h += slotImg(i,'render','o render da peça',it.render);
+  h += slotImg(i,'render','o render da peça',it);
   h += '<div class="sec-rot">A R T E &nbsp; F I N A L &nbsp; <small style="letter-spacing:0;text-transform:none">(recebida)</small></div>';
-  h += slotImg(i,'arte','a arte final recebida',it.arte);
+  h += slotImg(i,'arte','a arte final recebida',it);
   h += '</div>';
   h += '</div>'; /* pg-corpo */
   h += '<div class="pg-foot"><span>SULSIGN GROUP · '+TIPOS[S.tipo].book+' · '+esc(S.titulo).toUpperCase()+'</span><span>'+esc(cod)+'</span></div>';
@@ -433,8 +570,44 @@ function renderFinal(){
   '</div>';
 }
 
+function renderIndice(){
+  var temPlanta = !!S.planta;
+  var h = '<div class="page pg-indice'+(temPlanta?'':' sem-planta')+'">';
+  h += '<div class="pg-head">'+
+    '<div class="pg-cod">ÍNDICE</div>'+
+    '<div class="pg-titulo">PLANTA GERAL &amp; ÍNDICE DE ARTES</div>'+
+    '<div class="pg-proj">'+esc(S.titulo)+'</div>'+
+    '<div class="pg-rev">'+esc(S.revisao)+'</div>'+
+  '</div>';
+  h += '<div style="padding:6mm 2mm">';
+  if(temPlanta){
+    h += '<div class="planta-wrap" style="position:relative;text-align:center;margin-bottom:5mm">'+
+      '<img src="'+S.planta+'" style="max-width:100%;max-height:120mm;border-radius:4px">'+
+      '<button class="btn-x sec-oculta-print" data-action="remover-planta" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.55);color:#fff;border:none;border-radius:3px;padding:2px 8px;cursor:pointer;font-size:10px">✕ trocar planta</button>'+
+    '</div>';
+  }else{
+    h += '<div class="img-slot sec-oculta-print" data-action="upload-planta" style="min-height:60mm">⊕ Clique para inserir<br>a planta geral / vista do projeto</div>';
+  }
+  h += '<div class="sec-rot">L E G E N D A &nbsp; — &nbsp; toque para ir à página</div>';
+  h += '<div class="indice-lista">';
+  for(var i=0;i<S.itens.length;i++){
+    var it2 = S.itens[i];
+    var cod2 = it2.codigo || codigoLogico(i);
+    h += '<div class="indice-item" data-action="ir-item" data-idx="'+i+'">'+
+      '<span class="ind-cod">'+esc(cod2)+'</span>'+
+      '<span class="ind-nome">'+esc(it2.nome||'—')+'</span>'+
+      (it2.setor?'<span class="ind-setor">'+esc(it2.setor)+'</span>':'')+
+    '</div>';
+  }
+  h += '</div></div>';
+  h += '<div class="pg-foot"><span>SULSIGN GROUP · '+TIPOS[S.tipo].book+' · '+esc(S.titulo).toUpperCase()+'</span><span>ÍNDICE</span></div>';
+  h += '</div>';
+  return h;
+}
+
 function render(){
   var h = renderCapa();
+  h += renderIndice();
   for(var i=0;i<S.itens.length;i++) h += renderItem(S.itens[i], i);
   h += renderFinal();
   document.getElementById('doc').innerHTML = h;
@@ -453,13 +626,15 @@ document.addEventListener('input', function(ev){
     if(el.getAttribute('data-dim')){
       var wrap = document.querySelector('[data-diagrama="'+idx+'"]');
       if(wrap) wrap.innerHTML = svgDiagrama(S.itens[parseInt(idx,10)]);
+      var pg = el.closest('.pg-item');
       if(!S.itens[parseInt(idx,10)].impManual){
         /* atualiza a área impressa exibida sem perder o cursor */
-        var pg = el.closest('.pg-item');
         var imp = impressa(S.itens[parseInt(idx,10)]);
-        var caixas = pg.querySelectorAll('.dim-box');
-        if(caixas[1]) caixas[1].querySelector('.val').textContent = fmtDim(imp.L)+' × '+fmtDim(imp.A)+' cm';
+        var boxImp = pg.querySelector('.box-imp .val');
+        if(boxImp) boxImp.textContent = fmtDim(imp.L)+' × '+fmtDim(imp.A)+' cm';
       }
+      var arv = pg.querySelector('.area-real-val');
+      if(arv) arv.textContent = fmtM2(areaVisual(S.itens[parseInt(idx,10)]));
     }
   }else{
     if(campo==='local2') campo='local';
@@ -489,7 +664,16 @@ document.addEventListener('click', function(ev){
   }
   else if(ac==='upload-img'){ imgAlvo = { idx: idx, campo: el.getAttribute('data-campo') }; document.getElementById('input-img').click(); }
   else if(ac==='upload-logo'){ imgAlvo = { idx:-1, campo:'logo' }; document.getElementById('input-img').click(); }
-  else if(ac==='remover-img'){ ev.stopPropagation(); S.itens[idx][el.getAttribute('data-campo')]=''; render(); }
+  else if(ac==='upload-planta'){ imgAlvo = { idx:-2, campo:'planta' }; document.getElementById('input-img').click(); }
+  else if(ac==='remover-planta'){ ev.stopPropagation(); imgAlvo={idx:-2,campo:'planta'}; document.getElementById('input-img').click(); }
+  else if(ac==='ir-item'){ var alvoPg = document.querySelector('.pg-item[data-idx="'+idx+'"]'); if(alvoPg) alvoPg.scrollIntoView({behavior:'smooth'}); }
+  else if(ac==='remover-img'){ ev.stopPropagation();
+    var cmp = el.getAttribute('data-campo');
+    var pos = parseInt(el.getAttribute('data-pos')||'0',10);
+    var lst = imgsDe(S.itens[idx], cmp).slice();
+    lst.splice(pos,1);
+    S.itens[idx][cmp] = lst;
+    render(); }
   else if(ac==='salvar'){ salvar(); }
   else if(ac==='carregar'){ carregarLista(); }
   else if(ac==='baixar'){ baixarHTML(); }
@@ -505,6 +689,17 @@ document.getElementById('sel-tipo').addEventListener('change', function(){ S.tip
 /* checkbox toggle-manual precisa de change, não click-preventDefault */
 document.addEventListener('change', function(ev){
   var el = ev.target;
+  if(el.getAttribute && el.getAttribute('data-action')==='mudar-forma'){
+    var iF = parseInt(el.getAttribute('data-idx'),10);
+    var itF = S.itens[iF];
+    itF.forma = el.value;
+    /* defaults amigáveis ao trocar de forma */
+    if(itF.forma==='trap'    && !num(itF.fp1)) itF.fp1 = Math.round(num(itF.visL)*0.6);
+    if(itF.forma==='telhado' && !num(itF.fp1)) itF.fp1 = Math.round(num(itF.visA)*0.7);
+    if(itF.forma==='arco'    && !num(itF.fp1)) itF.fp1 = Math.round(num(itF.visA)*0.6);
+    render();
+    return;
+  }
   if(el.getAttribute && el.getAttribute('data-action')==='toggle-manual'){
     var idx = parseInt(el.getAttribute('data-idx'),10);
     var it = S.itens[idx];
@@ -516,27 +711,40 @@ document.addEventListener('change', function(ev){
 
 /* ═══ UPLOAD DE IMAGEM (redimensiona p/ não estourar o Supabase) ═══ */
 document.getElementById('input-img').addEventListener('change', function(){
-  var f = this.files[0]; this.value='';
-  if(!f || !imgAlvo) return;
+  var arquivos = Array.prototype.slice.call(this.files||[]); this.value='';
+  if(!arquivos.length || !imgAlvo) return;
   var alvo = imgAlvo; imgAlvo=null;
-  var leitor = new FileReader();
-  leitor.onload = function(e){
-    var img = new Image();
-    img.onload = function(){
-      var MAX = 1400;
-      var w=img.width, h=img.height;
-      if(w>MAX || h>MAX){ var r=Math.min(MAX/w,MAX/h); w=Math.round(w*r); h=Math.round(h*r); }
-      var cv = document.createElement('canvas'); cv.width=w; cv.height=h;
-      cv.getContext('2d').drawImage(img,0,0,w,h);
-      var ehPng = alvo.campo==='logo';
-      var data = ehPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg',0.82);
-      if(alvo.campo==='logo') S.logo = data;
-      else S.itens[alvo.idx][alvo.campo] = data;
-      render();
+  if(alvo.campo==='logo' || alvo.campo==='planta') arquivos = arquivos.slice(0,1);
+  var pendentes = arquivos.length;
+  function umPronto(){ pendentes--; if(pendentes<=0) render(); }
+  function processa(f){
+    var leitor = new FileReader();
+    leitor.onload = function(e){
+      var img = new Image();
+      img.onload = function(){
+        var MAX = 1400;
+        var w=img.width, h=img.height;
+        if(w>MAX || h>MAX){ var r=Math.min(MAX/w,MAX/h); w=Math.round(w*r); h=Math.round(h*r); }
+        var cv = document.createElement('canvas'); cv.width=w; cv.height=h;
+        cv.getContext('2d').drawImage(img,0,0,w,h);
+        var ehPng = alvo.campo==='logo';
+        var data = ehPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg',0.82);
+        if(alvo.campo==='logo'){ S.logo = data; }
+        else if(alvo.campo==='planta'){ S.planta = data; }
+        else{
+          var lst = imgsDe(S.itens[alvo.idx], alvo.campo).slice();
+          lst.push(data);
+          S.itens[alvo.idx][alvo.campo] = lst;
+        }
+        umPronto();
+      };
+      img.onerror = umPronto;
+      img.src = e.target.result;
     };
-    img.src = e.target.result;
-  };
-  leitor.readAsDataURL(f);
+    leitor.onerror = umPronto;
+    leitor.readAsDataURL(f);
+  }
+  for(var fi=0; fi<arquivos.length; fi++) processa(arquivos[fi]);
 });
 
 /* ═══ SUPABASE ═══ */
@@ -731,7 +939,7 @@ function importarOrc(numero){
         /* render + observações vindos do Estratificado do ORC */
         var chave='tbl'+(i+1);
         var img=estrImgs[chave]||((chavesImg.length===grupos.length)?estrImgs[chavesImg[i]]:null);
-        if(img) it.render=img;
+        if(img) it.render=[img];
         var dsc=estrDescs[chave]||((chavesImg.length===grupos.length&&estrDescs[chavesImg[i]])?estrDescs[chavesImg[i]]:'');
         if(dsc) it.obs=dsc;
         novos.push(it);
