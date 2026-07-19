@@ -206,8 +206,8 @@ var PDVEXTrelica = (function(){
     var avisos=[];
 
     /* override manual: se veio lista de peças do usuário, ela manda */
-    var manH = (mH && mH.length) ? true : false;
-    var manV = (mV && mV.length) ? true : false;
+    var manH = Array.isArray(mH);
+    var manV = Array.isArray(mV);
     var arestaH = manH ? mH.slice() : (dH.ok ? dH.barras : null);
     var arestaV = manV ? mV.slice() : (dV.ok ? dV.barras : null);
     var somaH = arestaH ? somaArr(arestaH) : 0;
@@ -495,7 +495,7 @@ function atualizarTrelica(t, idx){
     '</tr>';
   });
   html+='</tbody></table>';
-  if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+(d.manH?d.somaH:d.vaoH)+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+(d.manV?d.somaV:d.vaoV)+'cm'+(d.nRef>0?' · '+d.nRef+' reforço(s) vertical(is) idêntico(s) à vertical, sem cubo':'')+'</div>';
+  if(d.arestaH && d.arestaH.length) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+(d.manH?d.somaH:d.vaoH)+'cm · Cada vertical (×2): '+(d.arestaV&&d.arestaV.length?d.arestaV.join(' + '):'—')+' = '+(d.manV?d.somaV:d.vaoV)+'cm'+(d.nRef>0?' · '+d.nRef+' reforço(s) vertical(is) idêntico(s) à vertical, sem cubo':'')+'</div>';
 
   html+='<div class="sec">C O M P O S I Ç Ã O &nbsp; D A S &nbsp; A R E S T A S</div>';
   html+=editorEixo(t, d, 'H');
@@ -601,10 +601,10 @@ document.getElementById('lista').addEventListener('input',function(e){
 
 function listaManual(t, i, eixo){
   var key = eixo==='H' ? 'mH' : 'mV';
-  if(t[key] && t[key].length) return t[key];
+  if(Array.isArray(t[key])) return t[key];   /* já é manual (mesmo vazio) → mantém */
   var d=_decomps[i];
   var base = d ? (eixo==='H' ? d.arestaH : d.arestaV) : null;
-  t[key] = base ? base.slice() : [];
+  t[key] = base ? base.slice() : [];          /* semeia da sugestão automática atual */
   return t[key];
 }
 
@@ -639,7 +639,8 @@ document.getElementById('lista').addEventListener('click',function(ev){
     var lst=listaManual(t,i,eixo);
     var idx=parseInt(el.getAttribute('data-idx'),10);
     lst.splice(idx,1);
-    if(!lst.length) t[key]=null;   /* esvaziou → volta ao automático */
+    /* fica em manual mesmo vazio: aresta em vermelho até você recompor.
+       Pra voltar à sugestão original use o botão ↺ Automático. */
   }
   atualizarTrelica(t,i);
   atualizarTotal();
