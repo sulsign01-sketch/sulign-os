@@ -48,6 +48,11 @@ button{font-family:inherit;cursor:pointer}
 .topbar .tenant{font-family:var(--font-d);font-weight:700;font-size:15px}
 .topbar .tenant em{font-style:normal;color:var(--mut);font-weight:500;font-size:12px;margin-left:8px}
 .topbar .sp{flex:1}
+.btn-mask{display:inline-flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);color:var(--mut);border-radius:20px;padding:6px 13px;font-size:12.5px;font-family:inherit;cursor:pointer;user-select:none;white-space:nowrap;transition:.15s}
+.btn-mask:hover{border-color:var(--mut)}
+.btn-mask.hidden{background:#2A2118;border-color:#7A5A1E;color:#E0A93B}
+.btn-mask .ic{font-size:14px;line-height:1}
+@media(max-width:600px){.btn-mask .lbl{display:none}.btn-mask{padding:6px 10px}}
 .pill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:20px;white-space:nowrap}
 .pill.demo{background:var(--warn-soft);color:var(--warn);border:1px dashed var(--warn)}
 .content{padding:24px 26px 60px;max-width:1180px;width:100%}
@@ -305,6 +310,7 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
     <div class="topbar">
       <span class="tenant">Sul Sign Group <em>CNPJ 03.952.317/0001-16</em></span>
       <span class="sp"></span>
+      <button class="btn-mask" id="btn-mask" data-action="toggle-mask" title="Ocultar/mostrar valores financeiros"><span class="ic">👁</span><span class="lbl">Valores</span></button>
       <span class="pill live" id="pill-conn">● Supabase</span>
     </div>
     <div class="content" id="ss-content">
@@ -324,7 +330,27 @@ var SS20 = {
   modules: {},          // módulos v2 registrados
   loaded: {},           // scripts já injetados
   view: 'dash',
-  cache: {}             // cache de dados por sessão de página
+  cache: {},            // cache de dados por sessão de página
+  mask: (function(){ try{ return localStorage.getItem('ss20_mask_vals')==='1'; }catch(e){ return false; } })()
+};
+
+/* ── OCULTAR VALORES ──
+   Embrulha SulSignCore.fmt só nesta página v2 (não altera o core nem o v1).
+   Como isto roda antes de qualquer mod_*.js ser injetado, todos os módulos
+   capturam a versão embrulhada; a leitura de SS20.mask é dinâmica em cada chamada. */
+(function(){
+  var _orig = SulSignCore.fmt;
+  SulSignCore.fmt = function(v){
+    if(SS20.mask) return 'R$ ••••••';
+    return _orig(v);
+  };
+})();
+
+SS20.updateMaskBtn=function(){
+  var b=document.getElementById('btn-mask'); if(!b) return;
+  var ic=b.querySelector('.ic'), lb=b.querySelector('.lbl');
+  if(SS20.mask){ b.classList.add('hidden'); if(ic)ic.textContent='🙈'; if(lb)lb.textContent='Ocultos'; b.title='Mostrar valores financeiros'; }
+  else{ b.classList.remove('hidden'); if(ic)ic.textContent='👁'; if(lb)lb.textContent='Valores'; b.title='Ocultar valores financeiros'; }
 };
 
 /* ── FETCH SUPABASE ── */
@@ -487,6 +513,12 @@ document.addEventListener('click', function(e){
   if(!el || el===document) return;
   var act=el.getAttribute('data-action');
   if(act==='nav'){ SS20.go(el.getAttribute('data-view')); }
+  else if(act==='toggle-mask'){
+    SS20.mask=!SS20.mask;
+    try{ localStorage.setItem('ss20_mask_vals', SS20.mask?'1':'0'); }catch(err){}
+    SS20.updateMaskBtn();
+    SS20.go(SS20.view);   // re-renderiza a tela atual com os valores mascarados/visíveis
+  }
   else if(act==='logout'){ e.preventDefault(); window.ss20Logout(); }
   else if(act==='go-view'){ SS20.go(el.getAttribute('data-view')); }
 });
@@ -494,6 +526,7 @@ document.addEventListener('click', function(e){
 /* ── BOOT (após login) ── */
 SS20.boot=function(){
   SS20.renderNav();
+  SS20.updateMaskBtn();
   SS20.go('dash');
 };
 
