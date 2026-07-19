@@ -431,25 +431,32 @@ function editorEixo(t, d, eixo){
   h+='</div>';
 
   h+='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">';
-  if(lista){
+  if(lista && lista.length){
     for(var i=0;i<lista.length;i++){
       var p=PDVEXTrelica.porTamanho(lista[i]);
       var tc=PDVEXTrelica.textoSobre(p.hex);
-      h+='<span style="display:inline-flex;align-items:center;gap:6px;background:'+p.hex+';color:'+tc+';font-weight:bold;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid rgba(0,0,0,.25)">'
+      h+='<span style="display:inline-flex;align-items:center;gap:8px;background:'+p.hex+';color:'+tc+';font-weight:bold;font-size:14px;padding:6px 6px 6px 10px;border-radius:7px;border:1px solid rgba(0,0,0,.25)">'
         +lista[i]
-        +'<button data-action="pc-rem" data-id="'+t.id+'" data-eixo="'+eixo+'" data-idx="'+i+'" style="border:none;background:rgba(0,0,0,.2);color:'+tc+';border-radius:4px;width:22px;height:22px;line-height:1;cursor:pointer;font-size:13px;padding:0">✕</button>'
+        +'<button type="button" data-action="pc-rem" data-id="'+t.id+'" data-eixo="'+eixo+'" data-idx="'+i+'" style="border:none;background:rgba(0,0,0,.28);color:'+tc+';border-radius:5px;width:30px;height:30px;line-height:1;cursor:pointer;font-size:15px;padding:0;-webkit-appearance:none">✕</button>'
         +'</span>';
     }
+  } else {
+    h+='<span style="font-size:12px;color:#8A938E;padding:5px 0">Nenhuma peça — toque abaixo para montar.</span>';
   }
-  h+='<select data-action="pc-add" data-id="'+t.id+'" data-eixo="'+eixo+'" style="font-family:inherit;font-size:13px;padding:6px;border:1px dashed #8FA398;border-radius:6px;background:#fff;color:#2F6B50;min-width:110px">';
-  h+='<option value="">+ peça…</option>';
+  h+='</div>';
+
+  /* paleta: um toque adiciona a peça (só click — à prova de iOS) */
+  h+='<div style="margin-top:8px"><div style="font-size:10px;letter-spacing:.5px;color:#8A938E;margin-bottom:5px">TOQUE PARA ADICIONAR</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:5px">';
   for(var k=0;k<PDVEXTrelica.PECAS.length;k++){
     var pc=PDVEXTrelica.PECAS[k];
     if(pc.tipo!=='barra') continue;
-    h+='<option value="'+pc.t+'">'+pc.t+' cm — '+pc.nome+'</option>';
+    var ptc=PDVEXTrelica.textoSobre(pc.hex);
+    h+='<button type="button" data-action="pc-add" data-id="'+t.id+'" data-eixo="'+eixo+'" data-val="'+pc.t+'" '
+      +'style="background:'+pc.hex+';color:'+ptc+';border:1px solid rgba(0,0,0,.22);border-radius:6px;padding:8px 10px;font-family:inherit;font-size:13px;font-weight:bold;cursor:pointer;min-width:44px;-webkit-appearance:none">'+pc.t+'</button>';
   }
-  h+='</select>';
-  if(manual) h+='<button data-action="pc-auto" data-id="'+t.id+'" data-eixo="'+eixo+'" style="border:1px solid #C4CCC7;background:#fff;color:#3A4540;border-radius:6px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:12px">↺ Automático</button>';
+  h+='</div>';
+  if(manual) h+='<button type="button" data-action="pc-auto" data-id="'+t.id+'" data-eixo="'+eixo+'" style="margin-top:8px;border:1px solid #C4CCC7;background:#fff;color:#3A4540;border-radius:6px;padding:8px 12px;cursor:pointer;font-family:inherit;font-size:12px;-webkit-appearance:none">↺ Voltar ao automático</button>';
   h+='</div>';
   if(!horiz && d.nRef>0) h+='<div style="font-size:10px;color:#8A938E;margin-top:6px">Os '+d.nRef+' reforço(s) interno(s) usam esta mesma composição.</div>';
   h+='</div>';
@@ -587,14 +594,15 @@ function achaIdx(id){ for(var i=0;i<trelicas.length;i++) if(trelicas[i].id===id)
 
 document.getElementById('lista').addEventListener('input',function(e){
   var a=e.target.getAttribute('data-action'); if(!a) return;
+  if(a!=='t-nome'&&a!=='t-L'&&a!=='t-A'&&a!=='t-sng'&&a!=='t-qtd') return;
   var id=parseInt(e.target.getAttribute('data-id'),10);
   var i=achaIdx(id); if(i<0) return;
   var t=trelicas[i];
   if(a==='t-nome') t.nome=e.target.value;
-  if(a==='t-L')    t.L=e.target.value;
-  if(a==='t-A')    t.A=e.target.value;
-  if(a==='t-sng')  t.sng=e.target.value;
-  if(a==='t-qtd')  t.qtd=e.target.value;
+  else if(a==='t-L')    t.L=e.target.value;
+  else if(a==='t-A')    t.A=e.target.value;
+  else if(a==='t-sng')  t.sng=e.target.value;
+  else if(a==='t-qtd')  t.qtd=e.target.value;
   atualizarTrelica(t,i);
   atualizarTotal();
 });
@@ -609,24 +617,17 @@ function listaManual(t, i, eixo){
 }
 
 document.getElementById('lista').addEventListener('change',function(e){
-  var a=e.target.getAttribute('data-action'); if(!a) return;
+  var a=e.target.getAttribute('data-action'); if(a!=='t-ref') return;
   var id=parseInt(e.target.getAttribute('data-id'),10);
   var i=achaIdx(id); if(i<0) return;
   var t=trelicas[i];
-  if(a==='t-ref'){ t.ref=e.target.value; }
-  else if(a==='pc-add'){
-    var val=parseInt(e.target.value,10);
-    if(!val){ return; }
-    var eixo=e.target.getAttribute('data-eixo');
-    listaManual(t,i,eixo).push(val);
-  }
-  else return;
+  t.ref=e.target.value;
   atualizarTrelica(t,i);
   atualizarTotal();
 });
 
 document.getElementById('lista').addEventListener('click',function(ev){
-  var el=ev.target.closest?ev.target.closest('[data-action="pc-rem"],[data-action="pc-auto"]'):null;
+  var el=ev.target.closest?ev.target.closest('[data-action="pc-rem"],[data-action="pc-auto"],[data-action="pc-add"]'):null;
   if(!el) return;
   var a=el.getAttribute('data-action');
   var id=parseInt(el.getAttribute('data-id'),10);
@@ -635,12 +636,16 @@ document.getElementById('lista').addEventListener('click',function(ev){
   var eixo=el.getAttribute('data-eixo');
   var key = eixo==='H' ? 'mH' : 'mV';
   if(a==='pc-auto'){ t[key]=null; }
+  else if(a==='pc-add'){
+    var val=parseInt(el.getAttribute('data-val'),10);
+    if(val) listaManual(t,i,eixo).push(val);
+  }
   else {
     var lst=listaManual(t,i,eixo);
     var idx=parseInt(el.getAttribute('data-idx'),10);
     lst.splice(idx,1);
     /* fica em manual mesmo vazio: aresta em vermelho até você recompor.
-       Pra voltar à sugestão original use o botão ↺ Automático. */
+       Pra voltar à sugestão original use o botão ↺ Voltar ao automático. */
   }
   atualizarTrelica(t,i);
   atualizarTotal();
