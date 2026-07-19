@@ -194,7 +194,9 @@ var PDVEXTrelica = (function(){
     return achaveis;
   }
 
-  function decompor(W, H, nDiv){
+  function somaArr(a){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]; return s; }
+
+  function decompor(W, H, nDiv, mH, mV){
     nDiv = (nDiv===2||nDiv===3||nDiv===4) ? nDiv : 1;   /* divisões no eixo horizontal */
     var nRef = nDiv>1 ? nDiv-1 : 0;                      /* reforços verticais internos */
     var vaoH = W - 2*CUBO;
@@ -202,17 +204,36 @@ var PDVEXTrelica = (function(){
     var dH = decomporVao(vaoH);
     var dV = decomporVao(vaoV);
     var avisos=[];
-    if(!dH.ok) avisos.push('Largura: '+dH.motivo+(dH.sugestoes&&dH.sugestoes.length?' — larguras ok próximas: '+dH.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
-    if(!dV.ok) avisos.push('Altura: '+dV.motivo+(dV.sugestoes&&dV.sugestoes.length?' — alturas ok próximas: '+dV.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):''));
 
-    if(nRef>0 && !dV.ok) avisos.push('Reforço: depende do vão vertical, que não fecha — ajuste a altura.');
+    /* override manual: se veio lista de peças do usuário, ela manda */
+    var manH = (mH && mH.length) ? true : false;
+    var manV = (mV && mV.length) ? true : false;
+    var arestaH = manH ? mH.slice() : (dH.ok ? dH.barras : null);
+    var arestaV = manV ? mV.slice() : (dV.ok ? dV.barras : null);
+    var somaH = arestaH ? somaArr(arestaH) : 0;
+    var somaV = arestaV ? somaArr(arestaV) : 0;
+    var okH = manH ? (somaH===vaoH) : dH.ok;
+    var okV = manV ? (somaV===vaoV) : dV.ok;
+
+    if(manH && !okH){
+      var difH = vaoH - somaH;
+      avisos.push('Peças horizontais (manual): somam '+somaH+'cm, vão é '+vaoH+'cm — '+(difH>0?'faltam '+difH+'cm':'sobram '+(-difH)+'cm')+'.');
+    }
+    if(manV && !okV){
+      var difV = vaoV - somaV;
+      avisos.push('Peças verticais (manual): somam '+somaV+'cm, vão é '+vaoV+'cm — '+(difV>0?'faltam '+difV+'cm':'sobram '+(-difV)+'cm')+'.');
+    }
+    if(!manH && !dH.ok) avisos.push('Largura: '+dH.motivo+(dH.sugestoes&&dH.sugestoes.length?' — larguras ok próximas: '+dH.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):'')+' Você pode montar a composição manualmente abaixo.');
+    if(!manV && !dV.ok) avisos.push('Altura: '+dV.motivo+(dV.sugestoes&&dV.sugestoes.length?' — alturas ok próximas: '+dV.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):'')+' Você pode montar a composição manualmente abaixo.');
+
+    if(nRef>0 && !arestaV) avisos.push('Reforço: depende do vão vertical, que não fecha — ajuste a altura ou monte a vertical manualmente.');
 
     var tally={};
     tally[CUBO]=4;
     function add(arr,mult){ for(var i=0;i<arr.length;i++){ tally[arr[i]]=(tally[arr[i]]||0)+mult; } }
-    if(dH.ok) add(dH.barras,2);
-    if(dV.ok) add(dV.barras,2);
-    if(dV.ok && nRef>0) add(dV.barras,nRef);   /* reforços verticais internos, sem cubo */
+    if(arestaH) add(arestaH,2);
+    if(arestaV) add(arestaV,2);
+    if(arestaV && nRef>0) add(arestaV,nRef);   /* reforços verticais internos, sem cubo */
 
     var pecas=[];
     Object.keys(tally).map(Number).sort(function(a,b){return a-b;}).forEach(function(t){
@@ -222,10 +243,12 @@ var PDVEXTrelica = (function(){
 
     return {
       W:W, H:H, vaoH:vaoH, vaoV:vaoV,
-      arestaH: dH.ok?dH.barras:null,
-      arestaV: dV.ok?dV.barras:null,
-      okH:dH.ok, okV:dV.ok,
-      nDiv:nDiv, nRef:(dV.ok?nRef:0),
+      arestaH: arestaH,
+      arestaV: arestaV,
+      okH:okH, okV:okV,
+      manH:manH, manV:manV, somaH:somaH, somaV:somaV,
+      autoH:(dH.ok?dH.barras:null), autoV:(dV.ok?dV.barras:null),
+      nDiv:nDiv, nRef:(arestaV?nRef:0),
       pecas:pecas, avisos:avisos,
       totalPecas: pecas.reduce(function(a,p){return a+p.qtd;},0)
     };
@@ -269,30 +292,40 @@ var PDVEXTrelica = (function(){
         (c>16?'<text x="'+(x+c/2)+'" y="'+(y+c/2)+'" font-family="Arial" font-size="'+Math.max(7,c*0.34)+'" fill="'+tc+'" text-anchor="middle" dominant-baseline="central">30</text>':'')+'</g>';
     }
 
-    if(d.okH){
+    if(d.arestaH){
       var xs=x0+c;
       for(var i=0;i<d.arestaH.length;i++){ var w=d.arestaH[i]*s;
         svg+=barra(xs,y0,w,c,d.arestaH[i],true);
         svg+=barra(xs,y0+ph-c,w,c,d.arestaH[i],true);
         xs+=w;
       }
+      if(d.manH && d.somaH<d.vaoH){
+        var gw=(d.vaoH-d.somaH)*s;
+        svg+='<rect x="'+xs+'" y="'+y0+'" width="'+gw+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+        svg+='<rect x="'+xs+'" y="'+(y0+ph-c)+'" width="'+gw+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      }
     } else {
       svg+='<rect x="'+(x0+c)+'" y="'+y0+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
       svg+='<rect x="'+(x0+c)+'" y="'+(y0+ph-c)+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
     }
-    if(d.okV){
+    if(d.arestaV){
       var ys=y0+c;
       for(var j=0;j<d.arestaV.length;j++){ var hh=d.arestaV[j]*s;
         svg+=barra(x0,ys,c,hh,d.arestaV[j],false);
         svg+=barra(x0+pw-c,ys,c,hh,d.arestaV[j],false);
         ys+=hh;
       }
+      if(d.manV && d.somaV<d.vaoV){
+        var gv=(d.vaoV-d.somaV)*s;
+        svg+='<rect x="'+x0+'" y="'+ys+'" width="'+c+'" height="'+gv+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+        svg+='<rect x="'+(x0+pw-c)+'" y="'+ys+'" width="'+c+'" height="'+gv+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      }
     } else {
       svg+='<rect x="'+x0+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
       svg+='<rect x="'+(x0+pw-c)+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
     }
 
-    if(d.okV && d.nRef>0){
+    if(d.arestaV && d.nRef>0){
       for(var rk=1; rk<d.nDiv; rk++){
         var xc = x0 + c + (pw-2*c)*(rk/d.nDiv);
         var xr = xc - c/2;
@@ -318,7 +351,7 @@ var PDVEXTrelica = (function(){
     return svg;
   }
 
-  return { CUBO:CUBO, PECAS:PECAS, decompor:decompor, mapaSVG:mapaSVG, porTamanho:porTamanho };
+  return { CUBO:CUBO, PECAS:PECAS, decompor:decompor, mapaSVG:mapaSVG, porTamanho:porTamanho, textoSobre:textoSobre };
 })();
 
 /* ═══════════════════════════════════════════════════════════════
@@ -330,7 +363,7 @@ var _decomps=[];                  /* último resultado de cada uma */
 var trelicas=[ novaTrelica() ];   /* lista de treliças do evento */
 
 function novaTrelica(){
-  return { id:_seq++, nome:'', L:'500', A:'300', sng:'10', qtd:'1', ref:'0' };
+  return { id:_seq++, nome:'', L:'500', A:'300', sng:'10', qtd:'1', ref:'0', mH:null, mV:null };
 }
 
 function num(v){ var n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
@@ -374,6 +407,55 @@ function renderLista(){
   atualizarTotal();
 }
 
+/* ── editor de composição manual de um eixo (H ou V) ── */
+function editorEixo(t, d, eixo){
+  var horiz = (eixo==='H');
+  var lista = horiz ? d.arestaH : d.arestaV;
+  var vao   = horiz ? d.vaoH    : d.vaoV;
+  var manual= horiz ? d.manH    : d.manV;
+  var soma  = lista ? lista.reduce(function(a,b){return a+b;},0) : 0;
+  var dif   = vao - soma;
+
+  var h='<div class="ed-eixo" style="border:1px solid #DCE2DE;border-radius:7px;padding:10px 10px 8px;margin:8px 0;background:#FAFBFA">';
+  h+='<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:7px">';
+  h+='<b style="font-size:11px;letter-spacing:1px;color:#3A4540">'+(horiz?'HORIZONTAL':'VERTICAL'+(d.nRef>0?' + REFORÇOS':''))+'</b>';
+  h+='<span style="font-size:10px;padding:2px 7px;border-radius:9px;background:'+(manual?'#FFF3D6;color:#8A6A12':'#E8F0EB;color:#2F6B50')+'">'+(manual?'MANUAL':'AUTO')+'</span>';
+  if(lista && lista.length){
+    var okBadge = dif===0
+      ? '<span style="font-size:11px;color:#2F6B50;font-weight:bold">'+soma+' / '+vao+' cm ✓</span>'
+      : '<span style="font-size:11px;color:#C0392B;font-weight:bold">'+soma+' / '+vao+' cm · '+(dif>0?'faltam '+dif:'sobram '+(-dif))+' cm</span>';
+    h+=okBadge;
+  } else {
+    h+='<span style="font-size:11px;color:#C0392B">vão de '+vao+'cm sem composição — adicione peças</span>';
+  }
+  h+='</div>';
+
+  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">';
+  if(lista){
+    for(var i=0;i<lista.length;i++){
+      var p=PDVEXTrelica.porTamanho(lista[i]);
+      var tc=PDVEXTrelica.textoSobre(p.hex);
+      h+='<span style="display:inline-flex;align-items:center;gap:6px;background:'+p.hex+';color:'+tc+';font-weight:bold;font-size:13px;padding:5px 8px;border-radius:6px;border:1px solid rgba(0,0,0,.25)">'
+        +lista[i]
+        +'<button data-action="pc-rem" data-id="'+t.id+'" data-eixo="'+eixo+'" data-idx="'+i+'" style="border:none;background:rgba(0,0,0,.2);color:'+tc+';border-radius:4px;width:22px;height:22px;line-height:1;cursor:pointer;font-size:13px;padding:0">✕</button>'
+        +'</span>';
+    }
+  }
+  h+='<select data-action="pc-add" data-id="'+t.id+'" data-eixo="'+eixo+'" style="font-family:inherit;font-size:13px;padding:6px;border:1px dashed #8FA398;border-radius:6px;background:#fff;color:#2F6B50;min-width:110px">';
+  h+='<option value="">+ peça…</option>';
+  for(var k=0;k<PDVEXTrelica.PECAS.length;k++){
+    var pc=PDVEXTrelica.PECAS[k];
+    if(pc.tipo!=='barra') continue;
+    h+='<option value="'+pc.t+'">'+pc.t+' cm — '+pc.nome+'</option>';
+  }
+  h+='</select>';
+  if(manual) h+='<button data-action="pc-auto" data-id="'+t.id+'" data-eixo="'+eixo+'" style="border:1px solid #C4CCC7;background:#fff;color:#3A4540;border-radius:6px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:12px">↺ Automático</button>';
+  h+='</div>';
+  if(!horiz && d.nRef>0) h+='<div style="font-size:10px;color:#8A938E;margin-top:6px">Os '+d.nRef+' reforço(s) interno(s) usam esta mesma composição.</div>';
+  h+='</div>';
+  return h;
+}
+
 /* ── cálculo e saída de UMA treliça ── */
 function atualizarTrelica(t, idx){
   var W=paraCm(t.L), H=paraCm(t.A), sng=num(t.sng), qtd=Math.max(1,Math.round(num(t.qtd))||1);
@@ -382,7 +464,7 @@ function atualizarTrelica(t, idx){
   if(W<=0||H<=0){ out.innerHTML='<div class="aviso info">Informe largura e altura da estrutura.</div>'; _decomps[idx]=null; return; }
 
   var nDiv=parseInt(t.ref,10); if(!(nDiv===2||nDiv===3||nDiv===4)) nDiv=1;
-  var d=PDVEXTrelica.decompor(W,H,nDiv);
+  var d=PDVEXTrelica.decompor(W,H,nDiv,t.mH,t.mV);
   d.qtd=qtd; d.nome=t.nome; d.sng=sng;
   _decomps[idx]=d;
   var artL=W+2*sng, artA=H+2*sng;
@@ -413,7 +495,11 @@ function atualizarTrelica(t, idx){
     '</tr>';
   });
   html+='</tbody></table>';
-  if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+d.vaoH+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+d.vaoV+'cm'+(d.nRef>0?' · '+d.nRef+' reforço(s) vertical(is) idêntico(s) à vertical, sem cubo':'')+'</div>';
+  if(d.arestaH) html+='<div style="font-size:11px;color:#777">Cada aresta horizontal (×2): '+d.arestaH.join(' + ')+' = '+(d.manH?d.somaH:d.vaoH)+'cm · Cada vertical (×2): '+(d.arestaV?d.arestaV.join(' + '):'—')+' = '+(d.manV?d.somaV:d.vaoV)+'cm'+(d.nRef>0?' · '+d.nRef+' reforço(s) vertical(is) idêntico(s) à vertical, sem cubo':'')+'</div>';
+
+  html+='<div class="sec">C O M P O S I Ç Ã O &nbsp; D A S &nbsp; A R E S T A S</div>';
+  html+=editorEixo(t, d, 'H');
+  html+=editorEixo(t, d, 'V');
 
   html+='<div class="sec">M A P A &nbsp; D E &nbsp; M O N T A G E M</div>';
   html+='<div class="mapa-wrap">'+PDVEXTrelica.mapaSVG(d)+'</div>';
@@ -513,12 +599,49 @@ document.getElementById('lista').addEventListener('input',function(e){
   atualizarTotal();
 });
 
+function listaManual(t, i, eixo){
+  var key = eixo==='H' ? 'mH' : 'mV';
+  if(t[key] && t[key].length) return t[key];
+  var d=_decomps[i];
+  var base = d ? (eixo==='H' ? d.arestaH : d.arestaV) : null;
+  t[key] = base ? base.slice() : [];
+  return t[key];
+}
+
 document.getElementById('lista').addEventListener('change',function(e){
-  var a=e.target.getAttribute('data-action'); if(a!=='t-ref') return;
+  var a=e.target.getAttribute('data-action'); if(!a) return;
   var id=parseInt(e.target.getAttribute('data-id'),10);
   var i=achaIdx(id); if(i<0) return;
-  trelicas[i].ref=e.target.value;
-  atualizarTrelica(trelicas[i],i);
+  var t=trelicas[i];
+  if(a==='t-ref'){ t.ref=e.target.value; }
+  else if(a==='pc-add'){
+    var val=parseInt(e.target.value,10);
+    if(!val){ return; }
+    var eixo=e.target.getAttribute('data-eixo');
+    listaManual(t,i,eixo).push(val);
+  }
+  else return;
+  atualizarTrelica(t,i);
+  atualizarTotal();
+});
+
+document.getElementById('lista').addEventListener('click',function(ev){
+  var el=ev.target.closest?ev.target.closest('[data-action="pc-rem"],[data-action="pc-auto"]'):null;
+  if(!el) return;
+  var a=el.getAttribute('data-action');
+  var id=parseInt(el.getAttribute('data-id'),10);
+  var i=achaIdx(id); if(i<0) return;
+  var t=trelicas[i];
+  var eixo=el.getAttribute('data-eixo');
+  var key = eixo==='H' ? 'mH' : 'mV';
+  if(a==='pc-auto'){ t[key]=null; }
+  else {
+    var lst=listaManual(t,i,eixo);
+    var idx=parseInt(el.getAttribute('data-idx'),10);
+    lst.splice(idx,1);
+    if(!lst.length) t[key]=null;   /* esvaziou → volta ao automático */
+  }
+  atualizarTrelica(t,i);
   atualizarTotal();
 });
 
