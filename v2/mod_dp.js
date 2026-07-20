@@ -18,14 +18,36 @@
     return cat.indexOf('mão de obra')>=0||cat.indexOf('mao de obra')>=0;
   }
 
+  function norm(s){
+    s=String(s||'').toUpperCase();
+    try{ s=s.normalize('NFD').replace(/[\u0300-\u036f]/g,''); }catch(err){}
+    return s.replace(/\s+/g,' ').trim();
+  }
+  /* casa nome do lançamento com o cadastro: igualdade exata ou prefixo único */
+  function matchColab(nome,colabs){
+    var n=norm(nome),i,hit=null,hits=0;
+    if(!n)return null;
+    for(i=0;i<colabs.length;i++){
+      var cn=norm(colabs[i].nome);
+      if(cn===n) return colabs[i];
+      if(cn.indexOf(n+' ')===0 || n.indexOf(cn+' ')===0){ hit=colabs[i]; hits++; }
+    }
+    return (hits===1)?hit:null;
+  }
+
   function fetchAll(){
     if(SS20.cache.dp) return Promise.resolve(SS20.cache.dp);
-    return SS20.sb('lancamentos?select=valor,categoria,orcamento_numero,data,pessoa,funcao,descricao,diarias,valor_diaria,horas_extras,tipo_mo,local_mo&deletado_em=is.null')
-      .then(function(rows){
-        var data=rows.filter(function(l){return !isTreino(l.orcamento_numero)&&ehMO(l);});
-        SS20.cache.dp=data;
-        return data;
-      });
+    return Promise.all([
+      SS20.sb('lancamentos?select=valor,categoria,orcamento_numero,data,pessoa,funcao,descricao,diarias,valor_diaria,horas_extras,tipo_mo,local_mo&deletado_em=is.null'),
+      SS20.sb('colaboradores?select=nome,funcao,documento,setor,valor_diaria,ativo&order=setor.asc,nome.asc')
+    ]).then(function(r){
+      var data={
+        mo:r[0].filter(function(l){return !isTreino(l.orcamento_numero)&&ehMO(l);}),
+        colabs:r[1]||[]
+      };
+      SS20.cache.dp=data;
+      return data;
+    });
   }
 
   function render(c){
@@ -36,13 +58,14 @@
   }
 
   function draw(c,d){
+    var colabs=d.colabs;
     /* meses disponíveis */
     var mesesSet={};
-    d.forEach(function(l){ if(l.data)mesesSet[l.data.slice(0,7)]=1; });
+    d.mo.forEach(function(l){ if(l.data)mesesSet[l.data.slice(0,7)]=1; });
     var meses=Object.keys(mesesSet).sort().reverse();
     if(st.mes===null&&meses.length)st.mes=meses[0]; // default: mês mais recente
 
-    var filt=d.filter(function(l){
+    var filt=d.mo.filter(function(l){
       if(!st.mes)return true;
       return (l.data||'').slice(0,7)===st.mes;
     });
@@ -63,6 +86,8 @@
     });
     var pessoas=Object.keys(porPessoa).map(function(k){return porPessoa[k];})
       .sort(function(a,b){return b.valor-a.valor;});
+    pessoas.forEach(function(p){ p.cad=(p.nome==='(SEM IDENTIFICAÇÃO)')?null:matchColab(p.nome,colabs); });
+    var foraCadastro=pessoas.filter(function(p){return !p.cad&&p.nome!=='(SEM IDENTIFICAÇÃO)';}).length;
 
     /* por job */
     var porJob={};
@@ -88,7 +113,7 @@
     h+='<p style="color:var(--mut);font-size:12.5px;margin-bottom:18px">Fonte: lançamentos com diárias ou categoria Mão de Obra · HE convertida a 1/8 da diária (regra do Fechamento PDVEX)</p>';
 
     h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px">';
-    h+=kpi('Pessoas',pessoas.length,'','var(--ink)');
+    h+=kpi('Pessoas',pessoas.length,colabs.length+' no cadastro'+(foraCadastro?' · '+foraCadastro+' fora':''),'var(--ink)');
     h+=kpi('Diárias',totDiarias.toFixed(1).replace('.0',''),'','var(--blue)');
     h+=kpi('Horas extras',totHE.toFixed(1).replace('.0','')+'h','','var(--warn)');
     h+=kpi('Total MO',fmt(totValor),'','var(--accent)');
@@ -107,7 +132,10 @@
       +'<th style="text-align:right;padding:4px 6px;font-size:10px;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--line)">Total</th></tr></thead><tbody>';
     pessoas.forEach(function(p){
       var nJobs=Object.keys(p.jobs).length;
-      h+='<tr><td style="padding:7px 6px;border-bottom:1px solid var(--line)">'+esc(p.nome)
+      var tag='';
+      if(p.cad&&p.cad.setor) tag=' <span style="font-size:10px;color:var(--mut)">· '+esc(p.cad.setor)+'</span>';
+      else if(!p.cad&&p.nome!=='(SEM IDENTIFICAÇÃO)') tag=' <span style="font-size:10px;color:var(--warn)">· fora do cadastro</span>';
+      h+='<tr><td style="padding:7px 6px;border-bottom:1px solid var(--line)">'+esc(p.nome)+tag
         +(nJobs?' <span style="font-size:10px;color:var(--mut)">· '+nJobs+' job'+(nJobs>1?'s':'')+'</span>':'')+'</td>'
         +'<td style="padding:7px 6px;border-bottom:1px solid var(--line);text-align:right">'+(p.diarias?p.diarias.toFixed(1).replace('.0',''):'—')+'</td>'
         +'<td style="padding:7px 6px;border-bottom:1px solid var(--line);text-align:right">'+(p.he?p.he.toFixed(1).replace('.0','')+'h':'—')+'</td>'
@@ -126,6 +154,33 @@
         +'<span style="font-weight:700">'+fmt(x.v)+' <span style="color:var(--mut);font-weight:400;font-size:11px">'+pctJ+'%</span></span></div>'
         +'<div style="height:6px;background:var(--paper);border-radius:4px;overflow:hidden"><div style="width:'+pctJ+'%;height:100%;background:var(--accent)"></div></div></div>';
     });
+    h+='</div>';
+
+    /* cadastro de colaboradores (fonte: tabela colaboradores) */
+    var porSetor={}, ordemSetor=[];
+    colabs.forEach(function(cb){
+      var s2=cb.setor||'Sem setor';
+      if(!porSetor[s2]){ porSetor[s2]=[]; ordemSetor.push(s2); }
+      porSetor[s2].push(cb);
+    });
+    var pendDoc=0;
+    h+='<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;grid-column:1/-1">';
+    h+='<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:12px">Cadastro de colaboradores <span style="font-weight:400;text-transform:none;letter-spacing:0">· fonte única · alimenta o Credenciamento</span></div>';
+    if(!colabs.length)h+='<div style="color:var(--mut);font-size:12px">Tabela colaboradores vazia.</div>';
+    ordemSetor.forEach(function(s2){
+      h+='<div style="font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin:12px 0 6px">'+esc(s2)+'</div>';
+      porSetor[s2].forEach(function(cb){
+        var badges='';
+        if(!cb.documento){ badges+=' <span style="font-size:10px;color:var(--warn)">⚠ sem documento</span>'; pendDoc++; }
+        if(!cb.funcao) badges+=' <span style="font-size:10px;color:var(--warn)">⚠ sem função</span>';
+        if(cb.ativo===false) badges+=' <span style="font-size:10px;color:var(--mut)">inativo</span>';
+        h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;flex-wrap:wrap">'
+          +'<span><b>'+esc(cb.nome)+'</b>'+(cb.funcao?' <span style="color:var(--mut)">· '+esc(cb.funcao)+'</span>':'')+badges+'</span>'
+          +'<span style="color:var(--mut)">'+(val(cb.valor_diaria)?('diária '+fmt(cb.valor_diaria)):'')+'</span>'
+          +'</div>';
+      });
+    });
+    if(pendDoc)h+='<div style="margin-top:10px;font-size:11.5px;color:var(--warn)">'+pendDoc+' colaborador(es) sem documento — não podem entrar em credenciamento até completar.</div>';
     h+='</div>';
 
     h+='</div></div>';
