@@ -500,8 +500,9 @@ SS20.go=function(view){
     else document.getElementById('ss-content').innerHTML='<div class="err-view">Módulo mod_'+view+'.js não registrou render().</div>';
   };
   s.onerror=function(){
-    SS20.loaded[view]=true;
-    document.getElementById('ss-content').innerHTML='<div class="err-view">Não foi possível carregar mod_'+view+'.js</div>';
+    if(s.parentNode) s.parentNode.removeChild(s);
+    document.getElementById('ss-content').innerHTML='<div class="err-view">Não foi possível carregar mod_'+view+'.js'
+      +'<br><br><button data-action="nav" data-view="'+view+'" style="background:none;border:1px solid #8B8E97;border-radius:6px;color:inherit;padding:8px 20px;cursor:pointer">Tentar novamente</button></div>';
   };
   document.body.appendChild(s);
 };
