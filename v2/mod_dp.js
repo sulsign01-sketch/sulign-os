@@ -7,7 +7,7 @@
    ═══════════════════════════════════════════════════════════════ */
 (function(){
   var fmt=SulSignCore.fmt;
-  var st={mes:null}; // 'YYYY-MM' ou null = todos
+  var st={mes:null, form:null}; // mes: 'YYYY-MM' ou null=todos · form: ficha em edição ou null
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
   function isTreino(x){ return (x||'').indexOf('TREINO')>=0; }
@@ -39,7 +39,7 @@
     if(SS20.cache.dp) return Promise.resolve(SS20.cache.dp);
     return Promise.all([
       SS20.sb('lancamentos?select=valor,categoria,orcamento_numero,data,pessoa,funcao,descricao,diarias,valor_diaria,horas_extras,tipo_mo,local_mo&deletado_em=is.null'),
-      SS20.sb('colaboradores?select=nome,funcao,documento,setor,valor_diaria,ativo&order=setor.asc,nome.asc')
+      SS20.sb('colaboradores?select=id,nome,funcao,documento,setor,valor_diaria,vinculo,ativo,obs&order=setor.asc,nome.asc')
     ]).then(function(r){
       var data={
         mo:r[0].filter(function(l){return !isTreino(l.orcamento_numero)&&ehMO(l);}),
@@ -55,6 +55,104 @@
     .catch(function(e){
       c.innerHTML='<div class="err-view">Erro ao carregar MO: '+esc(e.message)+'</div>';
     });
+    if(!SS20._dpBound){
+      SS20._dpBound=true;
+      c.addEventListener('click',function(ev){
+        var t=ev.target;
+        while(t&&t!==c&&!(t.dataset&&t.dataset.action)) t=t.parentNode;
+        if(!t||t===c) return;
+        var a=t.dataset.action;
+        if(a==='dp-novo'||a==='dp-edit'||a==='dp-cancel'||a==='dp-save'){
+          ev.preventDefault();
+          if(a==='dp-novo') abrirForm(c,null);
+          else if(a==='dp-edit') abrirForm(c,t.dataset.id);
+          else if(a==='dp-cancel'){ st.form=null; redraw(c); }
+          else if(a==='dp-save') salvar(c);
+        }
+      });
+    }
+  }
+
+  /* re-desenha usando o cache atual, sem refazer o fetch */
+  function redraw(c){ if(SS20.cache.dp) draw(c,SS20.cache.dp); else render(c); }
+
+  /* abre o formulário em branco (id=null) ou com a ficha carregada */
+  function abrirForm(c,id){
+    var col=null;
+    if(id&&SS20.cache.dp){
+      SS20.cache.dp.colabs.some(function(cb){ if(String(cb.id)===String(id)){ col=cb; return true; } return false; });
+    }
+    st.form = col ? {
+      id:col.id, nome:col.nome||'', funcao:col.funcao||'', documento:col.documento||'',
+      setor:col.setor||'', valor_diaria:(col.valor_diaria==null?'':col.valor_diaria),
+      vinculo:col.vinculo||'fixo', ativo:col.ativo!==false, obs:col.obs||''
+    } : {
+      id:null, nome:'', funcao:'', documento:'', setor:'', valor_diaria:'',
+      vinculo:'fixo', ativo:true, obs:''
+    };
+    redraw(c);
+  }
+
+  function salvar(c){
+    var g=function(idd){ var el=document.getElementById(idd); return el?el.value:''; };
+    var nome=g('dpf-nome').trim();
+    if(!nome){ alert('Nome é obrigatório.'); return; }
+    var vd=g('dpf-diaria').trim().replace(',','.');
+    var body={
+      nome:nome,
+      funcao:g('dpf-funcao').trim()||null,
+      documento:g('dpf-doc').trim()||null,
+      setor:g('dpf-setor').trim()||null,
+      valor_diaria: vd!==''?(parseFloat(vd)||null):null,
+      vinculo:g('dpf-vinculo')||null,
+      obs:g('dpf-obs').trim()||null,
+      ativo: document.getElementById('dpf-ativo')?document.getElementById('dpf-ativo').checked:true,
+      atualizado_em:new Date().toISOString()
+    };
+    var btn=document.getElementById('dpf-save'); if(btn){ btn.disabled=true; btn.textContent='Salvando…'; }
+    var isEdit=st.form&&st.form.id;
+    var p=isEdit
+      ? SS20.sbw('colaboradores?id=eq.'+encodeURIComponent(st.form.id),'PATCH',body)
+      : SS20.sbw('colaboradores','POST',body);
+    p.then(function(){
+      SS20.cache.dp=null; st.form=null; render(c);
+    }).catch(function(e){
+      if(btn){ btn.disabled=false; btn.textContent='Salvar'; }
+      alert('Erro ao salvar: '+e.message);
+    });
+  }
+
+  function formHTML(){
+    var f=st.form, isEdit=!!f.id;
+    var inp=function(id,lbl,valv,ph){
+      return '<div><label style="display:block;font-size:11px;color:var(--mut);margin:0 0 3px">'+lbl+'</label>'
+        +'<input id="'+id+'" type="text" value="'+esc(valv)+'" placeholder="'+esc(ph||'')+'" '
+        +'style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;background:var(--paper);box-sizing:border-box"></div>';
+    };
+    var h='<div style="background:var(--panel);border:1px solid var(--accent);border-radius:var(--radius);padding:18px;margin-bottom:14px">';
+    h+='<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--accent);margin-bottom:12px">'+(isEdit?'Editar ficha':'Novo colaborador')+'</div>';
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 14px">';
+    h+=inp('dpf-nome','Nome *',f.nome,'Nome completo');
+    h+=inp('dpf-funcao','Função',f.funcao,'ex.: Forrador');
+    h+=inp('dpf-doc','Documento (CPF/RG)',f.documento,'com ou sem máscara');
+    h+=inp('dpf-setor','Setor',f.setor,'ex.: Forração');
+    h+=inp('dpf-diaria','Valor diária (R$)',f.valor_diaria,'ex.: 250');
+    h+='<div><label style="display:block;font-size:11px;color:var(--mut);margin:0 0 3px">Vínculo</label>'
+      +'<select id="dpf-vinculo" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;background:var(--paper);box-sizing:border-box">'
+      +'<option value="fixo"'+(f.vinculo==='fixo'?' selected':'')+'>Fixo</option>'
+      +'<option value="freela"'+(f.vinculo==='freela'?' selected':'')+'>Freela</option>'
+      +'<option value="terceiro"'+(f.vinculo==='terceiro'?' selected':'')+'>Terceiro</option>'
+      +'</select></div>';
+    h+='</div>';
+    h+='<div style="margin-top:12px"><label style="display:block;font-size:11px;color:var(--mut);margin:0 0 3px">Observação</label>'
+      +'<input id="dpf-obs" type="text" value="'+esc(f.obs)+'" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;font-family:inherit;background:var(--paper);box-sizing:border-box"></div>';
+    h+='<label style="display:inline-flex;align-items:center;gap:6px;font-size:12.5px;margin-top:12px;cursor:pointer">'
+      +'<input id="dpf-ativo" type="checkbox"'+(f.ativo?' checked':'')+'> Ativo</label>';
+    h+='<div style="display:flex;gap:10px;margin-top:14px">';
+    h+='<button id="dpf-save" data-action="dp-save" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:9px 22px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit">Salvar</button>';
+    h+='<button data-action="dp-cancel" style="background:none;border:1px solid var(--line);border-radius:8px;padding:9px 18px;font-size:13px;cursor:pointer;font-family:inherit;color:inherit">Cancelar</button>';
+    h+='</div></div>';
+    return h;
   }
 
   function draw(c,d){
@@ -119,6 +217,8 @@
     h+=kpi('Total MO',fmt(totValor),'','var(--accent)');
     h+='</div>';
 
+    if(st.form) h+=formHTML();
+
     h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px">';
 
     /* por pessoa */
@@ -165,7 +265,10 @@
     });
     var pendDoc=0;
     h+='<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;grid-column:1/-1">';
-    h+='<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:12px">Cadastro de colaboradores <span style="font-weight:400;text-transform:none;letter-spacing:0">· fonte única · alimenta o Credenciamento</span></div>';
+    h+='<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">';
+    h+='<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut)">Cadastro de colaboradores <span style="font-weight:400;text-transform:none;letter-spacing:0">· fonte única · alimenta o Credenciamento</span></div>';
+    h+='<button data-action="dp-novo" style="background:var(--accent);color:#fff;border:none;border-radius:8px;padding:7px 16px;font-size:12.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">＋ Novo</button>';
+    h+='</div>';
     if(!colabs.length)h+='<div style="color:var(--mut);font-size:12px">Tabela colaboradores vazia.</div>';
     ordemSetor.forEach(function(s2){
       h+='<div style="font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin:12px 0 6px">'+esc(s2)+'</div>';
@@ -174,9 +277,13 @@
         if(!cb.documento){ badges+=' <span style="font-size:10px;color:var(--warn)">⚠ sem documento</span>'; pendDoc++; }
         if(!cb.funcao) badges+=' <span style="font-size:10px;color:var(--warn)">⚠ sem função</span>';
         if(cb.ativo===false) badges+=' <span style="font-size:10px;color:var(--mut)">inativo</span>';
+        if(cb.vinculo) badges+=' <span style="font-size:10px;color:var(--blue)">· '+esc(cb.vinculo)+'</span>';
         h+='<div style="display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px;flex-wrap:wrap">'
           +'<span><b>'+esc(cb.nome)+'</b>'+(cb.funcao?' <span style="color:var(--mut)">· '+esc(cb.funcao)+'</span>':'')+badges+'</span>'
-          +'<span style="color:var(--mut)">'+(val(cb.valor_diaria)?('diária '+fmt(cb.valor_diaria)):'')+'</span>'
+          +'<span style="display:flex;align-items:center;gap:12px;color:var(--mut)">'
+          +(val(cb.valor_diaria)?('<span>diária '+fmt(cb.valor_diaria)+'</span>'):'')
+          +'<a href="#" data-action="dp-edit" data-id="'+esc(cb.id)+'" style="color:var(--accent);font-weight:600;font-size:11.5px">editar</a>'
+          +'</span>'
           +'</div>';
       });
     });
