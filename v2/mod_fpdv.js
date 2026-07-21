@@ -38,13 +38,14 @@
     var cat=(ln.categoria||'').trim();
     var tipo=(ln.tipo_mo||'').toLowerCase();
     var loc=(ln.local_mo||'galpao').toLowerCase();
+    var ehCampo=(loc==='campo'||loc==='evento');
     if(cat==='Mão de Obra'){
-      if(tipo==='free') return (loc==='campo')?'MO FREE CAMPO':'MO FREE';
-      if(tipo==='fixo') return (loc==='campo')?'MO FIXO CAMPO':'MO FIXO';
+      if(tipo==='free') return ehCampo?'MO FREE CAMPO':'MO FREE';
+      if(tipo==='fixo') return ehCampo?'MO FIXO CAMPO':'MO FIXO';
       return 'MO 3º';
     }
     if(cat==='Serviços') return 'MO 3º';
-    if(cat==='Material'||cat==='Insumo'||cat==='Verba Produção'||cat==='Ferramenta'||cat==='Imprevisto') return 'MATERIAIS';
+    if(cat==='Material'||cat==='Materiais'||cat==='Insumo'||cat==='Locação'||cat==='Verba Produção'||cat==='Ferramenta'||cat==='Imprevisto') return 'MATERIAIS';
     if(cat==='Comunicação Visual') return 'COM. VISUAL';
     if(cat==='Logística'||cat==='Transporte') return 'LOGÍSTICA';
     if(cat==='Alimentação') return 'ALIMENTAÇÃO';
@@ -65,6 +66,7 @@
   function montaObs(ln){
     var partes=[];
     if(ln.bloco) partes.push('Bloco: '+ln.bloco);
+    if(ln.categoria==='Locação') partes.push('locação PDVEX');
     if(ln.categoria==='Serviços') partes.push('Serviços');
     if(ln.categoria==='Verba Produção') partes.push('Verba Produção');
     if(ln.tem_nota===false) partes.push('sem nota');
@@ -173,7 +175,6 @@
     for(i=0;i<rows.length;i++){
       var ln=rows[i];
       var v=parseFloat(ln.valor)||0;
-      if(v===0) continue;
       var aba=classifica(ln);
       if(!aba){ foraFechamento.push(ln); continue; }
       if(aba.indexOf('MO F')===0 && !(parseFloat(ln.diarias)>0)) moSemDetalhe++;
@@ -343,7 +344,7 @@
       var ln=lista[i];
       var desc=montaDescritivo(ln);
       var v=parseFloat(ln.valor)||0;
-      if(temOC) aoa.push([dataBR(ln.data), desc, v, ln.oc_numero||'', montaObs(ln)]);
+      if(temOC) aoa.push([dataBR(ln.data), desc, v, ln.ordem_compra||ln.oc_numero||'', montaObs(ln)]);
       else      aoa.push([dataBR(ln.data), desc, v, montaObs(ln)]);
       temDado=true; linhaExcel++;
     }
