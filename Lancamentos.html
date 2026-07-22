@@ -1198,6 +1198,12 @@ var SUBCATS={
   'Mão de Obra':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
   'Serviços':['Contabilidade','Juridico','TI','Consultoria','Manutencao','Terceirizado'],
   'Logística':['Frete','Combustivel','Estacionamento','Pedagio','Transporte Equipe'],
+  'Locação':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
+  'Locação Equipamentos':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
+  'Locação PDVEX':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
+  'Locação Equipamentos PDVEX':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
+  'Mão de Obra PDVEX':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
+  'Material PDVEX':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
   'Alimentação':['Equipe','Cliente'],
   'Imposto':['Simples Nacional','ISS','INSS','FGTS','IRRF','Outros'],
   'Comissão':['Vendedor','Agencia','BV'],
@@ -1219,6 +1225,38 @@ var SUBCATS={
   'Transporte':['Frete','Combustivel','Aplicativo','Pedagio'],
   'Seguro':['Predial','Veiculo','Responsabilidade Civil']
 };
+/* ═══ CATEGORIAS DE LOCACAO / PDVEX ═══
+   Os dropdowns de categoria estao espalhados em varios <select> no HTML, cada
+   um com uma lista propria. Em vez de editar todos na mao (e esquecer um na
+   proxima vez), as categorias novas sao injetadas em runtime a partir do
+   sulsign_core.js, que e a fonte unica.
+   Alvos: apenas os selects de CUSTO DE JOB. Despesas fixas e receitas ficam
+   de fora de proposito — dominios diferentes. */
+var SELECTS_CUSTO_JOB = ['f-categoria','filt-cat','pp-cat','cce-cat','cc-cat-sel'];
+
+function injetarCategoriasExtras(){
+  if(!window.SulSignCore || !SulSignCore.CATEGORIAS_LOCACAO) return;
+  var novas = SulSignCore.CATEGORIAS_LOCACAO;
+  SELECTS_CUSTO_JOB.forEach(function(id){
+    var sel = document.getElementById(id);
+    if(!sel) return;
+    var existentes = {};
+    Array.prototype.forEach.call(sel.options, function(o){ existentes[o.value||o.text] = 1; });
+    novas.forEach(function(cat){
+      if(existentes[cat]) return;
+      var opt = document.createElement('option');
+      opt.value = cat; opt.text = cat;
+      sel.appendChild(opt);
+    });
+  });
+}
+
+if(document.readyState === 'loading'){
+  document.addEventListener('DOMContentLoaded', injetarCategoriasExtras);
+}else{
+  injetarCategoriasExtras();
+}
+
 function popularSubcat(selCatId,selSubId,manter){
   var c=document.getElementById(selCatId), s2=document.getElementById(selSubId);
   if(!c||!s2)return;
@@ -3147,7 +3185,13 @@ function renderFluxoDetalheMes(mes){
     // Células editáveis inline só para lançamentos (não aportes)
     var catCell, jobCell;
     if(it.origem==='lancamento'){
-      var cats = ['Material','Mão de Obra','Logística','Imposto','Serviços','Receita de Job','Comissão','Alimentação','Verba Produção','Outros'];
+      /* usa a lista oficial do core: se a categoria do lancamento nao estivesse
+         aqui, o select renderizaria com a primeira opcao marcada e uma edicao
+         acidental sobrescreveria a categoria real. */
+      var cats = (window.SulSignCore && SulSignCore.CATEGORIAS)
+        ? SulSignCore.CATEGORIAS.slice()
+        : ['Material','Mão de Obra','Logística','Imposto','Serviços','Receita de Job','Comissão','Alimentação','Verba Produção','Outros'];
+      if(it.cat && cats.indexOf(it.cat)<0) cats.push(it.cat);
       var catOpts = cats.map(function(c){
         return '<option value="'+c+'"'+(it.cat===c?' selected':'')+'>'+c+'</option>';
       }).join('');
