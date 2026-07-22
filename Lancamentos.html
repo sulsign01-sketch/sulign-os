@@ -1714,7 +1714,7 @@ function renderImpostos(){
       +(imp.multa&&parseFloat(imp.multa)?'<div class="imp-meta">Principal: '+fmt(imp.valor)+' · Multa/Juros: '+fmt(imp.multa)+'</div>':'')
       +(imp.comprovante_url?'<div class="imp-meta" style="margin-top:4px;">Comprovante: <a href="'+imp.comprovante_url+'" target="_blank" style="color:#1565c0;text-decoration:none;">📎 abrir</a></div>':'')
       +(imp.obs?'<div class="imp-meta" style="margin-top:4px;">Obs: '+imp.obs+'</div>':'')
-      +(imp.status==='Pendente'?'<button onclick="marcarPago(\''+imp.id+'\'" style="margin-top:8px;padding:5px 12px;background:#2d6a4f;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px;">✓ Marcar como Pago</button>':'')
+      +(imp.status==='Pendente'?'<button onclick="marcarPago(\''+imp.id+'\')" style="margin-top:8px;padding:5px 12px;background:#2d6a4f;color:#fff;border:none;border-radius:2px;cursor:pointer;font-size:11px;">✓ Marcar como Pago</button>':'')
       +'</div>';
     body.appendChild(div);
   });
@@ -1754,23 +1754,37 @@ async function salvarImposto(){
   }catch(e){setStatusImp('✗ Erro: '+e.message,'err');}
 }
 
+/* Baixa de imposto pela aba IMPOSTOS.
+   Delega a baixarContaCore para que este caminho produza exatamente o mesmo
+   resultado do pagamento feito pela aba A PAGAR — inclusive o lancamento
+   conciliado no Fluxo de Caixa, que antes nao era gerado aqui. */
 async function marcarPago(id){
+  var imp=(impostosCache||[]).find(function(i){ return String(i.id)===String(id); });
+  if(!imp){ alert('Imposto nao encontrado na lista. Recarregue a pagina.'); return; }
+
   var hoje=new Date().toISOString().split('T')[0];
+  var data=prompt('Data do pagamento (AAAA-MM-DD):', hoje);
+  if(data===null) return; // cancelou
+  data=(data||'').trim();
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(data)){ alert('Data invalida. Use o formato AAAA-MM-DD.'); return; }
+
   var link=prompt('Link do comprovante (Drive) — opcional. Deixe em branco se não tiver:','');
   if(link===null) return; // cancelou
   link=(link||'').trim();
-  var corpo={status:'Pago',data_pgto:hoje};
-  if(link) corpo.comprovante_url=link;
-  try{
-    await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+id,{
-      method:'PATCH',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json'},
-      body:JSON.stringify(corpo)
-    });
-    var item=impostosCache.find(function(i){return i.id===id;});
-    if(item){item.status='Pago';item.data_pgto=hoje;if(link)item.comprovante_url=link;}
-    renderImpostos();
-  }catch(e){alert('Erro ao salvar: '+e.message);}
+
+  var valorTot=(parseFloat(imp.valor)||0)+(parseFloat(imp.multa)||0);
+  var descImp=imp.tipo+(imp.competencia?' · '+String(imp.competencia).replace('-','/'):'');
+  var res=await baixarContaCore({
+    _imposto:true,
+    _rawId:imp.id,
+    _tipoImp:imp.tipo,
+    descricao:descImp,
+    valor:valorTot,
+    categoria:'Imposto'
+  }, data, link);
+
+  if(!res.ok){ alert('Erro ao salvar: '+res.erro); return; }
+  await carregarImpostos();
 }
 
 async function deletarImposto(id){
@@ -1779,7 +1793,7 @@ async function deletarImposto(id){
     await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+id,{
       method:'PATCH',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({deletado_em:new Date().toISOString()})
     });
-    impostosCache=impostosCache.filter(function(i){return i.id!==id;});
+    impostosCache=impostosCache.filter(function(i){return String(i.id)!==String(id);});
     renderImpostos();
   }catch(e){alert('Erro ao remover: '+e.message);}
 }
