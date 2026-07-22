@@ -1,10 +1,20 @@
 /* ═══ SULSIGN OS 2.0 — MÓDULO: FLUXO DE CAIXA (fluxo)
-   Regra: lancamentos conciliado=true + tabela aportes (exceto status Pendente).
-   Saídas de aporte: Retirada de Sócio / Devolução de Empréstimo. ═══ */
+   Fonte: lancamentos conciliado=true + tabela aportes (status <> Pendente).
+   Saídas de capital: Retirada de Sócio / Devolução de Empréstimo.
+   Inclui painel de diagnóstico e conferência contra o extrato bancário. ═══ */
 (function(){
   var fmt=SulSignCore.fmt;
-  var SAIDAS_AP=['Retirada de Sócio','Devolução de Empréstimo'];
+  var LS_BANCO='ss_saldo_banco';
+  var AP_SAIDA=['retirada de socio','devolucao de emprestimo'];
+  var AP_TIPOS=['aporte de socio','emprestimo recebido','credito externo','retirada de socio',
+                'devolucao de emprestimo','outros','alimentacao','verba producao'];
+
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function norm(s){
+    return String(s==null?'':s).toLowerCase()
+      .replace(/[àáâãä]/g,'a').replace(/[éèêë]/g,'e').replace(/[íìîï]/g,'i')
+      .replace(/[óòôõö]/g,'o').replace(/[úùûü]/g,'u').replace(/ç/g,'c').trim();
+  }
   function isTreino(x){ return (x||'').indexOf('TREINO')>=0; }
   function dstr(d){ if(!d)return '—'; var p=String(d).split('T')[0].split('-'); return p.length===3?(p[2]+'/'+p[1]+'/'+p[0]):d; }
   function kpi(lbl,val,sub,cor){
@@ -18,8 +28,9 @@
       +'<div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--mut);margin-bottom:12px">'+tit+'</div>'
       +body+(foot?'<div style="margin-top:10px;font-size:11.5px;color:var(--mut)">'+foot+'</div>':'')+'</div>';
   }
-  function aviso(txt){
-    return '<div style="background:var(--panel);border:1px solid var(--danger);border-left:3px solid var(--danger);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--danger)">'+txt+'</div>';
+  function aviso(txt,cor){
+    var c=cor||'var(--danger)';
+    return '<div style="background:var(--panel);border:1px solid '+c+';border-left:3px solid '+c+';border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;color:'+c+'">'+txt+'</div>';
   }
   function tbl(rows,rowFn,heads){
     if(!rows.length)return '<div style="color:var(--mut);font-size:12px">Nada por aqui. ✓</div>';
@@ -33,36 +44,45 @@
     return h;
   }
 
-  /* ── Normalizadores: aporte e lançamento viram o mesmo formato de movimento ── */
-  function apToMov(a){
-    var saida=SAIDAS_AP.indexOf(a.tipo)>=0;
-    return { data:a.data, valor:parseFloat(a.valor)||0, ent:!saida, origem:'aporte',
-             categoria:a.tipo||'Aporte', sub:a.origem||'', desc:a.descricao||'' };
-  }
-  function lcToMov(l){
-    return { data:l.data, valor:parseFloat(l.valor)||0,
-             ent:(l.tipo_lancamento||'').toLowerCase()==='entrada', origem:'lanc',
-             categoria:l.categoria||'—', sub:l.subcategoria||'', desc:l.descricao||'' };
-  }
-
   function fetchAll(){
     if(SS20.cache.fluxo) return Promise.resolve(SS20.cache.fluxo);
-    var pL=SS20.sb('lancamentos?select=data,valor,tipo_lancamento,categoria,subcategoria,descricao,orcamento_numero&conciliado=eq.true&deletado_em=is.null&order=data.asc');
+    var pL=SS20.sb('lancamentos?select=data,valor,tipo_lancamento,categoria,subcategoria,descricao,conciliado,orcamento_numero&deletado_em=is.null&order=data.asc');
     var pA=SS20.sb('aportes?select=data,valor,tipo,origem,descricao,status&deletado_em=is.null&order=data.asc')
-      .catch(function(){ return null; }); /* tabela ausente/bloqueada nao derruba a tela */
+      .catch(function(){ return null; });
     return Promise.all([pL,pA]).then(function(res){
-      var lancs=(res[0]||[]).filter(function(l){ return !isTreino(l.orcamento_numero)&&l.data; });
+      var todos=(res[0]||[]);
       var apOk=res[1]!==null;
-      var aps=(res[1]||[]).filter(function(a){ return a.data; });
-      var pend=0, movs=[];
-      lancs.forEach(function(l){ movs.push(lcToMov(l)); });
-      aps.forEach(function(a){
-        if((a.status||'')==='Pendente'){ pend+=parseFloat(a.valor)||0; return; }
-        movs.push(apToMov(a));
+      var aps=(res[1]||[]);
+      var movs=[], pend=0;
+      var dg={ naoConcQtd:0, naoConcVal:0, concQtd:0, semData:0, valorZero:0,
+               tipoEstranho:{}, apTipoEstranho:{}, dupQtd:0, dupVal:0, nAp:aps.length, apOk:apOk };
+
+      todos.forEach(function(l){
+        if(isTreino(l.orcamento_numero)) return;
+        var v=parseFloat(l.valor)||0;
+        var t=norm(l.tipo_lancamento);
+        if(t!=='entrada'&&t!=='saida') dg.tipoEstranho[l.tipo_lancamento||'(vazio)']=(dg.tipoEstranho[l.tipo_lancamento||'(vazio)']||0)+1;
+        if(!l.data) dg.semData++;
+        if(v<=0) dg.valorZero++;
+        if(norm(l.categoria).indexOf('aporte')>=0&&l.conciliado){ dg.dupQtd++; dg.dupVal+=v; }
+        if(!l.conciliado){ dg.naoConcQtd++; dg.naoConcVal+=v; return; }
+        dg.concQtd++;
+        if(!l.data) return;
+        movs.push({ data:l.data, valor:v, ent:(t==='entrada'), origem:'lanc',
+                    categoria:l.categoria||'—', sub:l.subcategoria||'', desc:l.descricao||'' });
       });
-      /* guarda de duplicidade: mesmo aporte gravado nas duas fontes */
-      var dup=lancs.filter(function(l){ return (l.categoria||'').indexOf('Aporte')>=0; }).length;
-      var d={ movs:movs, pend:pend, apOk:apOk, nAp:aps.length, dup:dup };
+
+      aps.forEach(function(a){
+        var v=parseFloat(a.valor)||0;
+        var t=norm(a.tipo);
+        if(AP_TIPOS.indexOf(t)<0) dg.apTipoEstranho[a.tipo||'(vazio)']=(dg.apTipoEstranho[a.tipo||'(vazio)']||0)+1;
+        if(norm(a.status)==='pendente'){ pend+=v; return; }
+        if(!a.data) return;
+        movs.push({ data:a.data, valor:v, ent:(AP_SAIDA.indexOf(t)<0), origem:'aporte',
+                    categoria:a.tipo||'Aporte', sub:a.origem||'', desc:a.descricao||'' });
+      });
+
+      var d={ movs:movs, pend:pend, dg:dg };
       SS20.cache.fluxo=d; return d;
     });
   }
@@ -73,26 +93,39 @@
     if(!SS20._fluxoBound){
       SS20._fluxoBound=true;
       c.addEventListener('change',function(ev){
-        if(ev.target&&ev.target.id==='fx-mes'){
-          fetchAll().then(function(d){ draw(c,d,ev.target.value); });
-        }
+        var t=ev.target; if(!t)return;
+        if(t.id==='fx-mes'){ fetchAll().then(function(d){ draw(c,d,t.value); }); }
       });
       c.addEventListener('click',function(ev){
-        var t=ev.target;
-        if(t&&t.getAttribute&&t.getAttribute('data-action')==='fluxo-refresh'){
+        var t=ev.target; if(!t||!t.getAttribute)return;
+        var a=t.getAttribute('data-action');
+        if(a==='fluxo-refresh'){
           SS20.cache.fluxo=null;
           var sel=document.getElementById('fx-mes');
           var m=sel?sel.value:null;
           t.textContent='Atualizando...';
           fetchAll().then(function(d){ draw(c,d,m); })
-          .catch(function(e){ c.innerHTML='<div class="err-view">Erro ao carregar dados: '+esc(e.message)+'</div>'; });
+          .catch(function(e){ c.innerHTML='<div class="err-view">Erro: '+esc(e.message)+'</div>'; });
+        }
+        if(a==='fluxo-diag'){
+          var p=document.getElementById('fx-diag');
+          if(p){ var vis=p.style.display!=='none'; p.style.display=vis?'none':'block'; t.textContent=vis?'▸ Diagnóstico':'▾ Diagnóstico'; }
+        }
+        if(a==='fluxo-banco'){
+          var inp=document.getElementById('fx-banco');
+          if(inp){
+            var v=parseFloat(String(inp.value).replace(/\./g,'').replace(',','.'))||0;
+            try{ localStorage.setItem(LS_BANCO,JSON.stringify({v:v,em:new Date().toISOString().slice(0,10)})); }catch(e){}
+            var sel2=document.getElementById('fx-mes');
+            fetchAll().then(function(d){ draw(c,d,sel2?sel2.value:null); });
+          }
         }
       });
     }
   }
 
   function draw(c,d,mesSel){
-    var movs=d.movs;
+    var movs=d.movs, dg=d.dg;
     var meses={};
     movs.forEach(function(x){
       var m=x.data.slice(0,7);
@@ -113,33 +146,65 @@
       opts+='<option value="'+x.m+'"'+(x.m===mesAtual?' selected':'')+'>'+x.m+'</option>';
     });
 
+    var banco=null;
+    try{ banco=JSON.parse(localStorage.getItem(LS_BANCO)||'null'); }catch(e){}
+
     var h='<div style="padding:24px 26px">';
-    h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px">';
+    h+='<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:4px;flex-wrap:wrap">';
     h+='<h2 style="font-family:var(--font-d);font-size:19px">Fluxo de Caixa</h2>';
-    h+='<button data-action="fluxo-refresh" style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">&#8635; Atualizar</button>';
+    h+='<div style="display:flex;gap:8px">'
+      +'<button data-action="fluxo-diag" style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">▸ Diagnóstico</button>'
+      +'<button data-action="fluxo-refresh" style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">&#8635; Atualizar</button>'
+      +'</div></div>';
+    h+='<p style="color:var(--mut);font-size:12.5px;margin-bottom:18px">Lançamentos conciliados (confirmados no banco) + aportes, retiradas e empréstimos</p>';
+
+    /* ── avisos críticos ── */
+    if(!dg.apOk) h+=aviso('Não consegui ler a tabela <b>aportes</b>. Os números estão <b>sem aportes, retiradas e empréstimos</b>.');
+    if(dg.dupQtd) h+=aviso('<b>Possível duplicidade:</b> '+dg.dupQtd+' lançamento(s) conciliado(s) com categoria "Aporte" ('+fmt(dg.dupVal)+') convivendo com '+dg.nAp+' registro(s) da tabela aportes. Se for o mesmo dinheiro, está contado em dobro.');
+    var estranhos=Object.keys(dg.tipoEstranho).concat(Object.keys(dg.apTipoEstranho));
+    if(estranhos.length) h+=aviso('<b>Classificação incerta:</b> valores de tipo fora do padrão ('+esc(estranhos.join(', '))+'). Foram tratados como saída — confira no Diagnóstico.','#f9a825');
+
+    /* ── painel de diagnóstico ── */
+    h+='<div id="fx-diag" style="display:none;margin-bottom:18px">';
+    var dl='<table style="width:100%;border-collapse:collapse;font-size:12.5px"><tbody>';
+    function lin(k,v,cor){ return '<tr><td style="padding:5px 6px;border-bottom:1px solid var(--line);color:var(--mut)">'+k+'</td><td style="padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;font-weight:600'+(cor?';color:'+cor:'')+'">'+v+'</td></tr>'; }
+    dl+=lin('Lançamentos conciliados',dg.concQtd+' registros');
+    dl+=lin('Lançamentos <b>não conciliados</b> (fora do fluxo)',dg.naoConcQtd+' · '+fmt(dg.naoConcVal),dg.naoConcQtd?'var(--danger)':'var(--ok)');
+    dl+=lin('Registros na tabela aportes',dg.nAp+' registros');
+    dl+=lin('Aportes pendentes (fora do saldo)',fmt(d.pend),d.pend?'#f9a825':'var(--mut)');
+    dl+=lin('Lançamentos sem data',dg.semData,dg.semData?'#f9a825':'var(--mut)');
+    dl+=lin('Lançamentos com valor zero ou negativo',dg.valorZero,dg.valorZero?'#f9a825':'var(--mut)');
+    Object.keys(dg.tipoEstranho).forEach(function(k){ dl+=lin('tipo_lancamento fora do padrão: <b>'+esc(k)+'</b>',dg.tipoEstranho[k]+' registros','var(--danger)'); });
+    Object.keys(dg.apTipoEstranho).forEach(function(k){ dl+=lin('tipo de aporte fora do padrão: <b>'+esc(k)+'</b>',dg.apTipoEstranho[k]+' registros','var(--danger)'); });
+    dl+='</tbody></table>';
+    h+=card('Diagnóstico dos dados',dl,'Não conciliado não entra no fluxo: é dinheiro que saiu ou entrou e o sistema ainda não sabe. Concilie em Lançamentos.');
     h+='</div>';
-    h+='<p style="color:var(--mut);font-size:12.5px;margin-bottom:20px">Lançamentos conciliados (banco confirmado) + aportes, retiradas e empréstimos</p>';
 
-    if(!d.apOk){
-      h+=aviso('Não consegui ler a tabela <b>aportes</b> (inexistente ou bloqueada por RLS). Os números abaixo estão <b>sem aportes, retiradas e empréstimos</b> — vão divergir do v1.');
-    }
-    if(d.dup){
-      h+=aviso('Atenção: '+d.dup+' lançamento(s) conciliado(s) com categoria "Aporte" na tabela <b>lancamentos</b>, além de '+d.nAp+' registro(s) na tabela <b>aportes</b>. Se for o mesmo dinheiro, está sendo <b>contado em dobro</b> — aqui e também no v1.');
-    }
-
-    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px">';
+    /* ── KPIs ── */
+    h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:18px">';
     h+=kpi('Entradas · '+mesAtual,fmt(entM),'','var(--ok)');
     h+=kpi('Saídas · '+mesAtual,fmt(saiM),'','var(--danger)');
     h+=kpi('Resultado do mês',fmt(entM-saiM),'',entM-saiM>=0?'var(--ok)':'var(--danger)');
-    h+=kpi('Saldo acumulado',fmt(acum),'desde o início do registro',acum>=0?'var(--ok)':'var(--danger)');
+    h+=kpi('Saldo acumulado',fmt(acum),'segundo o sistema',acum>=0?'var(--ok)':'var(--danger)');
     h+='</div>';
 
-    if(d.pend>0){
-      h+='<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--mut)">'
-        +'<b>'+fmt(d.pend)+'</b> em aportes com status <b>Pendente</b> — fora do saldo acima por não estarem confirmados no banco. '
-        +'<span style="opacity:.75">O v1 soma esse valor no fluxo; é essa a diferença esperada entre as duas telas.</span></div>';
+    /* ── conferência com o banco ── */
+    var bh='<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">'
+      +'<span style="font-size:12px;color:var(--mut)">Saldo real da conta hoje: R$</span>'
+      +'<input id="fx-banco" type="text" inputmode="decimal" value="'+(banco?String(banco.v).replace('.',','):'')+'" placeholder="0,00" style="width:130px;font-size:13px;padding:5px 8px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px">'
+      +'<button data-action="fluxo-banco" style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">Conferir</button>';
+    if(banco&&banco.v){
+      var dif=banco.v-acum;
+      var okDif=Math.abs(dif)<0.01;
+      bh+='<span style="font-size:13px;margin-left:6px;color:'+(okDif?'var(--ok)':'var(--danger)')+'">'
+        +(okDif?'✓ Sistema bate com o banco':'Divergência de <b>'+fmt(Math.abs(dif))+'</b> — o banco tem '+(dif>0?'MAIS':'MENOS')+' que o sistema')
+        +'</span>';
     }
+    bh+='</div>';
+    h+='<div style="margin-bottom:18px">'+card('Conferência com o extrato',bh,
+      banco&&banco.em?'Última conferência informada em '+dstr(banco.em)+'. Enquanto houver divergência, o fluxo não é confiável para decisão.':'Informe o saldo do extrato para o sistema calcular a divergência.')+'</div>';
 
+    /* ── tabelas ── */
     h+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">';
     h+=card('Por mês', tbl(arr.slice().reverse(),function(x){
       var res=x.ent-x.sai;
@@ -153,8 +218,7 @@
     var ordenado=doMes.slice().sort(function(a,b){ return a.data<b.data?1:(a.data>b.data?-1:0); });
     var extrato=tbl(ordenado,function(x){
       var tag=x.origem==='aporte'
-        ? '<span style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:3px;padding:1px 4px;margin-right:5px">apt</span>'
-        : '';
+        ? '<span style="font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:3px;padding:1px 4px;margin-right:5px">apt</span>' : '';
       return '<tr><td>'+dstr(x.data)+'</td>'
         +'<td style="font-size:11px">'+tag+esc(x.categoria)+(x.sub?' <span style="color:var(--mut)">&rsaquo; '+esc(x.sub)+'</span>':'')+'</td>'
         +'<td style="font-size:11px;color:var(--mut)">'+esc((x.desc||'').slice(0,50))+'</td>'
