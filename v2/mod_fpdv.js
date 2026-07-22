@@ -44,8 +44,11 @@
       if(tipo==='fixo') return ehCampo?'MO FIXO CAMPO':'MO FIXO';
       return 'MO 3º';
     }
+    /* mao de obra fornecida pela PDVEX e terceiro do ponto de vista da Sul Sign */
+    if(cat==='Mão de Obra PDVEX') return 'MO 3º';
     if(cat==='Serviços') return 'MO 3º';
     if(cat==='Material'||cat==='Materiais'||cat==='Insumo'||cat==='Locação'||cat==='Verba Produção'||cat==='Ferramenta'||cat==='Imprevisto') return 'MATERIAIS';
+    if(cat==='Locação Equipamentos'||cat==='Locação PDVEX'||cat==='Locação Equipamentos PDVEX'||cat==='Material PDVEX') return 'MATERIAIS';
     if(cat==='Comunicação Visual') return 'COM. VISUAL';
     if(cat==='Logística'||cat==='Transporte') return 'LOGÍSTICA';
     if(cat==='Alimentação') return 'ALIMENTAÇÃO';
@@ -66,7 +69,8 @@
   function montaObs(ln){
     var partes=[];
     if(ln.bloco) partes.push('Bloco: '+ln.bloco);
-    if(ln.categoria==='Locação') partes.push('locação PDVEX');
+    if(SulSignCore.ehPDVEX(ln.categoria)) partes.push('PDVEX');
+    else if(ln.categoria==='Locação'||ln.categoria==='Locação Equipamentos') partes.push('locação');
     if(ln.categoria==='Serviços') partes.push('Serviços');
     if(ln.categoria==='Verba Produção') partes.push('Verba Produção');
     if(ln.tem_nota===false) partes.push('sem nota');
