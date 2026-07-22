@@ -1210,7 +1210,8 @@ var SUBCATS={
   'Insumo':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
   'Mão de Obra':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
   'Serviços':['Contabilidade','Juridico','TI','Consultoria','Manutencao','Terceirizado'],
-  'Logística':['Frete','Mobilidade','Combustivel','Estacionamento','Pedagio'],
+  'Logística':['Frete','Combustivel','Estacionamento','Pedagio'],
+  'Mobilidade':['Uber','99','Taxi','Onibus/Metro','Passagem','Combustivel'],
   'Locação':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
   'Locação Equipamentos':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
   'Locação PDVEX':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
@@ -1248,8 +1249,9 @@ var SUBCATS={
 var SELECTS_CUSTO_JOB = ['f-categoria','filt-cat','pp-cat','cce-cat','cc-cat-sel'];
 
 function injetarCategoriasExtras(){
-  if(!window.SulSignCore || !SulSignCore.CATEGORIAS_LOCACAO) return;
-  var novas = SulSignCore.CATEGORIAS_LOCACAO;
+  if(!window.SulSignCore) return;
+  var novas = SulSignCore.CATEGORIAS_EXTRAS || SulSignCore.CATEGORIAS_LOCACAO;
+  if(!novas) return;
   SELECTS_CUSTO_JOB.forEach(function(id){
     var sel = document.getElementById(id);
     if(!sel) return;
