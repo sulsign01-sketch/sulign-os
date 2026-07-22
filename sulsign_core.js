@@ -27,7 +27,7 @@ var SulSignCore = (function(){
   ];
 
   // ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
-  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
+  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Mobilidade','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
 
   // ── CATEGORIAS DE CUSTO ORIGINADO NA PDVEX ──
   // Lista branca explicita. NAO usar match por substring ('PDVEX' no nome):
@@ -36,6 +36,13 @@ var SulSignCore = (function(){
 
   // Categorias novas, para as telas que montam dropdown proprio.
   var CATEGORIAS_LOCACAO = ['Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX'];
+
+  // Tudo que precisa ser injetado nos dropdowns antigos que tem lista propria.
+  // Mobilidade = transporte de PESSOA (Uber, 99, taxi). Logística = transporte
+  // de MATERIAL. Virou categoria, e nao subcategoria, porque lançamento gerado
+  // por baixa de conta a pagar nao carrega subcategoria — contas_pagar nao tem
+  // essa coluna, entao a subcategoria chegaria sempre nula no fluxo.
+  var CATEGORIAS_EXTRAS = CATEGORIAS_LOCACAO.concat(['Mobilidade']);
 
   function ehPDVEX(categoria){
     return CATEGORIAS_PDVEX.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
@@ -97,6 +104,7 @@ var SulSignCore = (function(){
     CATEGORIAS: CATEGORIAS,
     CATEGORIAS_PDVEX: CATEGORIAS_PDVEX,
     CATEGORIAS_LOCACAO: CATEGORIAS_LOCACAO,
+    CATEGORIAS_EXTRAS: CATEGORIAS_EXTRAS,
     ehPDVEX: ehPDVEX,
     calcOrcamento: calcOrcamento,
     fmt: fmt
