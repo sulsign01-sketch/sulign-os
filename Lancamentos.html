@@ -1076,11 +1076,19 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <option>Outros</option>
         </select>
       </div>
+      <div class="fl">
+        <label>Origem</label>
+        <select id="cc-origem-sel" onchange="renderCentroCusto()">
+          <option value="">— Todas —</option>
+          <option value="pdvex">Somente PDVEX</option>
+          <option value="direto">Somente direto</option>
+        </select>
+      </div>
       <button class="btn" onclick="carregarCentroCusto()" style="background:#e65100;">Aplicar</button>
     </div>
 
     <!-- KPIs -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#e8e8e8;border-radius:4px;overflow:hidden;margin-bottom:20px;">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#e8e8e8;border-radius:4px;overflow:hidden;margin-bottom:20px;">
       <div style="background:#fff;padding:14px 16px;">
         <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:6px;">TOTAL CUSTOS</div>
         <div style="font-family:monospace;font-size:18px;font-weight:700;color:#c62828;" id="cc-kpi-custos">—</div>
@@ -1092,6 +1100,11 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div style="background:#fff;padding:14px 16px;">
         <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:6px;">JOBS</div>
         <div style="font-family:monospace;font-size:18px;font-weight:700;color:#333;" id="cc-kpi-jobs">—</div>
+      </div>
+      <div style="background:#fff;padding:14px 16px;">
+        <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:#aaa;margin-bottom:6px;">A CONCILIAR PDVEX</div>
+        <div style="font-family:monospace;font-size:18px;font-weight:700;color:#5e35b1;" id="cc-kpi-pdvex">—</div>
+        <div style="font-size:9px;color:#bbb;margin-top:3px;" id="cc-kpi-pdvex-sub">—</div>
       </div>
     </div>
 
@@ -1197,7 +1210,7 @@ var SUBCATS={
   'Insumo':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
   'Mão de Obra':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
   'Serviços':['Contabilidade','Juridico','TI','Consultoria','Manutencao','Terceirizado'],
-  'Logística':['Frete','Combustivel','Estacionamento','Pedagio','Transporte Equipe'],
+  'Logística':['Frete','Mobilidade','Combustivel','Estacionamento','Pedagio','Transporte Equipe'],
   'Locação':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
   'Locação Equipamentos':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
   'Locação PDVEX':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
@@ -3427,8 +3440,25 @@ async function carregarCentroCusto(){
   }
 }
 
+function ccEhPDVEX(l){
+  return !!(window.SulSignCore && SulSignCore.ehPDVEX && SulSignCore.ehPDVEX(l.categoria));
+}
+
 function renderCentroCusto(){
-  var lancs = _ccLancsCache;
+  var base = _ccLancsCache || [];
+
+  /* O KPI de conciliacao sempre reflete o recorte de job/categoria, e nao o
+     filtro de origem — senao ele zeraria justamente ao escolher "Somente
+     direto", que e quando voce quer comparar os dois lados. */
+  var pdvexLancs = base.filter(ccEhPDVEX);
+  var totalPDVEX = pdvexLancs.reduce(function(a,l){ return a+(parseFloat(l.valor)||0); }, 0);
+
+  var elOri = document.getElementById('cc-origem-sel');
+  var origem = elOri ? elOri.value : '';
+  var lancs = base;
+  if(origem === 'pdvex')  lancs = pdvexLancs;
+  if(origem === 'direto') lancs = base.filter(function(l){ return !ccEhPDVEX(l); });
+
   var totalCusto = lancs.reduce(function(a,l){ return a+(parseFloat(l.valor)||0); }, 0);
   var jobs = [];
   lancs.forEach(function(l){ if(jobs.indexOf(l.orcamento_numero)<0) jobs.push(l.orcamento_numero); });
@@ -3436,6 +3466,14 @@ function renderCentroCusto(){
   document.getElementById('cc-kpi-custos').textContent = fmt(totalCusto);
   document.getElementById('cc-kpi-itens').textContent = lancs.length;
   document.getElementById('cc-kpi-jobs').textContent = jobs.length;
+  var elP = document.getElementById('cc-kpi-pdvex');
+  if(elP){
+    elP.textContent = fmt(totalPDVEX);
+    var elPs = document.getElementById('cc-kpi-pdvex-sub');
+    if(elPs) elPs.textContent = pdvexLancs.length
+      ? (pdvexLancs.length+' item(ns) · sem preço PDVEX ainda')
+      : 'nenhum custo PDVEX no recorte';
+  }
 
   // ── POR JOB ────────────────────────────────────────────────
   var porJob = {};
@@ -3503,9 +3541,10 @@ function renderCentroCusto(){
     // Linhas individuais
     d.itens.forEach(function(it){
       var dt = it.data ? new Date(it.data+'T12:00:00').toLocaleDateString('pt-BR') : '—';
+      var _mkPdvex = ccEhPDVEX(it) ? '<span style="font-size:8px;background:#ede7f6;color:#5e35b1;padding:1px 5px;border-radius:8px;font-weight:700;margin-left:6px;">PDVEX</span>' : '';
       htmlJob += '<tr style="border-bottom:1px solid #f5f5f5;background:#fff;">'
         +'<td style="padding:4px 10px 4px 28px;color:#999;font-family:monospace;font-size:10px;">'+dt+'</td>'
-        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span>'+(it.bloco?'<span style="font-size:10px;color:#e65100;margin-left:6px;">▦ '+it.bloco+'</span>':'')
+        +'<td style="padding:4px 10px;color:#555;">'+(it.descricao||'—')+(it.fornecedor?'<span style="color:#bbb;"> · '+it.fornecedor+'</span>':'')+'<span style="font-size:10px;color:#bbb;margin-left:6px;">['+( it.categoria||'—')+']</span>'+_mkPdvex+(it.bloco?'<span style="font-size:10px;color:#e65100;margin-left:6px;">▦ '+it.bloco+'</span>':'')
           +(it.comprovante
             ? (it.comprovante.startsWith('http')
                 ? '<a href="'+it.comprovante+'" target="_blank" style="margin-left:6px;color:#1565c0;text-decoration:none;" title="Ver comprovante">📎</a>'
