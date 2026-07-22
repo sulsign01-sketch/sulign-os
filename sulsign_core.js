@@ -27,7 +27,19 @@ var SulSignCore = (function(){
   ];
 
   // ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
-  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Estorno','Outros'];
+  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
+
+  // ── CATEGORIAS DE CUSTO ORIGINADO NA PDVEX ──
+  // Lista branca explicita. NAO usar match por substring ('PDVEX' no nome):
+  // um espaco a mais ou grafia diferente quebraria a conciliacao em silencio.
+  var CATEGORIAS_PDVEX = ['Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX'];
+
+  // Categorias novas, para as telas que montam dropdown proprio.
+  var CATEGORIAS_LOCACAO = ['Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX'];
+
+  function ehPDVEX(categoria){
+    return CATEGORIAS_PDVEX.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
+  }
 
   // ── CÁLCULO OFICIAL DO ORÇAMENTO ──
   // Replica exatamente o calcAll() do ORC_Manager:
@@ -83,6 +95,9 @@ var SulSignCore = (function(){
     SUPA_KEY: SUPA_KEY,
     STATUS_PIPELINE: STATUS_PIPELINE,
     CATEGORIAS: CATEGORIAS,
+    CATEGORIAS_PDVEX: CATEGORIAS_PDVEX,
+    CATEGORIAS_LOCACAO: CATEGORIAS_LOCACAO,
+    ehPDVEX: ehPDVEX,
     calcOrcamento: calcOrcamento,
     fmt: fmt
   };
