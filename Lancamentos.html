@@ -1477,7 +1477,7 @@ async function salvarLancamento(){
         horas_extras:(categoria==='Mão de Obra')?(parseFloat(document.getElementById('f-horas-extras').value)||null):null,
         tipo_mo:(categoria==='Mão de Obra')?document.getElementById('f-tipo-mo').value:null,
         local_mo:(categoria==='Mão de Obra')?document.getElementById('f-local-mo').value:null,
-        oc_numero:document.getElementById('f-oc-numero').value.trim()||null,
+        ordem_compra:document.getElementById('f-oc-numero').value.trim()||null,
         comprovante:comprovanteB64,tem_nota:temNota,
         tipo_lancamento:tipoLanc,periodicidade:periodicidade,vencimento:vencimento
       };
