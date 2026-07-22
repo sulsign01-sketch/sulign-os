@@ -495,9 +495,14 @@ SS20.go=function(view){
   var s=document.createElement('script');
   s.src='mod_'+view+'.js';
   s.onload=function(){
-    SS20.loaded[view]=true;
-    if(SS20.modules[view]) SS20.modules[view].render(document.getElementById('ss-content'));
-    else document.getElementById('ss-content').innerHTML='<div class="err-view">Módulo mod_'+view+'.js não registrou render().</div>';
+    if(SS20.modules[view]){
+      SS20.loaded[view]=true;
+      SS20.modules[view].render(document.getElementById('ss-content'));
+    } else {
+      if(s.parentNode) s.parentNode.removeChild(s);
+      document.getElementById('ss-content').innerHTML='<div class="err-view">Módulo mod_'+view+'.js não registrou render().'
+        +'<br><br><button data-action="nav" data-view="'+view+'" style="background:none;border:1px solid #8B8E97;border-radius:6px;color:inherit;padding:8px 20px;cursor:pointer">Tentar novamente</button></div>';
+    }
   };
   s.onerror=function(){
     if(s.parentNode) s.parentNode.removeChild(s);
