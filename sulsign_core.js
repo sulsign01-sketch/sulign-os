@@ -27,7 +27,7 @@ var SulSignCore = (function(){
   ];
 
   // ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
-  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Mobilidade','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
+  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Mobilidade','Receita Particular (Pondé)','Retirada Particular (Pondé)','Reserva Imposto Particular','Repasse Particular (Pondé)','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
 
   // ── CATEGORIAS DE CUSTO ORIGINADO NA PDVEX ──
   // Lista branca explicita. NAO usar match por substring ('PDVEX' no nome):
@@ -46,6 +46,20 @@ var SulSignCore = (function(){
 
   function ehPDVEX(categoria){
     return CATEGORIAS_PDVEX.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
+  }
+
+  // ── FLUXO PARTICULAR DO PONDE (nao e SulSign) ──
+  // O Ponde usa a conta da empresa (C6) para trabalhos pessoais: entra receita
+  // de clientes dele, ele saca parte para o sustento e reserva parte para o
+  // imposto dessas notas particulares. Esses lancamentos NAO podem contaminar
+  // o caixa nem os KPIs da SulSign — mesma logica do job de treino, que ja e
+  // excluido de todos os agregados por nome.
+  // Lista branca explicita, sem match por substring.
+  var CATEGORIAS_PARTICULAR = ['Receita Particular (Pondé)','Retirada Particular (Pondé)','Reserva Imposto Particular','Repasse Particular (Pondé)'];
+  CATEGORIAS_EXTRAS = CATEGORIAS_EXTRAS.concat(CATEGORIAS_PARTICULAR);
+
+  function ehParticular(categoria){
+    return CATEGORIAS_PARTICULAR.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
   }
 
   // ── CÁLCULO OFICIAL DO ORÇAMENTO ──
@@ -106,6 +120,8 @@ var SulSignCore = (function(){
     CATEGORIAS_LOCACAO: CATEGORIAS_LOCACAO,
     CATEGORIAS_EXTRAS: CATEGORIAS_EXTRAS,
     ehPDVEX: ehPDVEX,
+    CATEGORIAS_PARTICULAR: CATEGORIAS_PARTICULAR,
+    ehParticular: ehParticular,
     calcOrcamento: calcOrcamento,
     fmt: fmt
   };
