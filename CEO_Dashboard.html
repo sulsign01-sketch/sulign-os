@@ -345,6 +345,8 @@ function esc(s){
   return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+function isTreino(x){ return (x||'').indexOf('TREINO')>=0; }
+
 function calcOrcamento(orc){
   // FONTE UNICA: sulsign_core.js - corrige grupos opcionais (excluidos) e op-pct (Operacional %)
   return SulSignCore.calcOrcamento(orc);
@@ -363,7 +365,7 @@ async function carregar(){
       fetch(SUPA_URL+'/rest/v1/ordens_servico?select=num,orcamento_numero,itens,status,disciplina,created_at&deletado_em=is.null',{headers:hdrs}),
       fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,categoria,data,orcamento_numero&deletado_em=is.null',{headers:hdrs}),
       fetch(SUPA_URL+'/rest/v1/despesas_fixas?select=valor,categoria,tipo,status,data&deletado_em=is.null',{headers:hdrs}),
-      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=numero_op,descricao,valor,vencimento,favorecido&status=eq.Pendente&order=vencimento.asc&deletado_em=is.null',{headers:hdrs}),
+      fetch(SUPA_URL+'/rest/v1/contas_pagar?select=numero_op,descricao,valor,vencimento,favorecido,orcamento_numero&status=eq.Pendente&order=vencimento.asc&deletado_em=is.null',{headers:hdrs}),
       fetch(SUPA_URL+'/rest/v1/orcamentos?select=numero,cliente,valor_nf,data_nf,nf_numero,saldo_recebido&data_nf=not.is.null&order=data_nf.asc',{headers:hdrs})
     ]);
     var orcs=await rOrc.json();
@@ -372,6 +374,14 @@ async function carregar(){
     var todasFixas=await rFixas.json();
     var contasPagar=rPagar.ok?(await rPagar.json()):[];
     var nfsEmitidas=rNFs.ok?(await rNFs.json()):[];
+
+    // ── Exclui job de treino de todos os agregados (mesma regra dos módulos v2) ──
+    orcs        = (Array.isArray(orcs)?orcs:[]).filter(function(o){ return !isTreino(o.numero); });
+    todasOs     = (Array.isArray(todasOs)?todasOs:[]).filter(function(x){ return !isTreino(x.orcamento_numero); });
+    todosLanc   = (Array.isArray(todosLanc)?todosLanc:[]).filter(function(l){ return !isTreino(l.orcamento_numero); });
+    todasFixas  = Array.isArray(todasFixas)?todasFixas:[];
+    contasPagar = contasPagar.filter(function(c){ return !isTreino(c.orcamento_numero); });
+    nfsEmitidas = nfsEmitidas.filter(function(n){ return !isTreino(n.numero); });
 
     renderDash(orcs,todasOs,todosLanc,todasFixas,contasPagar,nfsEmitidas);
     document.getElementById('ts').textContent='Atualizado às '+new Date().toLocaleTimeString('pt-BR');
@@ -727,7 +737,7 @@ async function carregarFluxoInv(){
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var lancs=await r1.json();
-    lancs=Array.isArray(lancs)?lancs:[];
+    lancs=(Array.isArray(lancs)?lancs:[]).filter(function(l){ return !isTreino(l.orcamento_numero); });
 
     var r2=await fetch(SUPA_URL+'/rest/v1/aportes?select=*&data=gte.'+dataIni+'&data=lte.'+dataFim+'&deletado_em=is.null&order=data.asc',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
@@ -735,11 +745,11 @@ async function carregarFluxoInv(){
     var aportes=await r2.json();
     aportes=Array.isArray(aportes)?aportes:[];
 
-    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&conciliado=eq.true&deletado_em=is.null',{
+    var r3=await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento,orcamento_numero&data=lt.'+dataIni+'&conciliado=eq.true&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var lancsAntes=await r3.json();
-    lancsAntes=Array.isArray(lancsAntes)?lancsAntes:[];
+    lancsAntes=(Array.isArray(lancsAntes)?lancsAntes:[]).filter(function(l){ return !isTreino(l.orcamento_numero); });
 
     var r4=await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.'+dataIni+'&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
