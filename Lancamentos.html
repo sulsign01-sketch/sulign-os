@@ -760,6 +760,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
         <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#555;cursor:pointer;"><input type="checkbox" onchange="toggleSelTodasContas(this.checked)"> Selecionar todas</label>
         <button onclick="gerarPedidoPagamento()" style="font-size:11px;font-weight:700;padding:6px 12px;border:none;border-radius:4px;background:#111;color:#00ff88;cursor:pointer;">&#128196; Gerar Ordem de Pagamento</button>
+        <button onclick="abrirModalPagamentoLote()" style="font-size:11px;font-weight:700;padding:6px 12px;border:none;border-radius:4px;background:#2e7d32;color:#fff;cursor:pointer;">&#10003; Pagar Selecionadas</button>
       </div>
       <div id="pp-body"><div class="empty">Carregando...</div></div>
     </div>
@@ -846,6 +847,27 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
         <button onclick="confirmarPagamentoConta()" style="flex:2;padding:11px;background:#2e7d32;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✓ Confirmar Pago</button>
       </div>
       <div id="mp-pag-status" style="text-align:center;font-size:12px;padding-bottom:14px;min-height:16px;">—</div>
+    </div>
+  </div>
+
+  <!-- MODAL PAGAMENTO EM LOTE -->
+  <div id="modal-pag-lote" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:1000;padding:20px;overflow-y:auto;">
+    <div style="background:#fff;max-width:460px;width:100%;margin:0 auto;border-radius:8px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+      <div style="background:#1b5e20;padding:16px 20px;">
+        <div style="color:#fff;font-size:14px;font-weight:700;">&#10003; Pagamento em Lote</div>
+        <div id="ml-pag-resumo" style="color:#a5d6a7;font-size:11px;margin-top:4px;"></div>
+      </div>
+      <div style="padding:20px;display:grid;gap:14px;">
+        <div class="fl"><label>Data do pagamento (aplicada a todas)</label><input type="date" id="ml-pag-data"></div>
+        <div class="fl"><label>Comprovante único (opcional)</label><input type="url" id="ml-pag-url" placeholder="https://drive.google.com/..."></div>
+        <div style="font-size:10px;color:#aaa;">O link é aplicado a <b>todas</b> as contas do lote. Use apenas se houver um comprovante único (ex: PIX agrupado). Em branco, cada conta fica sem anexo.</div>
+        <div id="ml-pag-lista" style="max-height:210px;overflow-y:auto;border-top:1px solid #eee;padding-top:8px;"></div>
+      </div>
+      <div style="padding:0 20px 16px;display:flex;gap:10px;">
+        <button onclick="fecharModalPagamentoLote()" style="flex:1;padding:11px;background:#f5f5f5;border:none;border-radius:6px;color:#555;font-size:12px;font-weight:700;cursor:pointer;">Cancelar</button>
+        <button id="ml-pag-btn" onclick="confirmarPagamentoLote()" style="flex:2;padding:11px;background:#2e7d32;border:none;border-radius:6px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">&#10003; Confirmar Baixas</button>
+      </div>
+      <div id="ml-pag-status" style="text-align:center;font-size:12px;padding:0 20px 16px;min-height:16px;">—</div>
     </div>
   </div>
 
@@ -2122,7 +2144,7 @@ function renderContasPagar(){
       +(c.pago_por_ponde
         ? '<span style="font-size:9px;background:#e8f5e9;color:#1b5e20;padding:2px 6px;border-radius:10px;font-weight:700;">✓ Pondé confirmou</span>'
         : (c.token_ponde ? '<span style="font-size:9px;background:#fff3e0;color:#e65100;padding:2px 6px;border-radius:10px;font-weight:700;">📲 enviado</span>' : ''))
-      +(c.comprovante_url?'<a href="'+c.comprovante_url+'" target="_blank" style="font-size:11px;color:#1565c0;text-decoration:none;" title="Ver comprovante">📎</a>':'')
+      +(c.comprovante_link?'<a href="'+c.comprovante_link+'" target="_blank" style="font-size:11px;color:#1565c0;text-decoration:none;" title="Ver comprovante">📎</a>':'')
       +'<button data-cid="'+c.id+'" onclick="pagarConta(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #2e7d32;border-radius:2px;background:#e8f5e9;color:#1b5e20;cursor:pointer;">✓ Pagar</button>'
       +'<button data-cid="'+c.id+'" onclick="gerarOP(this.dataset.cid)" style="font-size:10px;padding:2px 8px;border:1px solid #1565c0;border-radius:2px;background:#e3f2fd;color:#1565c0;cursor:pointer;">📄 OP</button>'
       +removeCtl
@@ -2331,79 +2353,37 @@ function fecharModalPagamento(){
   _pagarContaId = null;
 }
 
-async function confirmarPagamentoConta(){
-  var id = _pagarContaId;
-  if(!id) return;
-  var conta = (contasPagarCache||[]).find(function(c){return c.id===id;});
-  var data = document.getElementById('mp-pag-data').value;
-  var url = document.getElementById('mp-pag-url').value.trim();
-  var st = document.getElementById('mp-pag-status');
-  if(!data){st.textContent='Informe a data.';st.style.color='#c62828';return;}
-  st.textContent='Salvando...';st.style.color='#888';
-  if(conta && conta._imposto){ await confirmarPagamentoImposto(conta, data, url, st); return; }
-  try{
-    /* comprovante_url NAO existe em contas_pagar (colunas reais: comprovante_link
-       e comprovante_ponde). Enviar a chave inexistente fazia o PostgREST devolver
-       PGRST204 e descartar o UPDATE inteiro, silenciosamente. */
-    var corpo={status:'Pago', data_pagamento:data};
-    if(url) corpo.comprovante_link=url;
-
-    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
-      method:'PATCH',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=representation'},
-      body:JSON.stringify(corpo)
-    });
-    if(!r.ok) throw new Error('HTTP '+r.status+' — '+(await r.text()));
-    var linhas=await r.json();
-    if(!linhas || !linhas.length) throw new Error('Nenhuma linha atualizada — RLS bloqueou o UPDATE.');
-
-    /* o lancamento so entra se a baixa foi confirmada, senao gera saida fantasma */
-    if(conta){
-      var r2=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
-        method:'POST',
-        headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-        body:JSON.stringify({
-          orcamento_numero:conta.orcamento_numero||'SEM-JOB',
-          categoria:conta.categoria||'Outros',
-          descricao:'['+( conta.numero_op||'OP')+'] '+(conta.descricao||'—'),
-          valor:conta.valor||0,
-          data:data,
-          fornecedor:conta.favorecido||'',
-          tem_nota:true,
-          periodicidade:'unica',
-          tipo_lancamento:'saida',
-          conciliado:true,
-          comprovante:url||null
-        })
-      });
-      if(!r2.ok) throw new Error('Baixa OK, mas o lancamento falhou: HTTP '+r2.status+' — '+(await r2.text()));
-    }
-    st.textContent='✓ Pago!';st.style.color='#2e7d32';
-    setTimeout(function(){
-      fecharModalPagamento();
-      carregarContasPagar();
-    },600);
-  }catch(e){
-    st.textContent='Erro: '+e.message;st.style.color='#c62828';
-  }
+/* ─────────────────────────────────────────────────────────────
+   NUCLEO DA BAIXA — fonte unica de verdade.
+   Usado tanto pelo pagamento individual quanto pelo lote, para que os nomes
+   de coluna nunca mais divirjam entre os dois caminhos.
+   Nunca lanca excecao: resolve sempre em {ok:true} ou {ok:false, erro:'...'}.
+   ──────────────────────────────────────────────────────────── */
+function _hdrSupa(prefer){
+  var h={'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json'};
+  if(prefer) h['Prefer']=prefer;
+  return h;
 }
 
-// Pagamento de imposto vindo da aba A PAGAR:
-// grava na tabela impostos (status=Pago, data_pgto editável) e posta um lançamento
-// conciliado:true para entrar no Fluxo de Caixa.
-async function confirmarPagamentoImposto(conta, data, url, st){
+async function _postLancamentoBaixa(corpo){
+  var r=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
+    method:'POST', headers:_hdrSupa('return=minimal'), body:JSON.stringify(corpo)
+  });
+  if(!r.ok) throw new Error('Baixa gravada, mas o lançamento falhou: HTTP '+r.status+' — '+(await r.text()));
+}
+
+async function baixarContaCore(conta, data, url){
   try{
-    var corpoImp={status:'Pago', data_pgto:data};
-    if(url) corpoImp.comprovante_url=url;
-    await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+conta._rawId,{
-      method:'PATCH',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify(corpoImp)
-    });
-    await fetch(SUPA_URL+'/rest/v1/lancamentos',{
-      method:'POST',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({
+    if(conta && conta._imposto){
+      var corpoImp={status:'Pago', data_pgto:data};
+      if(url) corpoImp.comprovante_url=url;
+      var ri=await fetch(SUPA_URL+'/rest/v1/impostos?id=eq.'+conta._rawId,{
+        method:'PATCH', headers:_hdrSupa('return=representation'), body:JSON.stringify(corpoImp)
+      });
+      if(!ri.ok) return {ok:false, erro:'HTTP '+ri.status+' — '+(await ri.text())};
+      var li=await ri.json();
+      if(!li || !li.length) return {ok:false, erro:'Nenhuma linha atualizada em impostos (RLS ou id inexistente).'};
+      await _postLancamentoBaixa({
         orcamento_numero:'SEM-JOB',
         categoria:'Imposto',
         descricao:'[IMPOSTO] '+(conta.descricao||'—'),
@@ -2415,19 +2395,162 @@ async function confirmarPagamentoImposto(conta, data, url, st){
         tipo_lancamento:'saida',
         conciliado:true,
         comprovante:url||null
-      })
-    });
-    if(typeof impostosCache!=='undefined'&&Array.isArray(impostosCache)){
-      var it=impostosCache.find(function(x){return x.id===conta._rawId;});
-      if(it){it.status='Pago';it.data_pgto=data;}
+      });
+      if(typeof impostosCache!=='undefined' && Array.isArray(impostosCache)){
+        var it=impostosCache.find(function(x){return x.id===conta._rawId;});
+        if(it){ it.status='Pago'; it.data_pgto=data; }
+      }
+      return {ok:true};
     }
-    st.textContent='✓ Pago!';st.style.color='#2e7d32';
+
+    /* contas_pagar — comprovante_url NAO existe aqui (colunas reais:
+       comprovante_link e comprovante_ponde). */
+    var corpo={status:'Pago', data_pagamento:data};
+    if(url) corpo.comprovante_link=url;
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+conta.id,{
+      method:'PATCH', headers:_hdrSupa('return=representation'), body:JSON.stringify(corpo)
+    });
+    if(!r.ok) return {ok:false, erro:'HTTP '+r.status+' — '+(await r.text())};
+    var linhas=await r.json();
+    if(!linhas || !linhas.length) return {ok:false, erro:'Nenhuma linha atualizada — RLS bloqueou o UPDATE.'};
+
+    /* o lancamento so entra depois da baixa confirmada, senao gera saida fantasma */
+    await _postLancamentoBaixa({
+      orcamento_numero:conta.orcamento_numero||'SEM-JOB',
+      categoria:conta.categoria||'Outros',
+      descricao:'['+(conta.numero_op||'OP')+'] '+(conta.descricao||'—'),
+      valor:conta.valor||0,
+      data:data,
+      fornecedor:conta.favorecido||'',
+      tem_nota:true,
+      periodicidade:'unica',
+      tipo_lancamento:'saida',
+      conciliado:true,
+      comprovante:url||null
+    });
+    return {ok:true};
+  }catch(e){
+    return {ok:false, erro:e.message};
+  }
+}
+
+/* ── pagamento individual ── */
+async function confirmarPagamentoConta(){
+  var id = _pagarContaId;
+  if(!id) return;
+  var conta = (contasPagarCache||[]).find(function(c){return c.id===id;});
+  if(!conta){ return; }
+  var data = document.getElementById('mp-pag-data').value;
+  var url = document.getElementById('mp-pag-url').value.trim();
+  var st = document.getElementById('mp-pag-status');
+  if(!data){ st.textContent='Informe a data.'; st.style.color='#c62828'; return; }
+  st.textContent='Salvando...'; st.style.color='#888';
+  var res = await baixarContaCore(conta, data, url);
+  if(res.ok){
+    st.textContent='✓ Pago!'; st.style.color='#2e7d32';
     setTimeout(function(){ fecharModalPagamento(); carregarContasPagar(); },600);
-  }catch(e){ st.textContent='Erro: '+e.message; st.style.color='#c62828'; }
+  }else{
+    st.textContent='Erro: '+res.erro; st.style.color='#c62828';
+  }
+}
+
+/* mantida por compatibilidade — delega ao nucleo */
+async function confirmarPagamentoImposto(conta, data, url, st){
+  var res = await baixarContaCore(conta, data, url);
+  if(res.ok){
+    st.textContent='✓ Pago!'; st.style.color='#2e7d32';
+    setTimeout(function(){ fecharModalPagamento(); carregarContasPagar(); },600);
+  }else{
+    st.textContent='Erro: '+res.erro; st.style.color='#c62828';
+  }
 }
 
 async function pagarConta(id){
   abrirModalPagamento(id);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   PAGAMENTO EM LOTE
+   Processa sequencialmente (uma conta por vez) para nao disparar corrida de
+   escrita nem estourar rate limit. Uma falha nao interrompe as demais.
+   ──────────────────────────────────────────────────────────── */
+var _loteContas = [];
+
+function _escLote(t){
+  return String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function abrirModalPagamentoLote(){
+  var sel = Array.from(document.querySelectorAll('.pp-sel-item:checked')).map(function(cb){ return cb.dataset.cid; });
+  if(!sel.length){ alert('Selecione ao menos uma conta para pagar.'); return; }
+  _loteContas = (contasPagarCache||[]).filter(function(c){ return sel.indexOf(String(c.id))>=0; });
+  if(!_loteContas.length){ alert('Nenhuma conta correspondente na lista.'); return; }
+
+  var total = _loteContas.reduce(function(a,c){ return a+(parseFloat(c.valor)||0); },0);
+  document.getElementById('ml-pag-data').value = new Date().toISOString().split('T')[0];
+  document.getElementById('ml-pag-url').value = '';
+  document.getElementById('ml-pag-resumo').textContent = _loteContas.length+' conta(s) · '+fmt(total);
+  document.getElementById('ml-pag-status').textContent = '—';
+  document.getElementById('ml-pag-status').style.color = '#888';
+  document.getElementById('ml-pag-btn').disabled = false;
+
+  var wrap = document.getElementById('ml-pag-lista');
+  wrap.innerHTML = '';
+  _loteContas.forEach(function(c,i){
+    var row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;font-size:11px;padding:5px 0;border-bottom:1px solid #f4f4f4;';
+    row.innerHTML = '<span id="ml-tag-'+i+'" style="width:14px;flex-shrink:0;color:#bbb;font-weight:700;">·</span>'
+      + '<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#444;">'
+      + (c._imposto?'<span style="color:#5e35b1;font-weight:700;">[IMP] </span>':'')
+      + _escLote(c.descricao||'—') + '</span>'
+      + '<span style="font-family:DM Mono,monospace;font-weight:700;color:#c62828;flex-shrink:0;">'+fmt(parseFloat(c.valor)||0)+'</span>';
+    wrap.appendChild(row);
+  });
+
+  document.getElementById('modal-pag-lote').style.display = 'block';
+}
+
+function fecharModalPagamentoLote(){
+  document.getElementById('modal-pag-lote').style.display = 'none';
+  _loteContas = [];
+}
+
+async function confirmarPagamentoLote(){
+  if(!_loteContas.length) return;
+  var data = document.getElementById('ml-pag-data').value;
+  var url  = document.getElementById('ml-pag-url').value.trim();
+  var st   = document.getElementById('ml-pag-status');
+  var btn  = document.getElementById('ml-pag-btn');
+  if(!data){ st.textContent='Informe a data.'; st.style.color='#c62828'; return; }
+  if(!confirm('Confirmar a baixa de '+_loteContas.length+' conta(s)? Cada uma gera um lançamento conciliado no Fluxo de Caixa.')) return;
+
+  btn.disabled = true;
+  var ok = 0, falhas = [], i, tag, res;
+  for(i=0; i<_loteContas.length; i++){
+    tag = document.getElementById('ml-tag-'+i);
+    if(tag){ tag.textContent='…'; tag.style.color='#888'; }
+    st.textContent = 'Processando '+(i+1)+'/'+_loteContas.length+'…';
+    st.style.color = '#888';
+    res = await baixarContaCore(_loteContas[i], data, url);
+    if(res.ok){
+      ok++;
+      if(tag){ tag.textContent='✓'; tag.style.color='#2e7d32'; }
+    }else{
+      falhas.push(_escLote(_loteContas[i].descricao||'—')+': '+_escLote(res.erro));
+      if(tag){ tag.textContent='✗'; tag.style.color='#c62828'; }
+    }
+  }
+  btn.disabled = false;
+
+  if(!falhas.length){
+    st.textContent = '✓ '+ok+' conta(s) baixada(s).';
+    st.style.color = '#2e7d32';
+    setTimeout(function(){ fecharModalPagamentoLote(); carregarContasPagar(); },900);
+  }else{
+    st.innerHTML = '<b style="color:#e65100;">'+ok+' ok · '+falhas.length+' com erro</b>'
+      + '<div style="margin-top:6px;text-align:left;font-size:10px;color:#c62828;line-height:1.5;">'+falhas.join('<br>')+'</div>';
+    carregarContasPagar();
+  }
 }
 
 async function deletarContaPagar(id,el){
