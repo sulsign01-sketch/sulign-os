@@ -741,7 +741,7 @@ async function carregarFluxoInv(){
     var lancsAntes=await r3.json();
     lancsAntes=Array.isArray(lancsAntes)?lancsAntes:[];
 
-    var r4=await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.&deletado_em=is.null'+dataIni,{
+    var r4=await fetch(SUPA_URL+'/rest/v1/aportes?select=valor,tipo&data=lt.'+dataIni+'&deletado_em=is.null',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+SUPA_KEY}
     });
     var aportesAntes=await r4.json();
