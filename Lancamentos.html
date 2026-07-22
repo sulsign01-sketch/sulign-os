@@ -2342,13 +2342,24 @@ async function confirmarPagamentoConta(){
   st.textContent='Salvando...';st.style.color='#888';
   if(conta && conta._imposto){ await confirmarPagamentoImposto(conta, data, url, st); return; }
   try{
-    await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
+    /* comprovante_url NAO existe em contas_pagar (colunas reais: comprovante_link
+       e comprovante_ponde). Enviar a chave inexistente fazia o PostgREST devolver
+       PGRST204 e descartar o UPDATE inteiro, silenciosamente. */
+    var corpo={status:'Pago', data_pagamento:data};
+    if(url) corpo.comprovante_link=url;
+
+    var r=await fetch(SUPA_URL+'/rest/v1/contas_pagar?id=eq.'+id,{
       method:'PATCH',
-      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
-      body:JSON.stringify({status:'Pago', data_pagamento:data, comprovante_url:url||null})
+      headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=representation'},
+      body:JSON.stringify(corpo)
     });
+    if(!r.ok) throw new Error('HTTP '+r.status+' — '+(await r.text()));
+    var linhas=await r.json();
+    if(!linhas || !linhas.length) throw new Error('Nenhuma linha atualizada — RLS bloqueou o UPDATE.');
+
+    /* o lancamento so entra se a baixa foi confirmada, senao gera saida fantasma */
     if(conta){
-      await fetch(SUPA_URL+'/rest/v1/lancamentos',{
+      var r2=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
         method:'POST',
         headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},
         body:JSON.stringify({
@@ -2365,6 +2376,7 @@ async function confirmarPagamentoConta(){
           comprovante:url||null
         })
       });
+      if(!r2.ok) throw new Error('Baixa OK, mas o lancamento falhou: HTTP '+r2.status+' — '+(await r2.text()));
     }
     st.textContent='✓ Pago!';st.style.color='#2e7d32';
     setTimeout(function(){
