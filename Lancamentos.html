@@ -982,6 +982,14 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div class="fl" style="margin:0;"><label>De</label><input type="month" id="fx-de" style="max-width:140px;"></div>
       <div class="fl" style="margin:0;"><label>Até</label><input type="month" id="fx-ate" style="max-width:140px;"></div>
       <button class="btn" onclick="carregarFluxo()" style="background:#0d47a1;padding:9px 16px;">Aplicar Período</button>
+      <div class="fl" style="margin:0;">
+        <label>Visão</label>
+        <select id="fx-visao" onchange="carregarFluxo()" style="max-width:210px;">
+          <option value="sulsign">SulSign (exclui particular)</option>
+          <option value="particular">Particular Pondé</option>
+          <option value="tudo">Tudo (conta cheia)</option>
+        </select>
+      </div>
     </div>
 
     <!-- KPIs -->
@@ -3002,7 +3010,7 @@ async function carregarFluxo(){
     aportes = Array.isArray(aportes)?aportes:[];
 
     // Saldo acumulado ANTES do período (tudo antes de dataIni)
-    var r3 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento&data=lt.'+dataIni+'&deletado_em=is.null&conciliado=eq.true',{
+    var r3 = await fetch(SUPA_URL+'/rest/v1/lancamentos?select=valor,tipo_lancamento,categoria&data=lt.'+dataIni+'&deletado_em=is.null&conciliado=eq.true',{
       headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken()}
     });
     var lancsAntes = await r3.json();
@@ -3012,6 +3020,19 @@ async function carregarFluxo(){
     });
     var aportesAntes = await r4.json();
     aportesAntes = Array.isArray(aportesAntes)?aportesAntes:[];
+
+    /* ── Visao do fluxo ──
+         sulsign    : caixa real da empresa (exclui o particular do Ponde)
+         particular : so o fluxo pessoal do Ponde na conta da empresa
+         tudo       : a conta bancaria cheia
+       O mesmo recorte vale para lancsAntes (saldo inicial), senao o acumulado
+       herda dinheiro do outro fluxo. Aportes nunca sao particular. */
+    (function(){
+      var vEl=document.getElementById('fx-visao'); var v=vEl?vEl.value:'sulsign';
+      function ehP(l){ return !!(window.SulSignCore && SulSignCore.ehParticular && SulSignCore.ehParticular(l.categoria)); }
+      if(v==='sulsign'){    lancs=lancs.filter(function(l){return !ehP(l);});  lancsAntes=lancsAntes.filter(function(l){return !ehP(l);}); }
+      if(v==='particular'){ lancs=lancs.filter(ehP);  lancsAntes=lancsAntes.filter(ehP);  aportes=[];  aportesAntes=[]; }
+    })();
 
     var saidasAportesTipos = ['Retirada de Sócio','Devolução de Empréstimo'];
     var saldoInicial = 0;
