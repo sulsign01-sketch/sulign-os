@@ -256,6 +256,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
     <div class="fl">
       <label>Job (orçamento)</label>
       <input type="text" id="f-job-search" placeholder="Buscar por número, cliente ou projeto...">
+      <div style="margin-top:6px;">
+        <button type="button" onclick="selecionarSemVinculo()" style="font-size:11px;font-weight:600;padding:5px 12px;border:1px solid #ccc;border-radius:4px;background:#fafafa;color:#555;cursor:pointer;">— Sem vínculo / despesa ou receita geral</button>
+      </div>
       <div class="job-result" id="job-result"></div>
       <div class="job-sel" id="job-sel"><span id="job-sel-txt"></span><span class="x" onclick="limparJob()">×</span></div>
     </div>
@@ -1386,6 +1389,12 @@ function selecionarJob(o){
       }
     });
   }
+}
+function selecionarSemVinculo(){
+  /* Lancamento sem job (receita/despesa geral, incluindo o Particular do Ponde).
+     Usa o marcador SEM-JOB que o resto do sistema ja reconhece — nunca null,
+     para nao virar lancamento orfao fora do Centro de Custo. */
+  selecionarJob({numero:'SEM-JOB', cliente:'Sem vínculo / geral'});
 }
 function limparJob(){
   jobSelecionado=null;
