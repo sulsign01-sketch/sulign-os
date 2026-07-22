@@ -50,7 +50,7 @@
     if(cat==='Material'||cat==='Materiais'||cat==='Insumo'||cat==='Locação'||cat==='Verba Produção'||cat==='Ferramenta'||cat==='Imprevisto') return 'MATERIAIS';
     if(cat==='Locação Equipamentos'||cat==='Locação PDVEX'||cat==='Locação Equipamentos PDVEX'||cat==='Material PDVEX') return 'MATERIAIS';
     if(cat==='Comunicação Visual') return 'COM. VISUAL';
-    if(cat==='Logística'||cat==='Transporte') return 'LOGÍSTICA';
+    if(cat==='Logística'||cat==='Transporte'||cat==='Mobilidade') return 'LOGÍSTICA';
     if(cat==='Alimentação') return 'ALIMENTAÇÃO';
     return null;
   }
