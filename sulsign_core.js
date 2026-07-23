@@ -27,7 +27,7 @@ var SulSignCore = (function(){
   ];
 
   // ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
-  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Mobilidade','Receita Particular (Pondé)','Retirada Particular (Pondé)','Reserva Imposto Particular','Repasse Particular (Pondé)','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
+  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Mobilidade','Receita Particular (Pondé)','Retirada Particular (Pondé)','Reserva Imposto Particular','Repasse Particular (Pondé)','Aplicação Financeira','Resgate de Aplicação','Rendimento de Aplicação','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
 
   // ── CATEGORIAS DE CUSTO ORIGINADO NA PDVEX ──
   // Lista branca explicita. NAO usar match por substring ('PDVEX' no nome):
@@ -60,6 +60,20 @@ var SulSignCore = (function(){
 
   function ehParticular(categoria){
     return CATEGORIAS_PARTICULAR.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
+  }
+
+  // ── TRANSFERENCIA ENTRE CONTAS DA PROPRIA EMPRESA ──
+  // Aplicar em CDB nao e despesa e resgatar nao e receita: o dinheiro continua
+  // sendo da SulSign, so mudou de lugar. Mas SAI da conta corrente de fato, e o
+  // Fluxo de Caixa espelha o extrato — entao o lancamento precisa existir, senao
+  // o saldo do sistema nunca bate com o banco.
+  // 'Rendimento de Aplicacao' NAO entra aqui de proposito: o juro do CDB e
+  // receita financeira de verdade e deve somar como ganho.
+  var CATEGORIAS_TRANSFER = ['Aplicação Financeira','Resgate de Aplicação'];
+  CATEGORIAS_EXTRAS = CATEGORIAS_EXTRAS.concat(CATEGORIAS_TRANSFER).concat(['Rendimento de Aplicação']);
+
+  function ehTransferencia(categoria){
+    return CATEGORIAS_TRANSFER.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
   }
 
   // ── CÁLCULO OFICIAL DO ORÇAMENTO ──
@@ -122,6 +136,8 @@ var SulSignCore = (function(){
     ehPDVEX: ehPDVEX,
     CATEGORIAS_PARTICULAR: CATEGORIAS_PARTICULAR,
     ehParticular: ehParticular,
+    CATEGORIAS_TRANSFER: CATEGORIAS_TRANSFER,
+    ehTransferencia: ehTransferencia,
     calcOrcamento: calcOrcamento,
     fmt: fmt
   };
