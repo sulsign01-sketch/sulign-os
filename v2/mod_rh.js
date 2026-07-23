@@ -105,6 +105,15 @@
     for(i=0;i<d.cargos.length;i++){ if(String(d.cargos[i].id)===String(id)) return d.cargos[i]; }
     return null;
   }
+  function areasDe(d){
+    var vis={},lista=[],i,a;
+    for(i=0;i<d.cargos.length;i++){
+      a=d.cargos[i].area;
+      if(a&&!vis[a]){ vis[a]=1; lista.push(a); }
+    }
+    lista.sort();
+    return lista;
+  }
   function colabDe(d,id){
     var i; if(id==null) return null;
     for(i=0;i<d.colabs.length;i++){ if(String(d.colabs[i].id)===String(id)) return d.colabs[i]; }
@@ -130,6 +139,7 @@
         if(a==='rh-cancel'){ st.form=null; st.ftipo=null; redraw(c); return; }
         if(a==='rh-save'){ salvar(c); return; }
         if(a==='rh-cfg'){ st.ftipo='cfg'; st.form=cfg(); redraw(c); return; }
+        if(a==='rh-area-ren'){ st.ftipo='area'; st.form={de:t.dataset.area,para:t.dataset.area}; redraw(c); return; }
         if(a==='rh-cargo-novo'){ st.ftipo='cargo'; st.form={ativo:true}; redraw(c); return; }
         if(a==='rh-cargo-edit'){ st.ftipo='cargo'; st.form=copia(cargoDe(d,t.dataset.id)); redraw(c); return; }
         if(a==='rh-cargo-del'){ apagar(c,'cargos',t.dataset.id,'Excluir este cargo do plano?'); return; }
@@ -176,12 +186,24 @@
     if(btn){ btn.disabled=true; btn.textContent='Salvando…'; }
     var tabela,body;
 
+    if(st.ftipo==='area'){
+      var nova=g('rha-nome').trim(), de=st.form.de;
+      if(!nova){ alert('Informe o novo nome da área.'); if(btn){btn.disabled=false;btn.textContent='Salvar';} return; }
+      if(nova===de){ st.form=null; st.ftipo=null; redraw(c); return; }
+      SS20.sbw('cargos?area=eq.'+encodeURIComponent(de)+'&deletado_em=is.null','PATCH',{area:nova})
+        .then(function(){ invalidate(); st.form=null; st.ftipo=null; render(c); })
+        .catch(function(e){
+          if(btn){ btn.disabled=false; btn.textContent='Salvar'; }
+          alert('Erro ao renomear a área: '+e.message);
+        });
+      return;
+    }
     if(st.ftipo==='cargo'){
       if(!g('rhg-titulo').trim()){ alert('Título do cargo é obrigatório.'); if(btn){btn.disabled=false;btn.textContent='Salvar';} return; }
       tabela='cargos';
       body={
         titulo:g('rhg-titulo').trim(),
-        area:nz(g('rhg-area')),
+        area: nz(g('rhg-areanova'))||nz(g('rhg-area')),
         nivel:nz(g('rhg-nivel')),
         ordem:num(g('rhg-ordem')),
         cbo:nz(g('rhg-cbo')),
@@ -257,7 +279,7 @@
     ['Comunicação Visual','Operador de Impressão / Plotter','II',2,null,null,null,'6 meses de experiência em impressão digital de grande formato.','Operação da plotter, calibragem de cor, controle de mídia e perdas.'],
     ['Comunicação Visual','Aplicador / Instalador de Comunicação Visual','II',3,1900,2500,3300,'Experiência comprovada em aplicação de adesivo e instalação externa. CNH desejável.','Aplicação de vinil, instalação em campo, acabamento e conferência final.'],
     ['Comunicação Visual','Técnico em Comunicação Visual','III',4,null,null,null,'Experiência com dobradeira de letra caixa, montagem e acabamento de peças de comunicação visual.','Operação da dobradeira CNC, montagem e acabamento de letra caixa, aplicações especiais e controle de qualidade final da peça.'],
-    ['Comunicação Visual','Líder de Comunicação Visual','Líder',5,null,null,null,'Experiência de liderança e domínio de todo o processo do setor.','Distribuição da fila de produção, prazos, qualidade e desenvolvimento da equipe.'],
+    ['Comunicação Visual','Líder de Comunicação Visual','Líder',5,null,null,null,'Experiência de liderança e domínio de todo o processo do setor.','Distribuição da fila de produção do setor, qualidade da peça, consumo de insumo e desenvolvimento da equipe.'],
     ['Marcenaria','Ajudante de Marcenaria','I',1,null,null,null,'Ensino fundamental. Sem experiência prévia exigida.','Apoio no corte, lixamento, transporte de chapas e limpeza do setor.'],
     ['Marcenaria','Marceneiro','II',2,null,null,null,'Experiência comprovada em marcenaria de cenografia ou moveleira.','Execução de tapadeiras, praticáveis e estruturas em madeira conforme projeto.'],
     ['Marcenaria','Marceneiro Montador CNC','III',3,null,null,null,'Leitura de projeto e operação de router CNC.','Nesting, otimização de chapa, montagem de conjuntos complexos.'],
@@ -267,14 +289,30 @@
     ['Serralheria','Líder de Serralheria','Líder',3,null,null,null,'Liderança e domínio pleno do processo.','Planejamento de corte, consumo de metalon e qualidade estrutural.'],
     ['Costura','Auxiliar de Costura','I',1,null,null,null,'Ensino fundamental.','Corte de tecido, preparação de aviamentos e acabamento simples.'],
     ['Costura','Costureira(o)','II',2,null,null,null,'Experiência em costura industrial.','Confecção de rotundas, bandôs, saias de palco e revestimentos em napa.'],
-    ['Montagem & Logística','Ajudante de Montagem','I',1,null,null,null,'Ensino fundamental. Aptidão para trabalho externo.','Carga, descarga, apoio na montagem e desmontagem.'],
-    ['Montagem & Logística','Montador','II',2,null,null,null,'Experiência em montagem de cenografia ou estandes.','Montagem e desmontagem de estruturas, conferência de romaneio.'],
-    ['Montagem & Logística','Montador de Estruturas em Altura','III',3,null,null,null,'NR-35 válida e experiência com treliça e içamento.','Montagem em altura, conferência de ancoragem e uso de EPI específico.'],
-    ['Montagem & Logística','Encarregado de Montagem','Líder',4,null,null,null,'Liderança de equipe em campo e NR-35 válida.','Comando da equipe no evento, prazos, segurança e diário de obra.'],
+    ['Montagem','Ajudante de Montagem','I',1,null,null,null,'Ensino fundamental. Aptidão para trabalho externo.','Carga, descarga, apoio na montagem e desmontagem.'],
+    ['Montagem','Montador','II',2,null,null,null,'Experiência em montagem de cenografia ou estandes.','Montagem e desmontagem de estruturas, conferência de romaneio.'],
+    ['Montagem','Montador de Estruturas em Altura','III',3,null,null,null,'NR-35 válida e experiência com treliça e içamento.','Montagem em altura, conferência de ancoragem e uso de EPI específico.'],
+    ['Montagem','Encarregado de Montagem','Líder',4,null,null,null,'Liderança de equipe em campo e NR-35 válida.','Comando da equipe em campo, cumprimento do prazo de montagem, segurança do trabalho na frente de serviço e preenchimento do diário de obra.'],
     ['Fabricação Digital','Auxiliar de Fabricação Digital','I',1,null,null,null,'Ensino médio. Noção de informática. Sem experiência prévia exigida.','Troca e fixação de material nas máquinas, acompanhamento do corte, remoção de suportes e rebarbas, lixamento e organização da área.'],
     ['Fabricação Digital','Operador de Fabricação Digital','II',2,null,null,null,'Experiência na operação de router CNC ou laser. Leitura de desenho técnico.','Operação de router, laser e impressoras 3D a partir de arquivo já liberado. Zeramento, fixação de chapa, troca de ferramenta e registro de horas-máquina.'],
     ['Fabricação Digital','Programador de Fabricação Digital (CNC/CAD-CAM)','III',3,null,null,null,'Ensino técnico ou superior incompleto em áreas exatas. Domínio de CAD/CAM, nesting e parâmetros de corte. Dois anos de experiência.','Transforma o projeto em arquivo de produção: detalhamento, nesting e otimização de chapa, definição de ferramenta, avanço e estratégia de corte, fatiamento para impressão 3D. Mantém a biblioteca de arquivos e a tabela de parâmetros por material.'],
     ['Fabricação Digital','Líder de Fabricação Digital','Líder',4,null,null,null,'Domínio pleno do parque de máquinas e experiência de liderança.','Fila de produção das máquinas, custo hora-máquina, viabilidade técnica de peça, manutenção preventiva de primeiro nível e desenvolvimento da equipe.'],
+    ['Projetos & Orçamentos','Arte-finalista','II',1,null,null,null,'Domínio de Illustrator/CorelDRAW e Photoshop. Noção de perfil de cor e preparação para impressão.','Recebe o arquivo do cliente e libera para produção: confere sangria, resolução, perfil de cor, fontes e escala. Fecha o arquivo de impressão e o de recorte. Responde pelo pré-flight — é a última barreira antes da máquina.'],
+    ['Projetos & Orçamentos','Projetista Detalhista','III',2,null,null,null,'AutoCAD/SketchUp. Leitura de render e capacidade de transformá-lo em projeto executivo. Conhecimento de marcenaria, serralheria e cenografia.','Converte render e briefing em projeto executivo com medidas, materiais e detalhamento construtivo. Gera as vistas e o memorial que alimentam o orçamento e a produção. Valida viabilidade construtiva antes do aceite.'],
+    ['Projetos & Orçamentos','Orçamentista','III',3,null,null,null,'Domínio de composição de custo, BDI e das tabelas de insumo. Experiência em comunicação visual ou cenografia.','Levanta quantitativos a partir do projeto, compõe o custo direto por grupo, aplica o BDI vigente e emite a proposta. Responde pela margem orçada de cada job e pela conferência do preço antes do envio ao cliente.'],
+    ['Projetos & Orçamentos','Coordenador de Projetos e Orçamentos','Líder',4,null,null,null,'Domínio pleno de projeto e formação de preço. Experiência de liderança.','Revisa toda proposta antes do envio, mantém as tabelas de custo e o BDI atualizados, e apura orçado contra realizado por job.'],
+    ['Pintura & Acabamento','Auxiliar de Pintura','I',1,null,null,null,'Ensino fundamental. Treinamento de uso de EPI para agentes químicos.','Preparação de superfície: lixamento, massa, mascaramento e limpeza. Organização da cabine e descarte correto de resíduos.'],
+    ['Pintura & Acabamento','Pintor','II',2,null,null,null,'Experiência em pintura a pistola. Conhecimento de preparação de superfície e diluição.','Pintura de peças em madeira, metal e plástico. Preparo de tinta, regulagem de pistola e controle de camada e secagem.'],
+    ['Pintura & Acabamento','Pintor de Acabamento Especial','III',3,null,null,null,'Domínio de pintura automotiva, alto brilho e efeitos. Leitura de referência de cor.','Acabamento premium na cabine: automotiva, alto brilho, verniz e efeitos especiais. Formulação e igualação de cor por referência ou Pantone.'],
+    ['Suprimentos & Almoxarifado','Auxiliar de Almoxarifado','I',1,null,null,null,'Ensino médio. Noção de informática.','Recebimento e conferência de material, guarda, separação por job e apoio na expedição.'],
+    ['Suprimentos & Almoxarifado','Almoxarife','II',2,null,null,null,'Experiência em controle de estoque. Domínio do sistema de movimentação.','Movimentação de entrada e saída no sistema, inventário, controle de mínimos e apropriação de insumo por job. Responde pela acurácia do saldo.'],
+    ['Suprimentos & Almoxarifado','Comprador / Analista de Suprimentos','III',3,null,null,null,'Experiência em compras técnicas e negociação com fornecedor.','Cotação, comparativo de preço e prazo, emissão de ordem de compra e acompanhamento de entrega contra o cronograma. Mantém a base de fornecedores e as tabelas de preço.'],
+    ['Logística & Transporte','Ajudante de Carga e Descarga','I',1,null,null,null,'Ensino fundamental. Aptidão para esforço físico e trabalho externo.','Carga e descarga, conferência de romaneio, amarração e proteção da carga.'],
+    ['Logística & Transporte','Motorista','II',2,null,null,null,'CNH categoria compatível com a frota e curso de transporte de carga quando exigido. Sem restrição em pontuação.','Condução do veículo da empresa, roteirização da entrega, conferência de romaneio na saída e no retorno, e zelo pela manutenção preventiva. Jornada regida por regra própria de motorista.'],
+    ['Logística & Transporte','Encarregado de Logística','Líder',3,null,null,null,'Experiência em roteirização e gestão de frota.','Planejamento das rotas contra o cronograma de montagem, controle de frete e de terceiros, custo por entrega e documentação da frota.'],
+    ['Gestão','Coordenador de Produção (PCP)','Gestão',1,null,null,null,'Visão de todos os processos produtivos e domínio de cronograma e retroplanejamento.','Sequencia a produção entre as áreas contra o cronograma dos jobs, distribui carga, antecipa gargalo e responde pelo prazo de entrega. É a ponte entre os Líderes de área e a direção.'],
+    ['Gestão','Gerente de Operações','Gestão',2,null,null,null,'Experiência de gestão em produção industrial ou cenografia.','Responde pelo resultado operacional consolidado: produtividade, custo, qualidade e segurança. Gere os coordenadores e líderes.'],
+    ['Gestão','Sócio-Diretor','Gestão',3,null,null,null,'Sócio da empresa.','Direção estratégica, governança societária, decisão de investimento e representação legal. Remuneração por pró-labore, com reflexo no Fator R.'],
     ['Administrativo','Assistente Administrativo','I',1,null,null,null,'Ensino médio e pacote office.','Lançamentos, organização documental e apoio ao financeiro.'],
     ['Administrativo','Analista Administrativo-Financeiro','II',2,null,null,null,'Ensino superior em andamento e experiência em rotina financeira.','Contas a pagar e receber, conciliação e apoio ao fechamento.']
   ];
@@ -297,6 +335,7 @@
     h+=alertas(d);
     h+=abas();
     if(st.ftipo==='cfg')        h+=formCfg();
+    else if(st.ftipo==='area')  h+=formArea(d);
     else if(st.ftipo==='cargo') h+=formCargo(d);
     else if(st.ftipo==='colab') h+=formColab(d);
     else if(st.ftipo==='doc')   h+=formDoc(d);
@@ -365,7 +404,12 @@
     }
     ordem.forEach(function(a){
       h+='<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:12px;overflow:hidden">';
-      h+='<div style="padding:11px 16px;border-bottom:1px solid var(--line);font-family:var(--font-d);font-weight:800;font-size:13.5px">'+esc(a)+'</div>';
+      h+='<div style="padding:11px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px">'
+        +'<span style="font-family:var(--font-d);font-weight:800;font-size:13.5px">'+esc(a)+'</span>'
+        +'<span style="font-size:11px;color:var(--mut)">'+areas[a].length+' cargo(s)</span>'
+        +'<span style="flex:1"></span>'
+        +'<a href="#" data-action="rh-area-ren" data-area="'+esc(a)+'" style="color:var(--accent);font-size:11.5px;font-weight:600">renomear área</a>'
+        +'</div>';
       h+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px">';
       h+='<tr style="color:var(--mut);font-size:10.5px;text-transform:uppercase;letter-spacing:.6px">'
         +'<th style="text-align:left;padding:8px 16px">Cargo</th>'
@@ -583,11 +627,14 @@
 
   function formCargo(d){
     var f=st.form;
+    var oa='<option value="">— sem área —</option>';
+    areasDe(d).forEach(function(a){ oa+=opt(a,a,f.area); });
     var o='<option value="">— nenhum —</option>';
     d.cargos.forEach(function(cg){ if(String(cg.id)!==String(f.id)) o+=opt(cg.id,cg.area+' · '+cg.titulo,f.progride_para); });
     var i=grid(
        inp('rhg-titulo','Título *',f.titulo,'ex.: Montador')
-      +inp('rhg-area','Área',f.area,'ex.: Montagem & Logística')
+      +sel('rhg-area','Área',oa)
+      +inp('rhg-areanova','Ou criar nova área','','deixe vazio para usar a seleção')
       +sel('rhg-nivel','Nível','<option value="">—</option>'+opt('I','I',f.nivel)+opt('II','II',f.nivel)+opt('III','III',f.nivel)+opt('Líder','Líder',f.nivel)+opt('Gestão','Gestão',f.nivel))
       +inp('rhg-ordem','Ordem na área',f.ordem,'1, 2, 3…')
       +inp('rhg-cbo','CBO',f.cbo,'confirmar com a contabilidade')
@@ -601,6 +648,16 @@
       +chk('rhg-ativo','Ativo',f.ativo!==false)
     );
     return box(f.id?'Editar cargo':'Novo cargo',i);
+  }
+
+  function formArea(d){
+    var f=st.form, n=0, i;
+    for(i=0;i<d.cargos.length;i++){ if(d.cargos[i].area===f.de) n++; }
+    var inner=grid(inp('rha-nome','Novo nome da área',f.para,'ex.: Costura & Aviamentos'));
+    inner+='<div style="font-size:11.5px;color:var(--mut);margin-top:10px;line-height:1.6">'
+      +'Renomear atualiza os <b>'+n+' cargo(s)</b> desta área de uma vez. '
+      +'Se o nome novo já existir, as duas áreas se fundem — e isso não tem desfazer.</div>';
+    return box('Renomear área — '+f.de,inner);
   }
 
   function formColab(d){
