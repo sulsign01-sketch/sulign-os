@@ -30,18 +30,41 @@
   function btn(act,txt,extra){
     return '<button data-action="'+act+'"'+(extra||'')+' style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">'+txt+'</button>';
   }
+  /* acao principal: sem isso Salvar e Cancelar ficam identicos no modal */
+  function btnPri(act,txt){
+    return '<button data-action="'+act+'" style="font-size:11.5px;font-weight:600;padding:7px 18px;background:var(--ink,#1A1C22);color:#fff;border:1px solid var(--ink,#1A1C22);border-radius:6px;cursor:pointer">'+txt+'</button>';
+  }
   function inp(id,tipo,val,ph,w){
+    /* --bg nao existe na paleta do shell v2 (ver :root do index.html), entao o
+       fallback #111 pintava o campo de preto com texto escuro herdado = ilegivel.
+       Os tokens corretos sao --panel (branco) e --ink (texto). */
     return '<input id="'+id+'" type="'+tipo+'" value="'+esc(val==null?'':val)+'" placeholder="'+(ph||'')+'" '
-      +'style="width:'+(w||'100%')+';font-size:13px;padding:7px 9px;background:var(--bg,#111);color:inherit;border:1px solid var(--line);border-radius:6px;box-sizing:border-box">';
+      +'class="lc-fld" style="width:'+(w||'100%')+'">';
   }
   function sel(id,ops,val){
-    var h='<select id="'+id+'" style="width:100%;font-size:13px;padding:7px 9px;background:var(--bg,#111);color:inherit;border:1px solid var(--line);border-radius:6px;box-sizing:border-box">';
+    var h='<select id="'+id+'" class="lc-fld" style="width:100%">';
     ops.forEach(function(o){
       var v=(typeof o==='object')?o.v:o, t=(typeof o==='object')?o.t:o;
       h+='<option value="'+esc(v)+'"'+(String(v)===String(val)?' selected':'')+'>'+esc(t)+'</option>';
     });
     return h+'</select>';
   }
+  /* injeta uma vez: estados que estilo inline nao alcanca (:focus, ::placeholder) */
+  function ensureCSS(){
+    if(document.getElementById('lc-css')) return;
+    var st=document.createElement('style');
+    st.id='lc-css';
+    st.textContent=
+      '.lc-fld{font-size:13px;padding:8px 10px;background:var(--panel,#fff);color:var(--ink,#1A1C22);'
+      +'border:1px solid var(--line,#E4E2DC);border-radius:6px;box-sizing:border-box;font-family:inherit;'
+      +'transition:border-color .15s,box-shadow .15s;-webkit-appearance:none;appearance:none}'
+      +'.lc-fld:focus{outline:none;border-color:var(--ink,#1A1C22);box-shadow:0 0 0 3px rgba(26,28,34,.08)}'
+      +'.lc-fld::placeholder{color:#B4B6BC}'
+      +'select.lc-fld{-webkit-appearance:menulist;appearance:menulist}'
+      +'input.lc-fld[type=date]{min-height:36px}';
+    document.head.appendChild(st);
+  }
+
   function fld(lbl,ctrl){
     return '<div style="margin-bottom:11px"><div style="font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin-bottom:4px">'+lbl+'</div>'+ctrl+'</div>';
   }
@@ -245,6 +268,7 @@
 
     /* modal */
     if(_edit){
+      ensureCSS();
       var E=_edit, novo=!E.id;
       var catOps=CATS.slice(); if(E.categoria&&catOps.indexOf(E.categoria)<0) catOps.unshift(E.categoria);
       h+='<div style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:900;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto">'
@@ -262,7 +286,7 @@
         +fld('Job',inp('lc-job','text',E.orcamento_numero||'','SS-AAAA_MM-## ou vazio'))
         +'<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin:14px 0 16px;cursor:pointer">'
         +'<input type="checkbox" id="lc-conc"'+(E.conciliado?' checked':'')+'> Já passou no banco (conciliado)</label>'
-        +'<div style="display:flex;gap:8px;align-items:center">'+btn('lc-salvar','Salvar')+btn('lc-fechar','Cancelar')
+        +'<div style="display:flex;gap:10px;align-items:center;margin-top:2px">'+btnPri('lc-salvar','Salvar')+btn('lc-fechar','Cancelar')
         +'<span id="lc-st" style="font-size:11.5px;color:var(--mut)"></span></div>'
         +'</div></div>';
     }
