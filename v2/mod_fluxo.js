@@ -215,6 +215,45 @@
         +'<td style="text-align:right;color:'+(x.acum>=0?'var(--ok)':'var(--danger)')+'">'+fmt(x.acum)+'</td></tr>';
     },['Mês','Entradas','Saídas','Resultado','Acumulado']));
 
+    /* ── por categoria › subcategoria (mês selecionado) ── */
+    var pc={};
+    doMes.forEach(function(x){
+      var cat=x.categoria||'—';
+      var sub=String(x.sub||'').trim()||'— sem subcategoria';
+      if(!pc[cat]) pc[cat]={ent:0,sai:0,subs:{}};
+      if(!pc[cat].subs[sub]) pc[cat].subs[sub]={ent:0,sai:0};
+      var v=parseFloat(x.valor)||0;
+      if(x.ent){ pc[cat].ent+=v; pc[cat].subs[sub].ent+=v; }
+      else { pc[cat].sai+=v; pc[cat].subs[sub].sai+=v; }
+    });
+    function pcTot(o){ return (o.ent||0)+(o.sai||0); }
+    var pcRows='';
+    Object.keys(pc).sort(function(a,b){ return pcTot(pc[b])-pcTot(pc[a]); }).forEach(function(k){
+      var D=pc[k];
+      pcRows+='<tr style="border-bottom:1px solid var(--line)">'
+        +'<td style="padding:6px;font-weight:600">'+esc(k)+'</td>'
+        +'<td style="padding:6px;text-align:right;color:var(--ok)">'+(D.ent?fmt(D.ent):'—')+'</td>'
+        +'<td style="padding:6px;text-align:right;color:var(--danger)">'+(D.sai?fmt(D.sai):'—')+'</td></tr>';
+      var sk=Object.keys(D.subs).sort(function(a,b){ return pcTot(D.subs[b])-pcTot(D.subs[a]); });
+      if(sk.length===1&&sk[0]==='— sem subcategoria') return;
+      sk.forEach(function(s){
+        var SD=D.subs[s];
+        pcRows+='<tr style="border-bottom:1px solid var(--line)">'
+          +'<td style="padding:4px 6px 4px 22px;color:var(--mut);font-size:11.5px">&rsaquo; '+esc(s)+'</td>'
+          +'<td style="padding:4px 6px;text-align:right;font-size:11.5px;color:var(--mut)">'+(SD.ent?fmt(SD.ent):'—')+'</td>'
+          +'<td style="padding:4px 6px;text-align:right;font-size:11.5px;color:var(--mut)">'+(SD.sai?fmt(SD.sai):'—')+'</td></tr>';
+      });
+    });
+    var pcTh='<th style="padding:8px 6px;text-align:left;font-size:10.5px;letter-spacing:.5px;text-transform:uppercase;color:var(--mut)">';
+    var pcTab='<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr>'
+      +pcTh+'Categoria</th>'
+      +pcTh.replace('text-align:left','text-align:right')+'Entradas</th>'
+      +pcTh.replace('text-align:left','text-align:right')+'Saídas</th>'
+      +'</tr></thead><tbody>'+pcRows+'</tbody></table>';
+    h+=card('Por categoria · '+mesAtual,
+      pcRows?pcTab:'<div style="padding:14px;color:var(--mut);font-size:12px">Sem movimento no mês.</div>',
+      'Subcategoria aparece só onde há classificação. Categoria sem nenhum registro classificado fica só com a linha do total.');
+
     var ordenado=doMes.slice().sort(function(a,b){ return a.data<b.data?1:(a.data>b.data?-1:0); });
     var extrato=tbl(ordenado,function(x){
       var tag=x.origem==='aporte'
