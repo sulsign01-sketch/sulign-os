@@ -1007,6 +1007,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">SAÍDAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#c62828;" id="fx-saidas">—</div></div>
       <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">SALDO DO PERÍODO</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;" id="fx-saldo">—</div></div>
       <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">SALDO ACUMULADO</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#0d47a1;" id="fx-acumulado">—</div></div>
+      <div style="background:#fff;padding:12px 14px;"><div style="font-size:10px;color:#888;margin-bottom:4px;">TRANSFERÊNCIAS</div><div style="font-family:DM Mono,monospace;font-size:16px;font-weight:600;color:#5e35b1;" id="fx-transf">—</div><div style="font-size:9px;color:#bbb;margin-top:3px;" id="fx-transf-sub">—</div></div>
     </div>
 
     <!-- Form lançamento rápido -->
@@ -1229,6 +1230,9 @@ var SUBCATS={
   'Serviços':['Contabilidade','Juridico','TI','Consultoria','Manutencao','Terceirizado'],
   'Logística':['Frete','Combustivel','Estacionamento','Pedagio'],
   'Mobilidade':['Uber','99','Taxi','Onibus/Metro','Passagem','Combustivel'],
+  'Aplicação Financeira':['CDB','LCI/LCA','Tesouro Direto','Fundo','Poupanca'],
+  'Resgate de Aplicação':['CDB','LCI/LCA','Tesouro Direto','Fundo','Poupanca'],
+  'Rendimento de Aplicação':['CDB','LCI/LCA','Tesouro Direto','Fundo','Poupanca'],
   'Locação':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
   'Locação Equipamentos':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
   'Locação PDVEX':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
@@ -3113,6 +3117,26 @@ function renderFluxo(lancs, aportes, saldoInicial, de, ate){
   meses.forEach(function(m){ totalEntradas += porMes[m].entradas; totalSaidas += porMes[m].saidas; });
   var saldoPeriodo = totalEntradas - totalSaidas;
   var saldoFinal = saldoInicial + saldoPeriodo;
+
+  /* Transferencias (aplicacao/resgate) continuam somando em entradas/saidas,
+     porque o dinheiro passou pela conta corrente de fato e o Fluxo espelha o
+     extrato. Este KPI existe para voce conseguir descontar mentalmente o que
+     nao e custo nem receita operacional. */
+  var totalTransf = 0, nTransf = 0;
+  lancs.forEach(function(l){
+    if(!(window.SulSignCore && SulSignCore.ehTransferencia && SulSignCore.ehTransferencia(l.categoria))) return;
+    var v = parseFloat(l.valor)||0;
+    totalTransf += (l.tipo_lancamento==='entrada') ? v : -v;
+    nTransf++;
+  });
+  var elT = document.getElementById('fx-transf');
+  if(elT){
+    elT.textContent = (totalTransf>0?'+':'')+fmt(totalTransf);
+    var elTs = document.getElementById('fx-transf-sub');
+    if(elTs) elTs.textContent = nTransf
+      ? (nTransf+' mov. · não é custo nem receita')
+      : 'nenhuma no período';
+  }
 
   document.getElementById('fx-entradas').textContent = fmt(totalEntradas);
   document.getElementById('fx-saidas').textContent = fmt(totalSaidas);
