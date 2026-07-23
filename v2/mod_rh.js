@@ -46,16 +46,40 @@
     jornada:'44 horas semanais',
     nrs:'NR-06 · NR-35'
   };
-  function cfg(){
-    var c={},k;
-    for(k in CFG_DEF){ if(CFG_DEF.hasOwnProperty(k)) c[k]=CFG_DEF[k]; }
+  var CFG=null;         /* config em uso */
+  var CFG_REMOTA=false; /* true quando a tabela rh_config respondeu */
+
+  function cfgBase(){ var c={},k; for(k in CFG_DEF){ if(CFG_DEF.hasOwnProperty(k)) c[k]=CFG_DEF[k]; } return c; }
+  function cfgLocal(){
+    var c=cfgBase(),k;
     try{
       var raw=localStorage.getItem(CFG_KEY);
-      if(raw){ var o=JSON.parse(raw); for(k in o){ if(o.hasOwnProperty(k)) c[k]=o[k]; } }
+      if(raw){ var o=JSON.parse(raw); for(k in o){ if(o.hasOwnProperty(k)&&o[k]!=null&&o[k]!=='') c[k]=o[k]; } }
     }catch(e){}
     return c;
   }
-  function cfgSave(o){ try{ localStorage.setItem(CFG_KEY,JSON.stringify(o)); }catch(e){} }
+  function cfgMerge(row){
+    var c=cfgBase(),k;
+    if(row){ for(k in CFG_DEF){ if(CFG_DEF.hasOwnProperty(k)&&row[k]!=null&&row[k]!=='') c[k]=row[k]; } }
+    return c;
+  }
+  function cfg(){ return CFG||cfgLocal(); }
+  function cfgSave(o,done){
+    if(!CFG_REMOTA){
+      try{ localStorage.setItem(CFG_KEY,JSON.stringify(o)); }catch(e){}
+      CFG=cfgMerge(o); if(done) done(); return;
+    }
+    var body={},k;
+    for(k in CFG_DEF){ if(CFG_DEF.hasOwnProperty(k)) body[k]=nz(o[k]); }
+    body.atualizado_em=new Date().toISOString();
+    SS20.sbw('rh_config?id=eq.1','PATCH',body)
+      .then(function(){ CFG=cfgMerge(body); if(done) done(); })
+      .catch(function(e){
+        var b=document.getElementById('rh-btn-save');
+        if(b){ b.disabled=false; b.textContent='Salvar'; }
+        alert('Erro ao salvar configuração: '+e.message);
+      });
+  }
   function ph(v,txt){ return (v==null||String(v).trim()==='')
     ? '<span style="color:#c00;font-weight:700">['+esc(txt)+']</span>' : esc(v); }
 
@@ -65,8 +89,11 @@
     return Promise.all([
       SS20.sb('cargos?select=*&deletado_em=is.null&order=area.asc,ordem.asc,titulo.asc'),
       SS20.sb('colaboradores?select=*&deletado_em=is.null&order=nome.asc'),
-      SS20.sb('colaborador_documentos?select=*&deletado_em=is.null&order=validade.asc')
+      SS20.sb('colaborador_documentos?select=*&deletado_em=is.null&order=validade.asc'),
+      SS20.sb('rh_config?select=*&id=eq.1')['catch'](function(){ return null; })
     ]).then(function(r){
+      if(r[3]===null){ CFG_REMOTA=false; CFG=cfgLocal(); }
+      else { CFG_REMOTA=true; CFG=cfgMerge(r[3][0]||null); }
       var d={cargos:r[0]||[], colabs:r[1]||[], docs:r[2]||[]};
       SS20.cache.rh=d;
       return d;
@@ -140,7 +167,10 @@
     if(st.ftipo==='cfg'){
       var o={},k;
       for(k in CFG_DEF){ if(CFG_DEF.hasOwnProperty(k)) o[k]=g('rhc-'+k); }
-      cfgSave(o); st.form=null; st.ftipo=null; redraw(c); return;
+      var bc=document.getElementById('rh-btn-save');
+      if(bc){ bc.disabled=true; bc.textContent='Salvando…'; }
+      cfgSave(o,function(){ st.form=null; st.ftipo=null; redraw(c); });
+      return;
     }
     var btn=document.getElementById('rh-btn-save');
     if(btn){ btn.disabled=true; btn.textContent='Salvando…'; }
@@ -539,7 +569,11 @@
       +inp('rhc-jornada','Jornada padrão',f.jornada)
       +inp('rhc-nrs','NRs obrigatórias',f.nrs)
     );
-    i+='<div style="font-size:11.5px;color:var(--mut);margin-top:12px;line-height:1.6">Estes parâmetros alimentam todos os documentos gerados. Hoje ficam salvos <b>neste navegador</b> — quando virarem tabela no Supabase, passam a valer para todo mundo.</div>';
+    i+='<div style="font-size:11.5px;color:var(--mut);margin-top:12px;line-height:1.6">Estes parâmetros alimentam todos os documentos gerados. '
+      +(CFG_REMOTA
+        ? 'Salvos no <b>Supabase</b> — valem para todos os usuários do sistema.'
+        : '<b style="color:var(--warn)">Salvos apenas neste navegador.</b> A tabela <code>rh_config</code> ainda não existe no banco; rode a migração para que passem a valer para todo mundo.')
+      +'</div>';
     return box('Empresa & convenção coletiva',i);
   }
 
