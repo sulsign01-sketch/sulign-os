@@ -370,6 +370,12 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
       <input type="checkbox" id="f-tem-nota" checked style="width:auto;">
       <label style="margin:0;text-transform:none;font-size:12px;color:#333;">Possui nota fiscal</label>
     </div>
+    <div class="fl" style="display:flex;align-items:center;gap:8px;">
+      <input type="checkbox" id="f-conciliado" checked style="width:auto;">
+      <label style="margin:0;text-transform:none;font-size:12px;color:#333;">Já conciliado (consta no extrato)
+        <span style="display:block;font-size:10px;color:#aaa;text-transform:none;">Marcado: entra no Fluxo de Caixa. Desmarque se o dinheiro ainda não passou na conta.</span>
+      </label>
+    </div>
     <div class="row2">
       <div class="fl">
         <label>Tipo de Lançamento</label>
@@ -1472,6 +1478,8 @@ async function salvarLancamento(){
   processarComprovante(async function(comprovanteB64){
     try{
       var temNota=document.getElementById('f-tem-nota').checked;
+      var elConc=document.getElementById('f-conciliado');
+      var conciliadoChk=elConc?elConc.checked:false;
       var tipoLanc=document.getElementById('f-tipo-lancamento').value;
       var periodicidade=document.getElementById('f-periodicidade').value;
       var vencimento=document.getElementById('f-vencimento').value||null;
@@ -1488,7 +1496,11 @@ async function salvarLancamento(){
         local_mo:(categoria==='Mão de Obra')?document.getElementById('f-local-mo').value:null,
         ordem_compra:document.getElementById('f-oc-numero').value.trim()||null,
         comprovante:comprovanteB64,tem_nota:temNota,
-        tipo_lancamento:tipoLanc,periodicidade:periodicidade,vencimento:vencimento
+        tipo_lancamento:tipoLanc,periodicidade:periodicidade,vencimento:vencimento,
+        /* lancamento copiado do extrato ja nasce conciliado; data_conciliacao
+           acompanha para o Fluxo nao ficar com conciliado=true e data nula */
+        conciliado:conciliadoChk,
+        data_conciliacao:(conciliadoChk ? (data || new Date().toISOString().split('T')[0]) : null)
       };
       var r=await fetch(SUPA_URL+'/rest/v1/lancamentos',{
         method:'POST',
