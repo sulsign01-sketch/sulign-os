@@ -65,6 +65,24 @@
     document.head.appendChild(st);
   }
 
+  /* select de subcategoria de UMA linha da lista.
+     Preserva valor legado fora do dominio em vez de descartar. */
+  function subSel(l){
+    var atual=String(l.subcategoria||'').trim();
+    var lst=(window.SulSignCore&&SulSignCore.subcategoriasDe)?SulSignCore.subcategoriasDe(l.categoria):[];
+    var vazio=!atual;
+    var o='<option value="">—</option>';
+    for(var i=0;i<lst.length;i++){
+      o+='<option value="'+esc(lst[i])+'"'+(lst[i]===atual?' selected':'')+'>'+esc(lst[i])+'</option>';
+    }
+    if(atual && lst.indexOf(atual)<0) o+='<option value="'+esc(atual)+'" selected>'+esc(atual)+' (fora da lista)</option>';
+    var semDominio=!lst.length;
+    return '<select id="ls-'+l.id+'" data-row="'+l.id+'"'+(semDominio?' disabled title="Categoria sem subcategorias definidas"':'')
+      +' style="width:100%;min-width:130px;padding:3px 5px;font-size:11px;font-family:inherit;'
+      +'border:1px solid '+(vazio?'#f9a825':'var(--line)')+';border-radius:5px;'
+      +'background:'+(semDominio?'transparent':'var(--paper)')+';color:'+(vazio?'var(--mut)':'inherit')+'">'+o+'</select>';
+  }
+
   function fld(lbl,ctrl){
     return '<div style="margin-bottom:11px"><div style="font-size:10.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);margin-bottom:4px">'+lbl+'</div>'+ctrl+'</div>';
   }
@@ -98,6 +116,19 @@
   }
 
   /* ══ AÇÕES ══ */
+  function classificar(id,valor,c,el){
+    if(el){ el.disabled=true; el.style.opacity='.45'; }
+    return SS20.sbw('lancamentos?id=eq.'+encodeURIComponent(id),'PATCH',{subcategoria:valor||null})
+      .then(function(){
+        _d.forEach(function(x){ if(String(x.id)===String(id)) x.subcategoria=valor||null; });
+        draw(c);
+      })
+      .catch(function(e){
+        if(el){ el.disabled=false; el.style.opacity='1'; }
+        alert('Erro ao classificar: '+e.message);
+      });
+  }
+
   function conciliar(ids,valor,c){
     var body={conciliado:valor,data_conciliacao:valor?hoje():null};
     var ps=ids.map(function(id){ return SS20.sbw('lancamentos?id=eq.'+id,'PATCH',body); });
@@ -157,6 +188,7 @@
       if(t.id==='lf-tipo'){ _f.tipo=t.value; _sel={}; draw(c); }
       if(t.id==='lf-conc'){ _f.conc=t.value; _sel={}; draw(c); }
       if(t.id==='lf-sub'){ _f.sub=t.value; _sel={}; draw(c); }
+      if(t.id&&t.id.indexOf('ls-')===0){ classificar(t.getAttribute('data-row'),t.value,c,t); }
       if(t.id==='lc-cat'){
         /* repopula a subcategoria sem redesenhar, senao os outros campos
            do modal perdem o que ainda nao foi salvo */
@@ -269,8 +301,8 @@
       h+='<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow-x:auto">';
       h+='<table style="width:100%;border-collapse:collapse;font-size:12.5px"><thead><tr>';
       h+='<th style="padding:8px 6px;text-align:left"><input type="checkbox" id="lf-todos"></th>';
-      ['Data','Descrição','Categoria','Job','Valor','Conc.',''].forEach(function(x,i){
-        h+='<th style="text-align:'+(i===4?'right':'left')+';padding:8px 6px;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--line)">'+x+'</th>';
+      ['Data','Descrição','Categoria','Subcategoria','Job','Valor','Conc.',''].forEach(function(x){
+        h+='<th style="text-align:'+(x==='Valor'?'right':'left')+';padding:8px 6px;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--mut);border-bottom:1px solid var(--line)">'+x+'</th>';
       });
       h+='</tr></thead><tbody>';
       lista.forEach(function(l){
@@ -280,6 +312,7 @@
           +'<td style="padding:6px;white-space:nowrap">'+dstr(l.data)+'</td>'
           +'<td style="padding:6px">'+esc((l.descricao||'—').slice(0,44))+(l.fornecedor?'<div style="font-size:10.5px;color:var(--mut)">'+esc(l.fornecedor)+'</div>':'')+'</td>'
           +'<td style="padding:6px;font-size:11px;color:var(--mut)">'+esc(l.categoria||'—')+'</td>'
+          +'<td style="padding:4px 6px">'+subSel(l)+'</td>'
           +'<td style="padding:6px;font-size:11px;color:var(--mut)">'+esc(l.orcamento_numero||'—')+'</td>'
           +'<td style="padding:6px;text-align:right;font-weight:600;white-space:nowrap;color:'+(e?'var(--ok)':'var(--danger)')+'">'+(e?'+':'&minus;')+fmt(v)+'</td>'
           +'<td style="padding:6px"><span data-action="lc-toggle" data-id="'+l.id+'" title="'+(l.conciliado?'Conciliado em '+dstr(l.data_conciliacao):'Clique para conciliar')+'" style="cursor:pointer;font-size:15px;color:'+(l.conciliado?'var(--ok)':'#f9a825')+'">'+(l.conciliado?'✓':'○')+'</span></td>'
@@ -289,7 +322,7 @@
           +'</tr>';
       });
       h+='</tbody></table></div>';
-      h+='<div style="margin-top:8px;font-size:11.5px;color:var(--mut)">Linhas em destaque estão <b>não conciliadas</b> — não entram no Fluxo de Caixa. Clique no ○ para conciliar.</div>';
+      h+='<div style="margin-top:8px;font-size:11.5px;color:var(--mut)">Linhas em destaque estão <b>não conciliadas</b> — não entram no Fluxo de Caixa. Clique no ○ para conciliar.<br>A subcategoria salva sozinha ao escolher. Borda amarela = ainda sem classificação. Select apagado = a categoria não tem subcategorias definidas.</div>';
     }
 
     /* modal */
