@@ -65,15 +65,41 @@
     document.head.appendChild(st);
   }
 
+  /* ── OPÇÕES DE CATEGORIA, AGRUPADAS POR BLOCO ──
+     Alfabetica pura jogaria 'Receita de Job' no meio das despesas e 'Outros'
+     entre 'Ocupação' e 'Pró-Labore'. Os optgroup seguem a ordem de leitura de
+     um DRE, com ordem alfabetica DENTRO de cada bloco — voce acha a categoria
+     pelo raciocinio, nao pelo alfabeto.
+     Fonte: SulSignCore.BLOCOS. Fallback para lista plana se o navegador ainda
+     estiver com o core antigo em cache (o CDN do Pages atrasa 1-5 min). */
+  function opt(v,atual){
+    return '<option value="'+esc(v)+'"'+(v===atual?' selected':'')+'>'+esc(v)+'</option>';
+  }
+  function catOptions(atual){
+    var blocos=(window.SulSignCore&&SulSignCore.BLOCOS)?SulSignCore.BLOCOS:null;
+    var o='<option value=""'+(atual?'':' selected')+'>—</option>';
+    /* valor legado fora do dominio nao pode sumir da tela nem ser reescrito
+       em silencio ao salvar outro campo */
+    if(atual && CATS.indexOf(atual)<0){
+      o+='<optgroup label="Fora da lista">'+opt(atual,atual)+'</optgroup>';
+    }
+    var i,j;
+    if(!blocos){
+      for(i=0;i<CATS.length;i++) o+=opt(CATS[i],atual);
+      return o;
+    }
+    for(i=0;i<blocos.length;i++){
+      o+='<optgroup label="'+esc(blocos[i].nome)+'">';
+      for(j=0;j<blocos[i].cats.length;j++) o+=opt(blocos[i].cats[j],atual);
+      o+='</optgroup>';
+    }
+    return o;
+  }
+
   /* select de categoria de UMA linha da lista. */
   function catSel(l){
     var atual=String(l.categoria||'').trim();
-    var lst=CATS.slice();
-    if(atual && lst.indexOf(atual)<0) lst.unshift(atual);
-    var o='<option value="">—</option>';
-    for(var i=0;i<lst.length;i++){
-      o+='<option value="'+esc(lst[i])+'"'+(lst[i]===atual?' selected':'')+'>'+esc(lst[i])+'</option>';
-    }
+    var o=catOptions(atual);
     return '<select id="lk-'+l.id+'" data-row="'+l.id+'" style="width:100%;min-width:140px;padding:3px 5px;'
       +'font-size:11px;font-family:inherit;border:1px solid '+(atual?'var(--line)':'#f9a825')+';'
       +'border-radius:5px;background:var(--paper)">'+o+'</select>';
@@ -368,7 +394,8 @@
     if(_edit){
       ensureCSS();
       var E=_edit, novo=!E.id;
-      var catOps=CATS.slice(); if(E.categoria&&catOps.indexOf(E.categoria)<0) catOps.unshift(E.categoria);
+      var catModal='<select id="lc-cat" class="lc-fld" style="width:100%">'
+        +catOptions(String(E.categoria||'Outros').trim())+'</select>';
       h+='<div style="position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:900;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto">'
         +'<div style="background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;width:100%;max-width:460px">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
@@ -378,7 +405,7 @@
         +fld('Data',inp('lc-data','date',(E.data||hoje()).slice(0,10)))
         +fld('Descrição',inp('lc-desc','text',E.descricao||'','O que foi'))
         +fld('Valor (R$)',inp('lc-valor','text',E.valor==null?'':E.valor,'0,00'))
-        +fld('Categoria',sel('lc-cat',catOps,E.categoria||'Outros'))
+        +fld('Categoria',catModal)
         +fld('Subcategoria',(function(){
             var atual=String(E.subcategoria||'').trim();
             var lst=(window.SulSignCore&&SulSignCore.subcategoriasDe)?SulSignCore.subcategoriasDe(E.categoria||'Outros'):[];
