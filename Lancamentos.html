@@ -1034,6 +1034,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
           <option>Comissão</option><option>Alimentação</option><option>Verba Produção</option><option>Outros</option>
         </select>
       </div>
+      <div class="fl">
+        <label>Subcategoria</label>
+        <select id="fx-subcat"><option value="">—</option></select>
+      </div>
     </div>
     <div class="row2">
       <div class="fl">
@@ -1156,6 +1160,10 @@ body{font-family:'DM Sans',sans-serif;background:var(--g100);color:var(--black);
             <option>Imposto</option><option>Serviços</option><option>Receita de Job</option>
             <option>Comissão</option><option>Aporte</option><option>Alimentação</option><option>Verba Produção</option><option>Outros</option>
           </select>
+        </div>
+        <div class="fl">
+          <label>Subcategoria</label>
+          <select id="fxe-subcat"><option value="">—</option></select>
         </div>
       </div>
       <div class="row2">
@@ -1327,6 +1335,13 @@ function calculaValorMoPdvex(){
 }
 document.getElementById('f-categoria').addEventListener('change',function(){atualizaCamposPdvex();popularSubcat('f-categoria','f-subcategoria');});
 popularSubcat('f-categoria','f-subcategoria');
+if(document.getElementById('fx-cat')){
+  document.getElementById('fx-cat').addEventListener('change',function(){popularSubcat('fx-cat','fx-subcat');});
+  popularSubcat('fx-cat','fx-subcat');
+}
+if(document.getElementById('fxe-cat')){
+  document.getElementById('fxe-cat').addEventListener('change',function(){popularSubcat('fxe-cat','fxe-subcat');});
+}
 if(document.getElementById('ff-categoria')){
   document.getElementById('ff-categoria').addEventListener('change',function(){popularSubcat('ff-categoria','ff-subcategoria');});
   popularSubcat('ff-categoria','ff-subcategoria');
@@ -2486,6 +2501,7 @@ async function baixarContaCore(conta, data, url){
       await _postLancamentoBaixa({
         orcamento_numero:'SEM-JOB',
         categoria:'Imposto',
+        subcategoria:(conta._tipoImp&&String(conta._tipoImp).trim())||null,
         descricao:'[IMPOSTO] '+(conta.descricao||'—'),
         valor:conta.valor||0,
         data:data,
@@ -2518,6 +2534,7 @@ async function baixarContaCore(conta, data, url){
     await _postLancamentoBaixa({
       orcamento_numero:conta.orcamento_numero||'SEM-JOB',
       categoria:conta.categoria||'Outros',
+      subcategoria:(conta.subcategoria&&String(conta.subcategoria).trim())||null,
       descricao:'['+(conta.numero_op||'OP')+'] '+(conta.descricao||'—'),
       valor:conta.valor||0,
       data:data,
@@ -2959,7 +2976,7 @@ async function consolidarCaixa(contaId, jobNumero){
     var lancs=await r.json();
     if(!lancs||!lancs.length){alert('Nenhum lançamento para consolidar.');return;}
     // Inserir em lancamentos
-    var payload=lancs.map(function(l){return {orcamento_numero:jobNumero,categoria:l.categoria,descricao:'[Caixa] '+l.descricao,valor:l.valor,data:l.data,fornecedor:l.fornecedor||'',tem_nota:l.tem_nota,comprovante:l.comprovante,periodicidade:'unica',tipo_lancamento:'saida'};});
+    var payload=lancs.map(function(l){return {orcamento_numero:jobNumero,categoria:l.categoria,subcategoria:(l.subcategoria&&String(l.subcategoria).trim())||null,descricao:'[Caixa] '+l.descricao,valor:l.valor,data:l.data,fornecedor:l.fornecedor||'',tem_nota:l.tem_nota,comprovante:l.comprovante,periodicidade:'unica',tipo_lancamento:'saida'};});
     var ri=await fetch(SUPA_URL+'/rest/v1/lancamentos',{method:'POST',headers:{'apikey':SUPA_KEY,'Authorization':'Bearer '+getAuthToken(),'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
     if(!ri.ok)throw new Error('HTTP '+ri.status);
     // Marcar caixa como consolidado para impedir repetição
@@ -3316,6 +3333,7 @@ async function salvarFluxo(){
   var desc = document.getElementById('fx-desc').value.trim();
   var valor = parseFloat(document.getElementById('fx-valor').value)||0;
   var cat = document.getElementById('fx-cat').value;
+  var subcat = (document.getElementById('fx-subcat')?document.getElementById('fx-subcat').value:'')||null;
   var job = document.getElementById('fx-job').value;
   var forn = document.getElementById('fx-forn').value.trim();
   var st = document.getElementById('status-fx');
@@ -3326,7 +3344,7 @@ async function salvarFluxo(){
   try{
     var payload = {
       orcamento_numero: job || 'SEM-JOB',
-      categoria: cat, descricao: desc, valor: valor, data: data,
+      categoria: cat, subcategoria: subcat, descricao: desc, valor: valor, data: data,
       fornecedor: forn, pessoa: 'Eduardo Ponde', tem_nota: false,
       tipo_lancamento: tipo, periodicidade: 'unica'
     };
@@ -3358,6 +3376,7 @@ function abrirEdicaoFluxo(id){
   document.getElementById('fxe-desc').value = item.descricao || '';
   document.getElementById('fxe-valor').value = item.valor || '';
   document.getElementById('fxe-cat').value = item.categoria || 'Outros';
+  popularSubcat('fxe-cat','fxe-subcat', item.subcategoria || '');
   document.getElementById('fxe-forn').value = item.fornecedor || '';
 
   // Popula o seletor de job com os ativos + garante que o job atual apareça mesmo se não estiver "ativo"
@@ -3388,6 +3407,7 @@ async function confirmarEdicaoFluxo(){
   var desc = document.getElementById('fxe-desc').value.trim();
   var valor = parseFloat(document.getElementById('fxe-valor').value)||0;
   var cat = document.getElementById('fxe-cat').value;
+  var subcat = (document.getElementById('fxe-subcat')?document.getElementById('fxe-subcat').value:'')||null;
   var job = document.getElementById('fxe-job').value;
   var forn = document.getElementById('fxe-forn').value.trim();
   var st = document.getElementById('fxe-status');
@@ -3398,7 +3418,7 @@ async function confirmarEdicaoFluxo(){
   try{
     var payload = {
       orcamento_numero: job || 'SEM-JOB',
-      categoria: cat, descricao: desc, valor: valor, data: data,
+      categoria: cat, subcategoria: subcat, descricao: desc, valor: valor, data: data,
       fornecedor: forn, tipo_lancamento: tipo
     };
     var r = await fetch(SUPA_URL+'/rest/v1/lancamentos?id=eq.'+_fxEditandoId,{
