@@ -260,12 +260,20 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
   display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
 .cad-legenda .c{font-size:8px;font-weight:bold;white-space:nowrap;}
 .cad-legenda .t{font-size:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cad-desimg{max-width:100%;max-height:82mm;display:block;}
+.cad-desctrl{position:absolute;left:7mm;right:8mm;top:143mm;display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
+.cad-desctrl .lbl{font-size:9px;color:#8A938E;}
+.cad-desctrl .sep{width:1px;height:14px;background:#D8DCDA;margin:0 2px;}
+.cad-desctrl .dica{font-size:8.5px;color:#AEB6B1;flex:1 1 100%;}
+.cad-desctrl button{font-family:inherit;font-size:9px;padding:3px 7px;border:1px solid #C4CCC7;background:#fff;border-radius:4px;cursor:pointer;color:#556;}
+.cad-desctrl button.on{background:var(--verde);border-color:var(--verde);color:#fff;}
+.cad-desctrl button:hover{border-color:var(--verde);}
 .pg-cad .item-ctrl{top:auto;bottom:5mm;left:4mm;right:auto;flex-direction:row;}
 
 @media print{
   .so-print{display:inline !important;}
   body.fmt-pais .page{width:297mm;height:210mm;}
-  .cad-ctrl,.pin-bar,.cad-vazio{display:none !important;}
+  .cad-ctrl,.pin-bar,.cad-vazio,.cad-desctrl{display:none !important;}
   .cad-legenda .lg{cursor:default;}
   .pin{box-shadow:none;}
   .pg-indice.sem-planta{display:none;}
@@ -336,7 +344,7 @@ function itemNovo(){
   return { codigo:'', nome:'NOVO ITEM', setor:'', local:'', material:'', acabamento:'', substrato:'', estrutura:'',
     qtd:'1', visL:100, visA:100, sangria:2, impManual:false, impL:104, impA:104,
     forma:'ret', fp1:0,
-    refSrc:'', refRects:[], pins:[], cor:'',
+    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'',
     obs:'', instalacao:'', render:[], arte:[] };
 }
 function estadoInicial(){
@@ -618,6 +626,8 @@ function renderItem(it, i){
   h += '<div class="diagrama-wrap" data-diagrama="'+i+'">'+svgDiagrama(it)+'</div>';
   h += '<div class="sec-rot">R E F E R Ê N C I A &nbsp; V I S U A L &nbsp; <small style="letter-spacing:0;text-transform:none">(render)</small></div>';
   h += slotImg(i,'render','o render da peça',it);
+  h += '<div class="sec-rot">D E T A L H A M E N T O</div>';
+  h += slotImg(i,'detalhe','o detalhamento técnico',it);
   h += '<div class="sec-rot">A R T E &nbsp; F I N A L &nbsp; <small style="letter-spacing:0;text-transform:none">(recebida)</small></div>';
   h += slotImg(i,'arte','a arte final recebida',it);
   h += '</div>';
@@ -694,7 +704,7 @@ function render(){
   if(pais){
     h += renderCad3D();
     h += renderCadPlanta();
-    for(i=0;i<S.itens.length;i++) h += renderCadItem(S.itens[i], i);
+    for(i=0;i<S.itens.length;i++){ h += renderCadItem(S.itens[i], i); h += renderCadExtras(S.itens[i], i); }
   }else{
     h += renderIndice();
     for(i=0;i<S.itens.length;i++) h += renderItem(S.itens[i], i);
@@ -728,6 +738,9 @@ function normaliza(){
     var it = S.itens[i];
     if(!Array.isArray(it.refRects)) it.refRects = [];
     if(!Array.isArray(it.pins)) it.pins = [];
+    if(!Array.isArray(it.detalhe)) it.detalhe = [];
+    if(!Array.isArray(it.arte)) it.arte = imgsDe(it,'arte');
+    if(it.desenhoSrc===undefined) it.desenhoSrc = '';
     if(it.refSrc===undefined) it.refSrc = '';
     if(it.cor===undefined) it.cor = '';
   }
@@ -742,6 +755,18 @@ function refImg(it){
   if(proprios.length) return proprios[0];
   if(S.renders.length) return S.renders[0];
   return '';
+}
+
+/* imagem que ocupa a área central: '' = desenho gerado, 'd:n' = detalhamento, 'a:n' = arte final */
+function imgDesenho(it){
+  var s = String(it.desenhoSrc||''), pr = s.charAt(0), n = parseInt(s.substring(2),10);
+  if(pr==='d'){ var ds = imgsDe(it,'detalhe'); if(ds[n]) return ds[n]; }
+  if(pr==='a'){ var as = imgsDe(it,'arte');    if(as[n]) return as[n]; }
+  return '';
+}
+function conteudoDesenho(it){
+  var d = imgDesenho(it);
+  return d ? '<img src="'+d+'" class="cad-desimg">' : svgCaderno(it);
 }
 
 /* ═══ DESENHO TÉCNICO DO CADERNO ═══
@@ -858,7 +883,8 @@ function renderCadItem(it, i){
     h += '<div class="cad-vazio sec-oculta-print" data-action="upload-render-book">⊕ Inserir o render<br>do projeto</div>';
   }
   h += '</div>';
-  h += '<div class="cad-desenho" data-diagrama="'+i+'">'+svgCaderno(it)+'</div>';
+  h += '<div class="cad-desenho" data-diagrama="'+i+'">'+conteudoDesenho(it)+'</div>';
+  h += barraDesenho(it, i);
   h += '<div class="cad-aviso"><b>*ATENÇÃO:</b> <span contenteditable data-field="aviso">'+esc(S.aviso)+'</span></div>';
   h += '</div>';
   h += '</div>';
@@ -869,6 +895,41 @@ function renderCadItem(it, i){
     '<button data-action="del-item" data-idx="'+i+'" title="Excluir">🗑</button>'+
   '</div>';
   h += '</div>';
+  return h;
+}
+
+function barraDesenho(it, i){
+  var k, h = '<div class="cad-desctrl sec-oculta-print">';
+  h += '<span class="lbl">área central:</span>';
+  h += '<button class="'+(it.desenhoSrc?'':'on')+'" data-action="des-set" data-idx="'+i+'" data-src="">📐 desenho gerado</button>';
+  var ds = imgsDe(it,'detalhe'), as = imgsDe(it,'arte');
+  for(k=0;k<ds.length;k++) h += '<button class="'+(it.desenhoSrc==='d:'+k?'on':'')+'" data-action="des-set" data-idx="'+i+'" data-src="d:'+k+'">detalhamento '+(k+1)+'</button>';
+  for(k=0;k<as.length;k++) h += '<button class="'+(it.desenhoSrc==='a:'+k?'on':'')+'" data-action="des-set" data-idx="'+i+'" data-src="a:'+k+'">arte final '+(k+1)+'</button>';
+  h += '<span class="sep"></span>';
+  h += '<button data-action="upload-img" data-idx="'+i+'" data-campo="detalhe">⊕ detalhamento</button>';
+  h += '<button data-action="upload-img" data-idx="'+i+'" data-campo="arte">⊕ arte final</button>';
+  h += '<span class="dica">o que não estiver aqui no centro vira página inteira logo depois</span>';
+  h += '</div>';
+  return h;
+}
+
+/* páginas de continuação do item: detalhamentos e artes que não estão na área central */
+function renderCadExtras(it, i){
+  var k, h = '', lista = [];
+  var ds = imgsDe(it,'detalhe'), as = imgsDe(it,'arte');
+  for(k=0;k<ds.length;k++) if(it.desenhoSrc!=='d:'+k) lista.push({t:'DETALHAMENTO', src:ds[k], campo:'detalhe', pos:k});
+  for(k=0;k<as.length;k++) if(it.desenhoSrc!=='a:'+k) lista.push({t:'ARTE FINAL', src:as[k], campo:'arte', pos:k});
+  for(k=0;k<lista.length;k++){
+    var e = lista[k];
+    h += '<div class="page pg-cad">'+cadTopo()+
+      '<div class="cad-aba-solo" style="width:120mm">'+e.t+' &nbsp;·&nbsp; '+esc(it.nome||'')+'</div>'+
+      '<div class="cad-badge" style="background:'+corItem(i)+';top:30mm;left:6mm">'+(i+1)+'</div>'+
+      '<div class="cad-palco"><img src="'+e.src+'"></div>'+
+      '<div class="cad-ctrl sec-oculta-print" style="padding:0 19mm">'+
+        '<button data-action="des-set" data-idx="'+i+'" data-src="'+(e.campo==='detalhe'?'d':'a')+':'+e.pos+'">⇱ usar na área central</button>'+
+        '<button data-action="remover-img" data-idx="'+i+'" data-campo="'+e.campo+'" data-pos="'+e.pos+'">✕ remover</button>'+
+      '</div></div>';
+  }
   return h;
 }
 
@@ -1038,7 +1099,7 @@ document.addEventListener('input', function(ev){
     S.itens[parseInt(idx,10)][campo] = valor;
     if(el.getAttribute('data-dim')){
       var wrap = document.querySelector('[data-diagrama="'+idx+'"]');
-      if(wrap) wrap.innerHTML = (S.formato==='paisagem' ? svgCaderno(S.itens[parseInt(idx,10)]) : svgDiagrama(S.itens[parseInt(idx,10)]));
+      if(wrap) wrap.innerHTML = (S.formato==='paisagem' ? conteudoDesenho(S.itens[parseInt(idx,10)]) : svgDiagrama(S.itens[parseInt(idx,10)]));
       var pg = el.closest('.pg-item');
       if(!S.itens[parseInt(idx,10)].impManual){
         /* atualiza a área impressa exibida sem perder o cursor */
@@ -1098,6 +1159,7 @@ document.addEventListener('click', function(ev){
   else if(ac==='mudar-formato'){ S.formato = (S.formato==='paisagem') ? 'retrato' : 'paisagem'; render(); window.scrollTo(0,0); }
   else if(ac==='marcar-render'){ abrirMarcador(idx); }
   else if(ac==='trocar-render'){ trocarRender(idx); }
+  else if(ac==='des-set'){ S.itens[idx].desenhoSrc = el.getAttribute('data-src'); renderMantendo(); }
   else if(ac==='ref-set'){ S.itens[idx].refSrc = el.getAttribute('data-src'); fecharModal(); render(); }
   else if(ac==='marc-del'){ ev.stopPropagation(); marcCtx.rects.splice(parseInt(el.getAttribute('data-k'),10),1); desenhaMarcas(); }
   else if(ac==='marc-limpar'){ marcCtx.rects = []; desenhaMarcas(); }
