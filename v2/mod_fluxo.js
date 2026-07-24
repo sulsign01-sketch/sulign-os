@@ -1,6 +1,10 @@
 /* ═══ SULSIGN OS 2.0 — MÓDULO: FLUXO DE CAIXA (fluxo)
-   Fonte: lancamentos conciliado=true + tabela aportes (status <> Pendente).
-   Saídas de capital: Retirada de Sócio / Devolução de Empréstimo.
+   Fonte ÚNICA do saldo: lancamentos conciliado=true — inclusive o movimento
+   de capital (Aporte, Dívida Anterior, Aquisição de Ativo...), que sai do
+   banco de verdade e por isso pertence ao caixa, mesmo nao sendo resultado.
+   A tabela aportes NAO soma mais no saldo (Jul/2026): virou registro
+   societario e serve para (a) aporte pendente e (b) acusar aporte registrado
+   sem lancamento correspondente.
    Inclui painel de diagnóstico e conferência contra o extrato bancário. ═══ */
 (function(){
   var fmt=SulSignCore.fmt;
@@ -55,7 +59,8 @@
       var aps=(res[1]||[]);
       var movs=[], pend=0;
       var dg={ naoConcQtd:0, naoConcVal:0, concQtd:0, semData:0, valorZero:0,
-               tipoEstranho:{}, apTipoEstranho:{}, dupQtd:0, dupVal:0, nAp:aps.length, apOk:apOk };
+               tipoEstranho:{}, apTipoEstranho:{}, nAp:aps.length, apOk:apOk,
+               apReal:0, orfaoQtd:0, orfaoVal:0, orfaos:[], capQtd:0, capVal:0 };
 
       todos.forEach(function(l){
         if(isTreino(l.orcamento_numero)) return;
@@ -64,7 +69,11 @@
         if(t!=='entrada'&&t!=='saida') dg.tipoEstranho[l.tipo_lancamento||'(vazio)']=(dg.tipoEstranho[l.tipo_lancamento||'(vazio)']||0)+1;
         if(!l.data) dg.semData++;
         if(v<=0) dg.valorZero++;
-        if(norm(l.categoria).indexOf('aporte')>=0&&l.conciliado){ dg.dupQtd++; dg.dupVal+=v; }
+        /* movimento de capital: continua no caixa (saiu/entrou do banco de
+           verdade), mas fica marcado para os KPIs de resultado saberem ignorar */
+        if(l.conciliado && window.SulSignCore && SulSignCore.ehCapital && SulSignCore.ehCapital(l.categoria)){
+          dg.capQtd++; dg.capVal+=v;
+        }
         if(!l.conciliado){ dg.naoConcQtd++; dg.naoConcVal+=v; return; }
         dg.concQtd++;
         if(!l.data) return;
@@ -72,14 +81,54 @@
                     categoria:l.categoria||'—', sub:l.subcategoria||'', desc:l.descricao||'' });
       });
 
+      /* ── APORTES: registro societário, NÃO fonte de caixa (Jul/2026) ──
+         Antes esta tabela era somada junto com os lancamentos, e o mesmo
+         dinheiro entrava duas vezes assim que a linha do extrato fosse
+         categorizada como Aporte. Agora a regra e unica e sem ambiguidade:
+
+           lancamentos = o caixa. Espelha o extrato, tem que bater com o banco.
+           aportes     = o contrato. Quem aportou, se e capital ou mutuo, se
+                         volta, status. Nao soma no saldo.
+
+         O que a tabela ainda alimenta:
+           - aporte PENDENTE, que e previsao e nao passou no banco;
+           - o cruzamento abaixo, que acusa aporte registrado sem lancamento
+             correspondente. Sem esse cruzamento, sair de fininho da soma
+             esconderia dinheiro real em vez de duplica-lo — troca de um erro
+             por outro. */
+      var lancCapital=[];
+      todos.forEach(function(l){
+        if(!l.conciliado||!l.data) return;
+        var cap=(window.SulSignCore&&SulSignCore.ehCapital)
+                 ? SulSignCore.ehCapital(l.categoria)
+                 : (norm(l.categoria).indexOf('aporte')>=0);
+        if(cap) lancCapital.push({ data:l.data, valor:Math.round((parseFloat(l.valor)||0)*100) });
+      });
+      function temLancamento(a){
+        var alvo=Math.round((parseFloat(a.valor)||0)*100);
+        var da=Date.parse(String(a.data).slice(0,10));
+        for(var i=0;i<lancCapital.length;i++){
+          if(lancCapital[i].valor!==alvo) continue;
+          var dl=Date.parse(String(lancCapital[i].data).slice(0,10));
+          /* tolerancia de 5 dias: a data do aporte e a do combinado, a do
+             extrato e a da compensacao — quase nunca sao o mesmo dia */
+          if(isNaN(da)||isNaN(dl)||Math.abs(da-dl)<=5*864e5) return true;
+        }
+        return false;
+      }
+
       aps.forEach(function(a){
         var v=parseFloat(a.valor)||0;
         var t=norm(a.tipo);
         if(AP_TIPOS.indexOf(t)<0) dg.apTipoEstranho[a.tipo||'(vazio)']=(dg.apTipoEstranho[a.tipo||'(vazio)']||0)+1;
         if(norm(a.status)==='pendente'){ pend+=v; return; }
         if(!a.data) return;
-        movs.push({ data:a.data, valor:v, ent:(AP_SAIDA.indexOf(t)<0), origem:'aporte',
-                    categoria:a.tipo||'Aporte', sub:a.origem||'', desc:a.descricao||'' });
+        dg.apReal++;
+        if(!temLancamento(a)){
+          dg.orfaoQtd++; dg.orfaoVal+=v;
+          dg.orfaos.push({ data:a.data, valor:v, ent:(AP_SAIDA.indexOf(t)<0),
+                           tipo:a.tipo||'Aporte', origem:a.origem||'', desc:a.descricao||'' });
+        }
       });
 
       var d={ movs:movs, pend:pend, dg:dg };
@@ -156,11 +205,11 @@
       +'<button data-action="fluxo-diag" style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">▸ Diagnóstico</button>'
       +'<button data-action="fluxo-refresh" style="font-size:11px;padding:5px 12px;background:var(--panel);color:inherit;border:1px solid var(--line);border-radius:6px;cursor:pointer">&#8635; Atualizar</button>'
       +'</div></div>';
-    h+='<p style="color:var(--mut);font-size:12.5px;margin-bottom:18px">Lançamentos conciliados (confirmados no banco) + aportes, retiradas e empréstimos</p>';
+    h+='<p style="color:var(--mut);font-size:12.5px;margin-bottom:18px">Lançamentos conciliados (confirmados no banco) — inclui movimento de capital, que passa no extrato mas não é resultado</p>';
 
     /* ── avisos críticos ── */
     if(!dg.apOk) h+=aviso('Não consegui ler a tabela <b>aportes</b>. Os números estão <b>sem aportes, retiradas e empréstimos</b>.');
-    if(dg.dupQtd) h+=aviso('<b>Possível duplicidade:</b> '+dg.dupQtd+' lançamento(s) conciliado(s) com categoria "Aporte" ('+fmt(dg.dupVal)+') convivendo com '+dg.nAp+' registro(s) da tabela aportes. Se for o mesmo dinheiro, está contado em dobro.');
+    if(dg.orfaoQtd) h+=aviso('<b>Aporte sem lançamento:</b> '+dg.orfaoQtd+' registro(s) da tabela aportes ('+fmt(dg.orfaoVal)+') sem linha correspondente no extrato. Esse dinheiro <b>não está</b> no saldo — lance em Lançamentos com categoria do bloco Capital e Sócios. Detalhe no Diagnóstico.','#f9a825');
     var estranhos=Object.keys(dg.tipoEstranho).concat(Object.keys(dg.apTipoEstranho));
     if(estranhos.length) h+=aviso('<b>Classificação incerta:</b> valores de tipo fora do padrão ('+esc(estranhos.join(', '))+'). Foram tratados como saída — confira no Diagnóstico.','#f9a825');
 
@@ -170,8 +219,13 @@
     function lin(k,v,cor){ return '<tr><td style="padding:5px 6px;border-bottom:1px solid var(--line);color:var(--mut)">'+k+'</td><td style="padding:5px 6px;border-bottom:1px solid var(--line);text-align:right;font-weight:600'+(cor?';color:'+cor:'')+'">'+v+'</td></tr>'; }
     dl+=lin('Lançamentos conciliados',dg.concQtd+' registros');
     dl+=lin('Lançamentos <b>não conciliados</b> (fora do fluxo)',dg.naoConcQtd+' · '+fmt(dg.naoConcVal),dg.naoConcQtd?'var(--danger)':'var(--ok)');
-    dl+=lin('Registros na tabela aportes',dg.nAp+' registros');
+    dl+=lin('Movimento de capital nos lançamentos',dg.capQtd+' · '+fmt(dg.capVal));
+    dl+=lin('Registros na tabela aportes (só registro societário)',dg.nAp+' registros');
+    dl+=lin('Aportes realizados <b>sem lançamento no extrato</b>',dg.orfaoQtd+' · '+fmt(dg.orfaoVal),dg.orfaoQtd?'#f9a825':'var(--ok)');
     dl+=lin('Aportes pendentes (fora do saldo)',fmt(d.pend),d.pend?'#f9a825':'var(--mut)');
+    dg.orfaos.forEach(function(o){
+      dl+=lin('&nbsp;&nbsp;↳ '+dstr(o.data)+' · '+esc(o.tipo)+(o.origem?' · '+esc(o.origem):''),fmt(o.valor),'#f9a825');
+    });
     dl+=lin('Lançamentos sem data',dg.semData,dg.semData?'#f9a825':'var(--mut)');
     dl+=lin('Lançamentos com valor zero ou negativo',dg.valorZero,dg.valorZero?'#f9a825':'var(--mut)');
     Object.keys(dg.tipoEstranho).forEach(function(k){ dl+=lin('tipo_lancamento fora do padrão: <b>'+esc(k)+'</b>',dg.tipoEstranho[k]+' registros','var(--danger)'); });
