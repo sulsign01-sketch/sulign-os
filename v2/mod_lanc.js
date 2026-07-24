@@ -6,7 +6,7 @@
   var CATS=SulSignCore.CATEGORIAS||[];
   var _d=null;              /* cache local da lista        */
   var _sel={};              /* ids marcados para lote      */
-  var _f={mes:'',tipo:'',conc:'',q:''};
+  var _f={mes:'',tipo:'',conc:'',sub:'',q:''};
   var _edit=null;           /* registro em edição          */
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
@@ -86,6 +86,9 @@
       if(_f.tipo==='saida' && ent(l)) return false;
       if(_f.conc==='sim' && !l.conciliado) return false;
       if(_f.conc==='nao' && l.conciliado) return false;
+      var temSub=!!String(l.subcategoria||'').trim();
+      if(_f.sub==='nao' && temSub) return false;
+      if(_f.sub==='sim' && !temSub) return false;
       if(q){
         var alvo=norm((l.descricao||'')+' '+(l.categoria||'')+' '+(l.fornecedor||'')+' '+(l.orcamento_numero||''));
         if(alvo.indexOf(q)<0) return false;
@@ -122,7 +125,7 @@
       valor:num(document.getElementById('lc-valor').value),
       tipo_lancamento:document.getElementById('lc-tipo').value,
       categoria:document.getElementById('lc-cat').value,
-      subcategoria:document.getElementById('lc-sub').value.trim(),
+      subcategoria:(document.getElementById('lc-sub').value||'').trim()||null,
       fornecedor:document.getElementById('lc-forn').value.trim(),
       orcamento_numero:document.getElementById('lc-job').value.trim()||'SEM-JOB',
       conciliado:document.getElementById('lc-conc').checked
@@ -153,6 +156,20 @@
       if(t.id==='lf-mes'){ _f.mes=t.value; _sel={}; draw(c); }
       if(t.id==='lf-tipo'){ _f.tipo=t.value; _sel={}; draw(c); }
       if(t.id==='lf-conc'){ _f.conc=t.value; _sel={}; draw(c); }
+      if(t.id==='lf-sub'){ _f.sub=t.value; _sel={}; draw(c); }
+      if(t.id==='lc-cat'){
+        /* repopula a subcategoria sem redesenhar, senao os outros campos
+           do modal perdem o que ainda nao foi salvo */
+        var sEl=document.getElementById('lc-sub');
+        if(sEl){
+          var atual=sEl.value;
+          var lst=(window.SulSignCore&&SulSignCore.subcategoriasDe)?SulSignCore.subcategoriasDe(t.value):[];
+          var hh='<option value="">— sem subcategoria —</option>';
+          for(var i=0;i<lst.length;i++) hh+='<option value="'+esc(lst[i])+'">'+esc(lst[i])+'</option>';
+          sEl.innerHTML=hh;
+          if(atual) sEl.value=atual;  /* valor incoerente com a nova categoria zera sozinho */
+        }
+      }
       if(t.id==='lf-todos'){
         var mk=t.checked; filtrar().forEach(function(l){ if(mk)_sel[l.id]=true; else delete _sel[l.id]; }); draw(c);
       }
@@ -220,6 +237,14 @@
     h+=kpi('Saídas (filtro)',fmt(sT),'','var(--danger)');
     h+=kpi('Resultado',fmt(eT-sT),'',eT-sT>=0?'var(--ok)':'var(--danger)');
     h+=kpi('Não conciliado',fmt(ncV),ncQ+' fora do fluxo',ncQ?'#f9a825':'var(--ok)');
+    (function(){
+      /* _d ja vem sem treino do fetchAll */
+      var tot=_d.length,cls=0;
+      _d.forEach(function(l){ if(String(l.subcategoria||'').trim()) cls++; });
+      var pct=tot?Math.round(cls*100/tot):0;
+      h+=kpi('Classificados',pct+'%',cls+' de '+tot+' com subcategoria',
+             pct>=90?'var(--ok)':(pct>=50?'#f9a825':'var(--danger)'));
+    })();
     h+='</div>';
 
     /* filtros */
@@ -228,6 +253,7 @@
     h+='<div style="width:150px">'+sel('lf-mes',mOps,_f.mes)+'</div>';
     h+='<div style="width:130px">'+sel('lf-tipo',[{v:'',t:'Entrada e saída'},{v:'entrada',t:'Só entradas'},{v:'saida',t:'Só saídas'}],_f.tipo)+'</div>';
     h+='<div style="width:160px">'+sel('lf-conc',[{v:'',t:'Conciliado ou não'},{v:'nao',t:'Só NÃO conciliados'},{v:'sim',t:'Só conciliados'}],_f.conc)+'</div>';
+    h+='<div style="width:190px">'+sel('lf-sub',[{v:'',t:'Classificado ou não'},{v:'nao',t:'Só SEM subcategoria'},{v:'sim',t:'Só COM subcategoria'}],_f.sub)+'</div>';
     h+='<div style="flex:1;min-width:170px">'+inp('lf-q','text',_f.q,'Buscar descrição, job, fornecedor')+'</div>';
     h+='</div>';
 
@@ -281,7 +307,15 @@
         +fld('Descrição',inp('lc-desc','text',E.descricao||'','O que foi'))
         +fld('Valor (R$)',inp('lc-valor','text',E.valor==null?'':E.valor,'0,00'))
         +fld('Categoria',sel('lc-cat',catOps,E.categoria||'Outros'))
-        +fld('Subcategoria',inp('lc-sub','text',E.subcategoria||'','opcional'))
+        +fld('Subcategoria',(function(){
+            var atual=String(E.subcategoria||'').trim();
+            var lst=(window.SulSignCore&&SulSignCore.subcategoriasDe)?SulSignCore.subcategoriasDe(E.categoria||'Outros'):[];
+            var ops=[{v:'',t:'— sem subcategoria —'}];
+            lst.forEach(function(x){ ops.push({v:x,t:x}); });
+            /* nao descarta valor legado que nao esta no dominio */
+            if(atual && lst.indexOf(atual)<0) ops.push({v:atual,t:atual+'  (fora da lista)'});
+            return sel('lc-sub',ops,atual);
+          })())
         +fld('Fornecedor',inp('lc-forn','text',E.fornecedor||'','opcional'))
         +fld('Job',inp('lc-job','text',E.orcamento_numero||'','SS-AAAA_MM-## ou vazio'))
         +'<label style="display:flex;gap:8px;align-items:center;font-size:12.5px;margin:14px 0 16px;cursor:pointer">'
