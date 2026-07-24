@@ -39,10 +39,47 @@ var SulSignCore = (function(){
 
   // Tudo que precisa ser injetado nos dropdowns antigos que tem lista propria.
   // Mobilidade = transporte de PESSOA (Uber, 99, taxi). Logística = transporte
-  // de MATERIAL. Virou categoria, e nao subcategoria, porque lançamento gerado
-  // por baixa de conta a pagar nao carrega subcategoria — contas_pagar nao tem
-  // essa coluna, entao a subcategoria chegaria sempre nula no fluxo.
+  // de MATERIAL. Virou categoria, e nao subcategoria, por uma limitacao que
+  // NAO existe mais: contas_pagar tem a coluna subcategoria e a baixa passou a
+  // copia-la (Jul/2026). Mantido como categoria para nao quebrar o historico,
+  // mas a restricao que motivou a decisao ja caiu.
   var CATEGORIAS_EXTRAS = CATEGORIAS_LOCACAO.concat(['Mobilidade']);
+
+
+  /* ═══ SUBCATEGORIAS: dominio controlado por categoria ═══
+     Fonte unica. Antes vivia chumbado dentro de Lancamentos.html; a v2 nao
+     tinha lista nenhuma e aceitava texto livre, o que gerava "logistica",
+     "Logística" e "Logistica " como coisas diferentes. */
+  var SUBCATS = {
+    'Material':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
+    'Insumo':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
+    'Mão de Obra':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
+    'Serviços':['Contabilidade','Juridico','TI','Consultoria','Manutencao','Terceirizado'],
+    'Logística':['Frete','Combustivel','Estacionamento','Pedagio'],
+    'Mobilidade':['Uber','99','Taxi','Onibus/Metro','Passagem','Combustivel'],
+    'Aplicação Financeira':['CDB','LCI/LCA','Tesouro Direto','Fundo','Poupanca'],
+    'Resgate de Aplicação':['CDB','LCI/LCA','Tesouro Direto','Fundo','Poupanca'],
+    'Rendimento de Aplicação':['CDB','LCI/LCA','Tesouro Direto','Fundo','Poupanca'],
+    'Locação':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
+    'Locação Equipamentos':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
+    'Locação PDVEX':['Equipamento','Estrutura','Veiculo','Espaco','Mobiliario'],
+    'Locação Equipamentos PDVEX':['Trelica','Praticavel','Som e Luz','Ferramenta','Maquinario','Gerador'],
+    'Mão de Obra PDVEX':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
+    'Material PDVEX':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
+    'Alimentação':['Equipe','Cliente'],
+    'Imposto':['Simples Nacional','ISS','INSS','FGTS','IRRF','Outros'],
+    'Comissão':['Vendedor','Agencia','BV'],
+    'Comunicação Visual':['Impressao','Recorte','Instalacao'],
+    'Verba Produção':['Adiantamento','Prestacao de Contas'],
+    'Receita de Job':['Sinal','Saldo','Parcela','Integral'],
+    'Aporte':['Socio Dudu','Socio Carlos','Socio Ponde','Socio Jovita'],
+    'Estorno':['Devolucao Fornecedor','Ajuste Bancario','Reembolso']
+  };
+
+  function subcategoriasDe(categoria){
+    var k = String(categoria==null?'':categoria).trim();
+    return (SUBCATS[k] || []).slice();
+  }
 
   function ehPDVEX(categoria){
     return CATEGORIAS_PDVEX.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
@@ -133,6 +170,8 @@ var SulSignCore = (function(){
     CATEGORIAS_PDVEX: CATEGORIAS_PDVEX,
     CATEGORIAS_LOCACAO: CATEGORIAS_LOCACAO,
     CATEGORIAS_EXTRAS: CATEGORIAS_EXTRAS,
+    SUBCATS: SUBCATS,
+    subcategoriasDe: subcategoriasDe,
     ehPDVEX: ehPDVEX,
     CATEGORIAS_PARTICULAR: CATEGORIAS_PARTICULAR,
     ehParticular: ehParticular,
