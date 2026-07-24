@@ -65,6 +65,20 @@
     document.head.appendChild(st);
   }
 
+  /* select de categoria de UMA linha da lista. */
+  function catSel(l){
+    var atual=String(l.categoria||'').trim();
+    var lst=CATS.slice();
+    if(atual && lst.indexOf(atual)<0) lst.unshift(atual);
+    var o='<option value="">—</option>';
+    for(var i=0;i<lst.length;i++){
+      o+='<option value="'+esc(lst[i])+'"'+(lst[i]===atual?' selected':'')+'>'+esc(lst[i])+'</option>';
+    }
+    return '<select id="lk-'+l.id+'" data-row="'+l.id+'" style="width:100%;min-width:140px;padding:3px 5px;'
+      +'font-size:11px;font-family:inherit;border:1px solid '+(atual?'var(--line)':'#f9a825')+';'
+      +'border-radius:5px;background:var(--paper)">'+o+'</select>';
+  }
+
   /* select de subcategoria de UMA linha da lista.
      Preserva valor legado fora do dominio em vez de descartar. */
   function subSel(l){
@@ -116,6 +130,30 @@
   }
 
   /* ══ AÇÕES ══ */
+  function recategorizar(id,cat,c,el){
+    var alvo=null;
+    _d.forEach(function(x){ if(String(x.id)===String(id)) alvo=x; });
+    var sub=alvo?String(alvo.subcategoria||'').trim():'';
+    var dom=(window.SulSignCore&&SulSignCore.subcategoriasDe)?SulSignCore.subcategoriasDe(cat):[];
+    var body={categoria:cat||null};
+    /* subcategoria que nao pertence a nova categoria vira null no mesmo PATCH,
+       senao nasce par invalido tipo "Material > Uber" */
+    var limpou=false;
+    if(sub && dom.indexOf(sub)<0){ body.subcategoria=null; limpou=true; }
+    if(el){ el.disabled=true; el.style.opacity='.45'; }
+    return SS20.sbw('lancamentos?id=eq.'+encodeURIComponent(id),'PATCH',body)
+      .then(function(){
+        _d.forEach(function(x){
+          if(String(x.id)===String(id)){ x.categoria=cat||null; if(limpou) x.subcategoria=null; }
+        });
+        draw(c);
+      })
+      .catch(function(e){
+        if(el){ el.disabled=false; el.style.opacity='1'; }
+        alert('Erro ao recategorizar: '+e.message);
+      });
+  }
+
   function classificar(id,valor,c,el){
     if(el){ el.disabled=true; el.style.opacity='.45'; }
     return SS20.sbw('lancamentos?id=eq.'+encodeURIComponent(id),'PATCH',{subcategoria:valor||null})
@@ -189,6 +227,7 @@
       if(t.id==='lf-conc'){ _f.conc=t.value; _sel={}; draw(c); }
       if(t.id==='lf-sub'){ _f.sub=t.value; _sel={}; draw(c); }
       if(t.id&&t.id.indexOf('ls-')===0){ classificar(t.getAttribute('data-row'),t.value,c,t); }
+      if(t.id&&t.id.indexOf('lk-')===0){ recategorizar(t.getAttribute('data-row'),t.value,c,t); }
       if(t.id==='lc-cat'){
         /* repopula a subcategoria sem redesenhar, senao os outros campos
            do modal perdem o que ainda nao foi salvo */
@@ -311,7 +350,7 @@
           +'<td style="padding:6px"><input type="checkbox" data-action="lc-pick" data-id="'+l.id+'"'+(_sel[l.id]?' checked':'')+'></td>'
           +'<td style="padding:6px;white-space:nowrap">'+dstr(l.data)+'</td>'
           +'<td style="padding:6px">'+esc((l.descricao||'—').slice(0,44))+(l.fornecedor?'<div style="font-size:10.5px;color:var(--mut)">'+esc(l.fornecedor)+'</div>':'')+'</td>'
-          +'<td style="padding:6px;font-size:11px;color:var(--mut)">'+esc(l.categoria||'—')+'</td>'
+          +'<td style="padding:4px 6px">'+catSel(l)+'</td>'
           +'<td style="padding:4px 6px">'+subSel(l)+'</td>'
           +'<td style="padding:6px;font-size:11px;color:var(--mut)">'+esc(l.orcamento_numero||'—')+'</td>'
           +'<td style="padding:6px;text-align:right;font-weight:600;white-space:nowrap;color:'+(e?'var(--ok)':'var(--danger)')+'">'+(e?'+':'&minus;')+fmt(v)+'</td>'
@@ -322,7 +361,7 @@
           +'</tr>';
       });
       h+='</tbody></table></div>';
-      h+='<div style="margin-top:8px;font-size:11.5px;color:var(--mut)">Linhas em destaque estão <b>não conciliadas</b> — não entram no Fluxo de Caixa. Clique no ○ para conciliar.<br>A subcategoria salva sozinha ao escolher. Borda amarela = ainda sem classificação. Select apagado = a categoria não tem subcategorias definidas.</div>';
+      h+='<div style="margin-top:8px;font-size:11.5px;color:var(--mut)">Linhas em destaque estão <b>não conciliadas</b> — não entram no Fluxo de Caixa. Clique no ○ para conciliar.<br>Categoria e subcategoria salvam sozinhas ao escolher. Trocar a categoria limpa uma subcategoria que não pertença a ela. Borda amarela = ainda sem classificação. Select apagado = a categoria não tem subcategorias definidas.</div>';
     }
 
     /* modal */
