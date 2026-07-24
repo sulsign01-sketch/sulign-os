@@ -192,8 +192,82 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
 .img-multi.varias .img-slot.tem-img{flex:1 1 calc(50% - 1mm);max-width:calc(50% - 1mm);}
 .img-multi.varias .img-slot.tem-img img{max-height:44mm;object-fit:contain;}
 .img-slot.slot-add{min-height:12mm;font-size:9px;flex:1 1 100%;}
+
+/* ══════════ FORMATO PAISAGEM · CADERNO DE IMPRESSÃO E MONTAGEM ══════════ */
+body.fmt-pais .page{width:297mm;min-height:210mm;}
+body.fmt-pais .capa-faixa{width:74mm;}
+body.fmt-pais .capa-grid{grid-template-columns:1fr 1fr 1fr;margin-bottom:12mm;}
+body.fmt-pais .final .contatos{margin-top:10mm;}
+
+.cad-top{display:flex;align-items:center;justify-content:space-between;padding:5mm 8mm 3mm;}
+.cad-tit{font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:10.5px;text-transform:uppercase;color:#111;}
+.cad-logo{width:38mm;height:11mm;display:flex;align-items:center;justify-content:flex-end;cursor:pointer;}
+.cad-logo img{max-width:100%;max-height:11mm;}
+.cad-logo .txt{font-family:'Arial Narrow',Arial,sans-serif;font-weight:bold;font-size:17px;letter-spacing:1px;color:#111;text-align:right;line-height:1;}
+.cad-logo .txt small{display:block;font-size:6px;letter-spacing:3px;font-weight:normal;color:#777;margin-top:1px;}
+.cad-barra{height:3.2mm;background:#111;}
+
+.cad-corpo{display:flex;min-height:184mm;position:relative;}
+.cad-badge{position:absolute;left:6mm;top:21mm;width:9mm;height:9mm;border-radius:50%;color:#fff;z-index:4;
+  font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:11px;display:flex;align-items:center;justify-content:center;}
+.cad-col{width:56mm;margin-left:19mm;border-right:1px solid #C9C9C9;padding-right:4mm;padding-bottom:4mm;position:relative;}
+.cad-aba{background:#D8D8D8;width:calc(100% + 21mm);margin-right:-17mm;padding:3.2mm 4mm 3.2mm 4mm;
+  -webkit-clip-path:polygon(0 0,100% 0,calc(100% - 9mm) 100%,0 100%);clip-path:polygon(0 0,100% 0,calc(100% - 9mm) 100%,0 100%);}
+.cad-f{background:#F1F1F1;padding:2mm 4mm;margin-top:1.2mm;}
+.cad-f .rot,.cad-aba .rot{font-family:Arial,Helvetica,sans-serif;font-size:7px;font-weight:bold;letter-spacing:.3px;color:#222;}
+.cad-f .val,.cad-aba .val{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;font-weight:bold;text-transform:uppercase;line-height:1.3;margin-top:.7mm;color:#111;}
+.cad-f.vermelho{background:#F1F1F1;}
+.cad-f.vermelho .rot,.cad-f.vermelho .val{color:#E01B24;}
+
+.cad-area{flex:1;position:relative;padding:4mm 8mm 4mm 7mm;}
+.cad-render{position:absolute;top:3mm;right:8mm;width:62mm;}
+.cad-render .base{position:relative;line-height:0;cursor:pointer;}
+.cad-render .base img{width:100%;display:block;}
+.cad-render .marca{position:absolute;border:1.6px dashed #22C3DD;box-sizing:border-box;}
+.cad-render .cap{font-family:Arial,Helvetica,sans-serif;font-size:7.5px;font-weight:bold;margin-top:1.2mm;color:#111;}
+.cad-render .cap span{display:block;text-decoration:underline;}
+.cad-render .cap small{display:block;font-size:6.5px;font-weight:bold;margin-top:.4mm;}
+.cad-ctrl{margin-top:1.5mm;display:flex;gap:4px;flex-wrap:wrap;}
+.cad-ctrl button{font-family:inherit;font-size:9px;padding:3px 7px;border:1px solid #C4CCC7;background:#fff;border-radius:4px;cursor:pointer;color:#556;}
+.cad-ctrl button:hover{background:var(--verde-claro);border-color:var(--verde);}
+.cad-vazio{border:1.5px dashed #C4CCC7;border-radius:5px;min-height:34mm;display:flex;align-items:center;justify-content:center;
+  color:#AEB6B1;font-size:10px;text-align:center;padding:4mm;cursor:pointer;}
+.cad-desenho{position:absolute;left:7mm;right:8mm;top:58mm;height:82mm;display:flex;align-items:center;justify-content:center;}
+.cad-desenho svg{max-width:100%;max-height:82mm;}
+.cad-aviso{position:absolute;right:8mm;bottom:6mm;width:120mm;background:#FBE4E6;border-radius:6px;padding:3mm 5mm;
+  font-family:Arial,Helvetica,sans-serif;font-size:8px;line-height:1.5;color:#E01B24;text-align:center;}
+.cad-aviso b{color:#C0182B;font-weight:bold;}
+
+.cad-aba-solo{background:#DCDCDC;width:78mm;margin-top:0;padding:3.2mm 4mm 3.2mm 19mm;
+  font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:9.5px;text-transform:uppercase;color:#111;
+  -webkit-clip-path:polygon(0 0,100% 0,calc(100% - 10mm) 100%,0 100%);clip-path:polygon(0 0,100% 0,calc(100% - 10mm) 100%,0 100%);}
+.cad-palco{padding:4mm 12mm;display:flex;align-items:center;justify-content:center;min-height:150mm;}
+.cad-palco img{max-width:100%;max-height:150mm;display:block;}
+.cad-planta{position:relative;display:inline-block;line-height:0;}
+.cad-planta img{max-width:100%;max-height:132mm;display:block;}
+.pin{position:absolute;width:7mm;height:7mm;border-radius:50%;color:#fff;text-decoration:none;
+  font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:9px;display:flex;align-items:center;justify-content:center;
+  transform:translate(-50%,-50%);cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.35);}
+.pin-bar{padding:2mm 19mm;display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:11px;color:#556;}
+.pin-bar button{font-family:inherit;font-size:10px;padding:4px 9px;border:1px solid #C4CCC7;background:#fff;border-radius:4px;cursor:pointer;color:#556;}
+.pin-bar button.on{background:var(--verde);border-color:var(--verde);color:#fff;}
+.pin-chip{font-size:9.5px;padding:3px 8px;border-radius:11px;color:#fff;cursor:pointer;opacity:.45;font-family:Arial,Helvetica,sans-serif;font-weight:bold;}
+.pin-chip.armado{opacity:1;box-shadow:0 0 0 2px #111;}
+.cad-legenda{padding:3mm 19mm;display:flex;flex-wrap:wrap;gap:1.5mm;}
+.cad-legenda .lg{display:flex;align-items:center;gap:2mm;flex:1 1 calc(33.33% - 1mm);max-width:calc(33.33% - 1mm);
+  background:#F1F1F1;padding:1.5mm 2mm;border-radius:2px;cursor:pointer;font-family:Arial,Helvetica,sans-serif;}
+.cad-legenda .n{width:5mm;height:5mm;border-radius:50%;color:#fff;font-size:8px;font-weight:bold;
+  display:flex;align-items:center;justify-content:center;flex:0 0 auto;}
+.cad-legenda .c{font-size:8px;font-weight:bold;white-space:nowrap;}
+.cad-legenda .t{font-size:8px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.pg-cad .item-ctrl{top:auto;bottom:5mm;left:4mm;right:auto;flex-direction:row;}
+
 @media print{
   .so-print{display:inline !important;}
+  body.fmt-pais .page{width:297mm;height:210mm;}
+  .cad-ctrl,.pin-bar,.cad-vazio{display:none !important;}
+  .cad-legenda .lg{cursor:default;}
+  .pin{box-shadow:none;}
   .pg-indice.sem-planta{display:none;}
   .indice-item{cursor:default;}
   body{background:#fff;}
@@ -211,6 +285,7 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
   #doc{align-items:flex-start;overflow-x:auto;}
 }
 </style>
+<style id="pg-size">@page{size:A4 landscape;margin:0}</style>
 </head>
 <body>
 
@@ -228,6 +303,7 @@ h1,h2,h3,.titulo-display{font-family:'Arial Narrow','Helvetica Neue Condensed',A
   <button data-action="carregar">📂 Carregar</button>
   <button data-action="baixar">⬇ HTML</button>
   <button data-action="gerar-lg">🚚 Gerar LG</button>
+  <button data-action="mudar-formato" id="btn-formato">▭ Paisagem</button>
   <button data-action="imprimir">🖨 PDF</button>
   <span id="status-msg"></span>
 </div>
@@ -260,6 +336,7 @@ function itemNovo(){
   return { codigo:'', nome:'NOVO ITEM', setor:'', local:'', material:'', acabamento:'', substrato:'', estrutura:'',
     qtd:'1', visL:100, visA:100, sangria:2, impManual:false, impL:104, impA:104,
     forma:'ret', fp1:0,
+    refSrc:'', refRects:[], pins:[], cor:'',
     obs:'', instalacao:'', render:[], arte:[] };
 }
 function estadoInicial(){
@@ -268,7 +345,9 @@ function estadoInicial(){
     titulo:'Título do Projeto', local:'Rio de Janeiro - RJ',
     cliente:'', agencia:'', periodo:'', montagem:'', desmontagem:'',
     instagram:'@gruposulsign', email:'contato@sulsign.com.br',
-    logo:'', planta:'', itens:[ itemNovo() ]
+    logo:'', logoCab:'', planta:'', formato:'paisagem', renders:[],
+    tituloCaderno:'CADERNO DE IMPRESSÃO E MONTAGEM', aviso:'',
+    itens:[ itemNovo() ]
   };
 }
 var S = estadoInicial();
@@ -316,7 +395,7 @@ function codigoLogico(idx){
 /* Imagens como array (retrocompatível com string dos books antigos) */
 function imgsDe(it, campo){
   var v = it[campo];
-  if(v instanceof Array) return v;
+  if(Array.isArray(v)) return v;
   if(v) return [v];
   return [];
 }
@@ -481,7 +560,7 @@ function renderItem(it, i){
   var cod = it.codigo || codigoLogico(i);
   var imp = impressa(it);
   var ehManual = S.tipo==='instalacao';
-  var h = '<div class="page pg-item" data-idx="'+i+'">';
+  var h = '<div class="page pg-item" data-idx="'+i+'" id="pg-item-'+i+'">';
   h += '<div class="pg-head">'+
     '<div class="pg-cod" contenteditable data-item="'+i+'" data-field="codigo" data-ph="'+codigoLogico(i)+'">'+esc(it.codigo)+'</div>'+
     '<div class="pg-titulo" contenteditable data-item="'+i+'" data-field="nome" data-ph="Nome do item">'+esc(it.nome)+'</div>'+
@@ -606,13 +685,347 @@ function renderIndice(){
 }
 
 function render(){
-  var h = renderCapa();
-  h += renderIndice();
-  for(var i=0;i<S.itens.length;i++) h += renderItem(S.itens[i], i);
+  normaliza();
+  var pais = S.formato==='paisagem';
+  document.body.className = pais ? 'fmt-pais' : 'fmt-ret';
+  var tagPg = document.getElementById('pg-size');
+  if(tagPg) tagPg.textContent = '@page{size:A4 '+(pais?'landscape':'portrait')+';margin:0}';
+  var i, h = renderCapa();
+  if(pais){
+    h += renderCad3D();
+    h += renderCadPlanta();
+    for(i=0;i<S.itens.length;i++) h += renderCadItem(S.itens[i], i);
+  }else{
+    h += renderIndice();
+    for(i=0;i<S.itens.length;i++) h += renderItem(S.itens[i], i);
+  }
   h += renderFinal();
   document.getElementById('doc').innerHTML = h;
   document.getElementById('sel-tipo').value = S.tipo;
+  var bf = document.getElementById('btn-formato');
+  if(bf) bf.textContent = pais ? '▭ Paisagem' : '▯ Retrato';
 }
+
+
+/* ═══════════════════════════════════════════════════════════════════
+   CADERNO DE IMPRESSÃO E MONTAGEM  ·  formato paisagem (A4 deitado)
+   ═══════════════════════════════════════════════════════════════════ */
+var AVISO_PADRAO = 'FECHAR ARQUIVO EM PDF NO TAMANHO DA DIMENSÃO FINAL, EM ESCALA REAL OU 1:10. NÃO COLOCAR MARCA DE CORTE NEM MARCAÇÕES DE PROJEÇÃO DE OBJETOS NO ARQUIVO.';
+var PALETA = ['#C0182B','#8E44AD','#4FC3D9','#F0C419','#5FBF60','#1B2A6B','#E5197F','#DDA05F',
+              '#EFC2D3','#4A0E4E','#1B6B3A','#3FBFAD','#F26522','#F0705A','#9B59B6','#A0785A'];
+var pinModo = false, pinArmado = -1, marcCtx = null;
+
+function corItem(i){ var it=S.itens[i]; return (it && it.cor) ? it.cor : PALETA[i % PALETA.length]; }
+
+/* garante os campos novos em books antigos */
+function normaliza(){
+  if(!S.formato) S.formato = 'paisagem';
+  if(!Array.isArray(S.renders)) S.renders = [];
+  if(!S.aviso) S.aviso = AVISO_PADRAO;
+  if(!S.tituloCaderno) S.tituloCaderno = 'CADERNO DE IMPRESSÃO E MONTAGEM';
+  if(S.logoCab===undefined) S.logoCab = '';
+  for(var i=0;i<S.itens.length;i++){
+    var it = S.itens[i];
+    if(!Array.isArray(it.refRects)) it.refRects = [];
+    if(!Array.isArray(it.pins)) it.pins = [];
+    if(it.refSrc===undefined) it.refSrc = '';
+    if(it.cor===undefined) it.cor = '';
+  }
+}
+
+/* render de referência do item: 'b:n' = render do book, 'i:n' = render próprio */
+function refImg(it){
+  var s = String(it.refSrc||''), pr = s.charAt(0), n = parseInt(s.substring(2),10);
+  var proprios = imgsDe(it,'render');
+  if(pr==='i' && proprios[n]) return proprios[n];
+  if(pr==='b' && S.renders[n]) return S.renders[n];
+  if(proprios.length) return proprios[0];
+  if(S.renders.length) return S.renders[0];
+  return '';
+}
+
+/* ═══ DESENHO TÉCNICO DO CADERNO ═══
+   Mesma engine de sempre, no traço da referência:
+   retângulo vermelho tracejado = dimensão final (faca) · preto sólido = área visível. */
+function svgCaderno(it){
+  var imp = impressa(it);
+  var LF = imp.L||1, AF = imp.A||1;
+  var LV = num(it.visL)||LF, AV = num(it.visA)||AF;
+  if(LV>LF) LV=LF;
+  if(AV>AF) AV=AF;
+  var W=640, H=320, mL=125, mR=35, mT=78, mB=32;
+  var e = Math.min((W-mL-mR)/LF, (H-mT-mB)/AF);
+  var wf=LF*e, hf=AF*e;
+  var x = mL + ((W-mL-mR)-wf)/2, y = mT + ((H-mT-mB)-hf)/2;
+  var wv=LV*e, hv=AV*e;
+  var xv = x+(wf-wv)/2, yv = y+(hf-hv)/2;
+  var R='#E01B24', K='#111', F='Courier New,monospace';
+  var s = '<svg viewBox="0 0 '+W+' '+H+'" xmlns="http://www.w3.org/2000/svg">';
+  /* linhas de chamada */
+  s += '<line x1="'+x+'" y1="'+(y-52)+'" x2="'+x+'" y2="'+y+'" stroke="'+R+'" stroke-width="0.5"/>';
+  s += '<line x1="'+(x+wf)+'" y1="'+(y-52)+'" x2="'+(x+wf)+'" y2="'+y+'" stroke="'+R+'" stroke-width="0.5"/>';
+  s += '<line x1="'+(x-58)+'" y1="'+y+'" x2="'+x+'" y2="'+y+'" stroke="'+R+'" stroke-width="0.5"/>';
+  s += '<line x1="'+(x-58)+'" y1="'+(y+hf)+'" x2="'+x+'" y2="'+(y+hf)+'" stroke="'+R+'" stroke-width="0.5"/>';
+  /* dimensão final (faca) */
+  s += '<rect x="'+x+'" y="'+y+'" width="'+wf+'" height="'+hf+'" fill="none" stroke="'+R+'" stroke-width="1.2" stroke-dasharray="8 5"/>';
+  /* área visível */
+  s += '<rect x="'+xv+'" y="'+yv+'" width="'+wv+'" height="'+hv+'" fill="#FFFFFF" stroke="'+K+'" stroke-width="1.3"/>';
+  /* cotas horizontais (topo) */
+  s += cotaH(x, x+wf, y-48, fmtDim(LF), R, F, K);
+  s += cotaH(xv, xv+wv, y-24, fmtDim(LV), K, F, K);
+  /* cotas verticais (esquerda) */
+  s += cotaV(y, y+hf, x-54, fmtDim(AF), R, F, K);
+  s += cotaV(yv, yv+hv, x-26, fmtDim(AV), K, F, K);
+  s += '</svg>';
+  return s;
+}
+function cotaH(x1,x2,yy,txt,cor,F,K){
+  return '<line x1="'+x1+'" y1="'+yy+'" x2="'+x2+'" y2="'+yy+'" stroke="'+cor+'" stroke-width="0.9"/>'+
+    '<circle cx="'+x1+'" cy="'+yy+'" r="2.4" fill="'+cor+'"/><circle cx="'+x2+'" cy="'+yy+'" r="2.4" fill="'+cor+'"/>'+
+    '<text x="'+((x1+x2)/2)+'" y="'+(yy-7)+'" text-anchor="middle" font-family="'+F+'" font-size="17" fill="'+K+'">'+txt+'</text>';
+}
+function cotaV(y1,y2,xx,txt,cor,F,K){
+  var my=(y1+y2)/2;
+  return '<line x1="'+xx+'" y1="'+y1+'" x2="'+xx+'" y2="'+y2+'" stroke="'+cor+'" stroke-width="0.9"/>'+
+    '<circle cx="'+xx+'" cy="'+y1+'" r="2.4" fill="'+cor+'"/><circle cx="'+xx+'" cy="'+y2+'" r="2.4" fill="'+cor+'"/>'+
+    '<text x="'+(xx-8)+'" y="'+my+'" text-anchor="middle" font-family="'+F+'" font-size="17" fill="'+K+'" transform="rotate(-90 '+(xx-8)+' '+my+')">'+txt+'</text>';
+}
+
+/* ═══ PEÇAS DA PÁGINA ═══ */
+function cadTopo(){
+  var logoHtml = S.logoCab ? '<img src="'+S.logoCab+'">' : '<div class="txt">SULSIGN<small>G R O U P</small></div>';
+  return '<div class="cad-top">'+
+    '<div class="cad-tit" contenteditable data-field="tituloCaderno">'+esc(S.tituloCaderno)+'</div>'+
+    '<div class="cad-logo" data-action="upload-logo-cab" title="Clique para trocar o logo">'+logoHtml+'</div>'+
+  '</div><div class="cad-barra"></div>';
+}
+function cadF(rot, i, campo, valor, cls){
+  return '<div class="cad-f'+(cls?' '+cls:'')+'"><div class="rot">'+rot+'</div>'+
+    '<div class="val" contenteditable data-item="'+i+'" data-field="'+campo+'" data-ph="-">'+esc(valor)+'</div></div>';
+}
+
+function renderCadItem(it, i){
+  var cod = it.codigo || codigoLogico(i);
+  var imp = impressa(it);
+  var cor = corItem(i);
+  var h = '<div class="page pg-cad pg-item" data-idx="'+i+'" id="pg-item-'+i+'">';
+  h += cadTopo();
+  h += '<div class="cad-corpo">';
+  h += '<div class="cad-badge" style="background:'+cor+'">'+(i+1)+'</div>';
+  /* ── coluna de especificações ── */
+  h += '<div class="cad-col">';
+  h += '<div class="cad-aba"><div class="rot">SETOR:</div>'+
+       '<div class="val" contenteditable data-item="'+i+'" data-field="setor" data-ph="-">'+esc(it.setor)+'</div></div>';
+  h += cadF('LOCAL:', i, 'local', it.local);
+  h += cadF('PEÇA:', i, 'nome', it.nome);
+  h += cadF('CÓDIGO:', i, 'codigo', it.codigo||cod);
+  h += '<div class="cad-f"><div class="rot">DIMENSÃO ÁREA VISÍVEL:</div><div class="val">'+
+       '<span contenteditable data-item="'+i+'" data-field="visL" data-dim="1">'+fmtDim(num(it.visL))+'</span> X '+
+       '<span contenteditable data-item="'+i+'" data-field="visA" data-dim="1">'+fmtDim(num(it.visA))+'</span> CM</div></div>';
+  h += '<div class="cad-f vermelho box-imp"><div class="rot">DIMENSÃO FINAL:</div><div class="val">';
+  if(it.impManual){
+    h += '<span contenteditable data-item="'+i+'" data-field="impL" data-dim="1">'+fmtDim(num(it.impL))+'</span> X '+
+         '<span contenteditable data-item="'+i+'" data-field="impA" data-dim="1">'+fmtDim(num(it.impA))+'</span> CM';
+  }else{
+    h += fmtDim(imp.L)+' X '+fmtDim(imp.A)+' CM';
+  }
+  h += '</div></div>';
+  h += cadF('QUANTIDADE:', i, 'qtd', it.qtd);
+  h += cadF('MATERIAL:', i, 'material', it.material);
+  h += cadF('ACABAMENTO:', i, 'acabamento', it.acabamento||it.substrato);
+  h += cadF('ESTRUTURA:', i, 'estrutura', it.estrutura);
+  h += cadF('OBSERVAÇÃO:', i, 'obs', it.obs||'-');
+  h += '<div class="cad-f sec-oculta-print" style="background:#FFF8E6"><div class="rot">SANGRIA (CM POR LADO) '+
+       '<label style="float:right;cursor:pointer;font-weight:normal"><input type="checkbox" data-action="toggle-manual" data-idx="'+i+'" '+(it.impManual?'checked':'')+'> manual</label></div>'+
+       '<div class="val"><span contenteditable data-item="'+i+'" data-field="sangria" data-dim="1">'+fmtDim(num(it.sangria))+'</span> CM'+
+       ' &nbsp;·&nbsp; <span style="font-weight:normal;text-transform:none;color:#667">área visível '+fmtM2(areaVisual(it))+' m²</span></div></div>';
+  h += '</div>';
+  /* ── área técnica ── */
+  h += '<div class="cad-area">';
+  h += '<div class="cad-render">';
+  var ri = refImg(it);
+  if(ri){
+    h += '<div class="base" data-action="marcar-render" data-idx="'+i+'" title="Clique para marcar a peça no render"><img src="'+ri+'">';
+    for(var k=0;k<it.refRects.length;k++){
+      var r = it.refRects[k];
+      h += '<div class="marca" style="left:'+(r.x*100)+'%;top:'+(r.y*100)+'%;width:'+(r.w*100)+'%;height:'+(r.h*100)+'%"></div>';
+    }
+    h += '</div><div class="cap"><span>RENDER</span><small>SEM ESCALA</small></div>';
+    h += '<div class="cad-ctrl sec-oculta-print">'+
+         '<button data-action="marcar-render" data-idx="'+i+'">✏️ marcar</button>'+
+         '<button data-action="trocar-render" data-idx="'+i+'">🔄 trocar imagem</button></div>';
+  }else{
+    h += '<div class="cad-vazio sec-oculta-print" data-action="upload-render-book">⊕ Inserir o render<br>do projeto</div>';
+  }
+  h += '</div>';
+  h += '<div class="cad-desenho" data-diagrama="'+i+'">'+svgCaderno(it)+'</div>';
+  h += '<div class="cad-aviso"><b>*ATENÇÃO:</b> <span contenteditable data-field="aviso">'+esc(S.aviso)+'</span></div>';
+  h += '</div>';
+  h += '</div>';
+  h += '<div class="item-ctrl">'+
+    '<button data-action="mover-cima" data-idx="'+i+'" title="Subir">↑</button>'+
+    '<button data-action="mover-baixo" data-idx="'+i+'" title="Descer">↓</button>'+
+    '<button data-action="duplicar-item" data-idx="'+i+'" title="Duplicar">⧉</button>'+
+    '<button data-action="del-item" data-idx="'+i+'" title="Excluir">🗑</button>'+
+  '</div>';
+  h += '</div>';
+  return h;
+}
+
+function renderCad3D(){
+  var h = '', k;
+  for(k=0;k<S.renders.length;k++){
+    h += '<div class="page pg-cad">'+cadTopo()+'<div class="cad-aba-solo">3D</div>'+
+      '<div class="cad-palco"><img src="'+S.renders[k]+'"></div>'+
+      '<div class="cad-ctrl sec-oculta-print" style="padding:0 19mm">'+
+        '<button data-action="upload-render-book">⊕ adicionar render</button>'+
+        '<button data-action="remover-render-book" data-k="'+k+'">✕ remover este</button>'+
+      '</div></div>';
+  }
+  if(!S.renders.length){
+    h += '<div class="page pg-cad">'+cadTopo()+'<div class="cad-aba-solo">3D</div>'+
+      '<div class="cad-palco"><div class="cad-vazio sec-oculta-print" data-action="upload-render-book" style="width:70%;min-height:90mm">'+
+      '⊕ Clique para inserir os renders 3D do projeto<br><small>são eles que servem de base para marcar as peças</small></div></div></div>';
+  }
+  return h;
+}
+
+function renderCadPlanta(){
+  var i, k, h = '<div class="page pg-cad pg-planta">'+cadTopo()+'<div class="cad-aba-solo">PLANTA BAIXA</div>';
+  h += '<div class="pin-bar sec-oculta-print">'+
+       '<button data-action="pin-modo" class="'+(pinModo?'on':'')+'">📍 '+(pinModo?'modo pinos LIGADO':'posicionar pinos')+'</button>';
+  if(pinModo){
+    h += '<span style="font-size:10px">escolha o item e toque na planta · toque num pino para apagar</span>';
+    for(i=0;i<S.itens.length;i++){
+      h += '<span class="pin-chip'+(pinArmado===i?' armado':'')+'" data-action="pin-armar" data-idx="'+i+'" style="background:'+corItem(i)+'">'+
+           (i+1)+' '+esc((S.itens[i].nome||'').substring(0,16))+'</span>';
+    }
+  }
+  h += '<button data-action="upload-planta">🖼 trocar planta</button>';
+  h += '</div>';
+  h += '<div class="cad-palco" style="min-height:0;padding-top:0">';
+  if(S.planta){
+    h += '<div class="cad-planta" data-action="planta-clique"><img src="'+S.planta+'">';
+    for(i=0;i<S.itens.length;i++){
+      var ps = S.itens[i].pins||[];
+      for(k=0;k<ps.length;k++){
+        h += '<a class="pin" href="#pg-item-'+i+'" data-action="pin" data-idx="'+i+'" data-k="'+k+'" '+
+             'style="left:'+(ps[k].x*100)+'%;top:'+(ps[k].y*100)+'%;background:'+corItem(i)+'">'+(i+1)+'</a>';
+      }
+    }
+    h += '</div>';
+  }else{
+    h += '<div class="cad-vazio sec-oculta-print" data-action="upload-planta" style="width:70%;min-height:80mm">⊕ Clique para inserir a planta baixa</div>';
+  }
+  h += '</div>';
+  h += '<div class="cad-legenda">';
+  for(i=0;i<S.itens.length;i++){
+    var it2 = S.itens[i];
+    h += '<div class="lg" data-action="ir-item" data-idx="'+i+'">'+
+      '<span class="n" style="background:'+corItem(i)+'">'+(i+1)+'</span>'+
+      '<span class="c">'+esc(it2.codigo||codigoLogico(i))+'</span>'+
+      '<span class="t">'+esc(it2.nome||'-')+'</span></div>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+/* ═══ MARCADOR DE RETÂNGULOS SOBRE O RENDER ═══ */
+function abrirMarcador(idx){
+  var it = S.itens[idx], src = refImg(it);
+  if(!src){ msg('Insira antes um render do projeto (página 3D).'); return; }
+  marcCtx = { idx: idx, rects: JSON.parse(JSON.stringify(it.refRects||[])) };
+  var h = '<button class="fechar" data-action="fechar-modal">✕</button>';
+  h += '<h3>Marcar a peça no render</h3>';
+  h += '<div style="font-size:11px;color:#667;margin-bottom:9px;line-height:1.5">Arraste sobre a imagem para desenhar o retângulo. Toque num retângulo existente para apagá-lo.</div>';
+  h += '<div id="marc-wrap" style="position:relative;line-height:0;touch-action:none;-webkit-user-select:none;user-select:none">'+
+       '<img src="'+src+'" style="width:100%;display:block" draggable="false"><div id="marc-ov" style="position:absolute;left:0;top:0;right:0;bottom:0"></div></div>';
+  h += '<div style="display:flex;gap:6px;margin-top:11px">'+
+       '<button data-action="marc-limpar" style="flex:1;font-family:inherit;font-size:12px;padding:8px;border:1px solid #C4CCC7;background:#fff;border-radius:5px;cursor:pointer">Limpar tudo</button>'+
+       '<button data-action="marc-ok" style="flex:2;font-family:inherit;font-size:12px;padding:8px;border:none;background:var(--verde);color:#fff;border-radius:5px;cursor:pointer">✔ Concluir</button></div>';
+  abrirModal(h);
+  desenhaMarcas();
+  ligarMarcador();
+}
+function desenhaMarcas(prev){
+  var ov = document.getElementById('marc-ov');
+  if(!ov || !marcCtx) return;
+  var h='', k, r;
+  for(k=0;k<marcCtx.rects.length;k++){
+    r = marcCtx.rects[k];
+    h += '<div class="marca-e" data-action="marc-del" data-k="'+k+'" style="position:absolute;left:'+(r.x*100)+'%;top:'+(r.y*100)+
+         '%;width:'+(r.w*100)+'%;height:'+(r.h*100)+'%;border:2px dashed #22C3DD;background:rgba(34,195,221,.14);cursor:pointer"></div>';
+  }
+  if(prev && prev.x1!==undefined){
+    var x=Math.min(prev.x0,prev.x1), y=Math.min(prev.y0,prev.y1);
+    h += '<div style="position:absolute;left:'+(x*100)+'%;top:'+(y*100)+'%;width:'+(Math.abs(prev.x1-prev.x0)*100)+
+         '%;height:'+(Math.abs(prev.y1-prev.y0)*100)+'%;border:2px dashed #F26522;pointer-events:none"></div>';
+  }
+  ov.innerHTML = h;
+}
+function ligarMarcador(){
+  var wrap = document.getElementById('marc-wrap');
+  if(!wrap) return;
+  var arr = null;
+  function pos(e){
+    var r = wrap.getBoundingClientRect();
+    return { x: Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),
+             y: Math.min(1,Math.max(0,(e.clientY-r.top)/r.height)) };
+  }
+  wrap.addEventListener('pointerdown', function(e){
+    if(e.target && e.target.className==='marca-e') return;
+    var p = pos(e);
+    arr = { x0:p.x, y0:p.y };
+    try{ wrap.setPointerCapture(e.pointerId); }catch(err){}
+    e.preventDefault();
+  });
+  wrap.addEventListener('pointermove', function(e){
+    if(!arr) return;
+    var p = pos(e);
+    arr.x1 = p.x; arr.y1 = p.y;
+    desenhaMarcas(arr);
+    e.preventDefault();
+  });
+  wrap.addEventListener('pointerup', function(e){
+    if(!arr) return;
+    var a = arr; arr = null;
+    if(a.x1===undefined){ desenhaMarcas(); return; }
+    var w = Math.abs(a.x1-a.x0), hh = Math.abs(a.y1-a.y0);
+    if(w>0.015 && hh>0.015){
+      marcCtx.rects.push({ x:Math.min(a.x0,a.x1), y:Math.min(a.y0,a.y1), w:w, h:hh });
+    }
+    desenhaMarcas();
+  });
+  wrap.addEventListener('pointercancel', function(){ arr=null; desenhaMarcas(); });
+}
+
+/* ═══ TROCAR A IMAGEM DE REFERÊNCIA DO ITEM ═══ */
+function trocarRender(idx){
+  var it = S.itens[idx], k;
+  var h = '<button class="fechar" data-action="fechar-modal">✕</button><h3>Imagem de referência da peça</h3>';
+  h += '<div style="font-size:11px;color:#667;margin-bottom:9px">Escolha qual imagem aparece nesta página. Os retângulos já marcados são mantidos.</div>';
+  h += '<div style="display:flex;flex-wrap:wrap;gap:6px">';
+  for(k=0;k<S.renders.length;k++){
+    h += '<div data-action="ref-set" data-idx="'+idx+'" data-src="b:'+k+'" style="width:calc(50% - 3px);cursor:pointer;border:2px solid '+
+         (it.refSrc==='b:'+k?'var(--verde)':'#E3E6E4')+';border-radius:5px;padding:3px">'+
+         '<img src="'+S.renders[k]+'" style="width:100%;display:block;border-radius:3px">'+
+         '<div style="font-size:9px;color:#667;text-align:center;padding-top:3px">3D do projeto '+(k+1)+'</div></div>';
+  }
+  var pr = imgsDe(it,'render');
+  for(k=0;k<pr.length;k++){
+    h += '<div data-action="ref-set" data-idx="'+idx+'" data-src="i:'+k+'" style="width:calc(50% - 3px);cursor:pointer;border:2px solid '+
+         (it.refSrc==='i:'+k?'var(--verde)':'#E3E6E4')+';border-radius:5px;padding:3px">'+
+         '<img src="'+pr[k]+'" style="width:100%;display:block;border-radius:3px">'+
+         '<div style="font-size:9px;color:#667;text-align:center;padding-top:3px">render do item '+(k+1)+'</div></div>';
+  }
+  h += '</div>';
+  h += '<div style="display:flex;gap:6px;margin-top:11px">'+
+       '<button data-action="upload-render-book" style="flex:1;font-family:inherit;font-size:12px;padding:8px;border:1px solid #C4CCC7;background:#fff;border-radius:5px;cursor:pointer">⊕ novo 3D do projeto</button>'+
+       '<button data-action="upload-img" data-idx="'+idx+'" data-campo="render" style="flex:1;font-family:inherit;font-size:12px;padding:8px;border:1px solid #C4CCC7;background:#fff;border-radius:5px;cursor:pointer">⊕ render só deste item</button></div>';
+  abrirModal(h);
+}
+
+function renderMantendo(){ var y = window.pageYOffset; render(); window.scrollTo(0, y); }
 
 /* ═══ SYNC DE CAMPOS ═══ */
 document.addEventListener('input', function(ev){
@@ -625,13 +1038,15 @@ document.addEventListener('input', function(ev){
     S.itens[parseInt(idx,10)][campo] = valor;
     if(el.getAttribute('data-dim')){
       var wrap = document.querySelector('[data-diagrama="'+idx+'"]');
-      if(wrap) wrap.innerHTML = svgDiagrama(S.itens[parseInt(idx,10)]);
+      if(wrap) wrap.innerHTML = (S.formato==='paisagem' ? svgCaderno(S.itens[parseInt(idx,10)]) : svgDiagrama(S.itens[parseInt(idx,10)]));
       var pg = el.closest('.pg-item');
       if(!S.itens[parseInt(idx,10)].impManual){
         /* atualiza a área impressa exibida sem perder o cursor */
         var imp = impressa(S.itens[parseInt(idx,10)]);
         var boxImp = pg.querySelector('.box-imp .val');
-        if(boxImp) boxImp.textContent = fmtDim(imp.L)+' × '+fmtDim(imp.A)+' cm';
+        if(boxImp) boxImp.textContent = (S.formato==='paisagem')
+          ? fmtDim(imp.L)+' X '+fmtDim(imp.A)+' CM'
+          : fmtDim(imp.L)+' × '+fmtDim(imp.A)+' cm';
       }
       var arv = pg.querySelector('.area-real-val');
       if(arv) arv.textContent = fmtM2(areaVisual(S.itens[parseInt(idx,10)]));
@@ -665,8 +1080,50 @@ document.addEventListener('click', function(ev){
   else if(ac==='upload-img'){ imgAlvo = { idx: idx, campo: el.getAttribute('data-campo') }; document.getElementById('input-img').click(); }
   else if(ac==='upload-logo'){ imgAlvo = { idx:-1, campo:'logo' }; document.getElementById('input-img').click(); }
   else if(ac==='upload-planta'){ imgAlvo = { idx:-2, campo:'planta' }; document.getElementById('input-img').click(); }
+  else if(ac==='upload-logo-cab'){ imgAlvo = { idx:-4, campo:'logoCab' }; document.getElementById('input-img').click(); }
+  else if(ac==='upload-render-book'){ imgAlvo = { idx:-3, campo:'renderbook' }; fecharModal(); document.getElementById('input-img').click(); }
+  else if(ac==='remover-render-book'){
+    var kb = parseInt(el.getAttribute('data-k')||'0',10);
+    S.renders.splice(kb,1);
+    for(var ib=0; ib<S.itens.length; ib++){
+      var sb = String(S.itens[ib].refSrc||'');
+      if(sb.charAt(0)==='b'){
+        var nb = parseInt(sb.substring(2),10);
+        if(nb===kb) S.itens[ib].refSrc='';
+        else if(nb>kb) S.itens[ib].refSrc='b:'+(nb-1);
+      }
+    }
+    render();
+  }
+  else if(ac==='mudar-formato'){ S.formato = (S.formato==='paisagem') ? 'retrato' : 'paisagem'; render(); window.scrollTo(0,0); }
+  else if(ac==='marcar-render'){ abrirMarcador(idx); }
+  else if(ac==='trocar-render'){ trocarRender(idx); }
+  else if(ac==='ref-set'){ S.itens[idx].refSrc = el.getAttribute('data-src'); fecharModal(); render(); }
+  else if(ac==='marc-del'){ ev.stopPropagation(); marcCtx.rects.splice(parseInt(el.getAttribute('data-k'),10),1); desenhaMarcas(); }
+  else if(ac==='marc-limpar'){ marcCtx.rects = []; desenhaMarcas(); }
+  else if(ac==='marc-ok'){ S.itens[marcCtx.idx].refRects = marcCtx.rects; marcCtx = null; fecharModal(); renderMantendo(); }
+  else if(ac==='pin-modo'){ pinModo = !pinModo; if(!pinModo) pinArmado=-1; renderMantendo(); }
+  else if(ac==='pin-armar'){ pinArmado = idx; renderMantendo(); }
+  else if(ac==='pin'){
+    if(pinModo){
+      ev.preventDefault(); ev.stopPropagation();
+      S.itens[idx].pins.splice(parseInt(el.getAttribute('data-k'),10),1);
+      renderMantendo();
+    }
+  }
+  else if(ac==='planta-clique'){
+    if(pinModo && pinArmado>=0){
+      var rp = el.getBoundingClientRect();
+      S.itens[pinArmado].pins.push({
+        x: Math.min(1,Math.max(0,(ev.clientX-rp.left)/rp.width)),
+        y: Math.min(1,Math.max(0,(ev.clientY-rp.top)/rp.height)) });
+      renderMantendo();
+    }else if(!pinModo){
+      msg('Ligue "posicionar pinos" para marcar itens na planta.');
+    }
+  }
   else if(ac==='remover-planta'){ ev.stopPropagation(); imgAlvo={idx:-2,campo:'planta'}; document.getElementById('input-img').click(); }
-  else if(ac==='ir-item'){ var alvoPg = document.querySelector('.pg-item[data-idx="'+idx+'"]'); if(alvoPg) alvoPg.scrollIntoView({behavior:'smooth'}); }
+  else if(ac==='ir-item'){ var alvoPg = document.getElementById('pg-item-'+idx) || document.querySelector('.pg-item[data-idx="'+idx+'"]'); if(alvoPg) alvoPg.scrollIntoView({behavior:'smooth'}); }
   else if(ac==='remover-img'){ ev.stopPropagation();
     var cmp = el.getAttribute('data-campo');
     var pos = parseInt(el.getAttribute('data-pos')||'0',10);
@@ -714,7 +1171,7 @@ document.getElementById('input-img').addEventListener('change', function(){
   var arquivos = Array.prototype.slice.call(this.files||[]); this.value='';
   if(!arquivos.length || !imgAlvo) return;
   var alvo = imgAlvo; imgAlvo=null;
-  if(alvo.campo==='logo' || alvo.campo==='planta') arquivos = arquivos.slice(0,1);
+  if(alvo.campo==='logo' || alvo.campo==='logoCab' || alvo.campo==='planta') arquivos = arquivos.slice(0,1);
   var pendentes = arquivos.length;
   function umPronto(){ pendentes--; if(pendentes<=0) render(); }
   function processa(f){
@@ -727,10 +1184,12 @@ document.getElementById('input-img').addEventListener('change', function(){
         if(w>MAX || h>MAX){ var r=Math.min(MAX/w,MAX/h); w=Math.round(w*r); h=Math.round(h*r); }
         var cv = document.createElement('canvas'); cv.width=w; cv.height=h;
         cv.getContext('2d').drawImage(img,0,0,w,h);
-        var ehPng = alvo.campo==='logo';
+        var ehPng = (alvo.campo==='logo' || alvo.campo==='logoCab');
         var data = ehPng ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg',0.82);
         if(alvo.campo==='logo'){ S.logo = data; }
+        else if(alvo.campo==='logoCab'){ S.logoCab = data; }
         else if(alvo.campo==='planta'){ S.planta = data; }
+        else if(alvo.campo==='renderbook'){ S.renders.push(data); }
         else{
           var lst = imgsDe(S.itens[alvo.idx], alvo.campo).slice();
           lst.push(data);
