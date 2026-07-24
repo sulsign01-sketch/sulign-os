@@ -26,8 +26,46 @@ var SulSignCore = (function(){
     'Cancelado'
   ];
 
-  // ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
-  var CATEGORIAS = ['Imposto','Serviços','Receita de Job','Comissão','Mão de Obra','Alimentação','Verba Produção','Material','Insumo','Comunicação Visual','Logística','Mobilidade','Receita Particular (Pondé)','Retirada Particular (Pondé)','Reserva Imposto Particular','Repasse Particular (Pondé)','Aplicação Financeira','Resgate de Aplicação','Rendimento de Aplicação','Locação','Locação Equipamentos','Locação PDVEX','Locação Equipamentos PDVEX','Mão de Obra PDVEX','Material PDVEX','Estorno','Outros'];
+  /* ── CATEGORIAS OFICIAIS DE LANÇAMENTO ──
+     Organizadas em BLOCOS. A ordem dos blocos e a ordem de leitura de um DRE
+     (receita > custo > pessoal > tributo > despesa fixa > capital); dentro de
+     cada bloco, ordem alfabetica. CATEGORIAS e DERIVADA daqui — nao existe
+     lista plana mantida a mao, entao e impossivel o dropdown agrupado e a
+     lista de validacao divergirem.
+     Jul/2026: ampliado de 27 para 41 categorias. 'Aporte' passou a existir de
+     fato (antes so tinha SUBCATS, e a opcao aparecia unicamente nas linhas ja
+     salvas com ela, via o unshift do valor atual no catSel). */
+  var BLOCOS = [
+    { nome:'Receita', cats:[
+      'Receita de Job','Receita Não Operacional','Rendimento de Aplicação'] },
+    { nome:'Custo de Job', cats:[
+      'Alimentação','Comissão','Comunicação Visual','Insumo','Locação',
+      'Locação Equipamentos','Logística','Mão de Obra','Material','Mobilidade',
+      'Taxas e Licenças','Verba Produção'] },
+    { nome:'Custo PDVEX', cats:[
+      'Locação Equipamentos PDVEX','Locação PDVEX','Mão de Obra PDVEX','Material PDVEX'] },
+    { nome:'Pessoal', cats:[
+      'Folha de Pagamento','Pró-Labore','Segurança do Trabalho'] },
+    { nome:'Tributos e Encargos', cats:[
+      'Encargos Trabalhistas','Imposto'] },
+    { nome:'Despesa Fixa / Administrativa', cats:[
+      'Despesa Financeira','Frota','Manutenção','Marketing','Ocupação','Serviços'] },
+    { nome:'Capital e Sócios', cats:[
+      'Aporte','Aquisição de Ativo','Distribuição de Lucros','Dívida Anterior','Mútuo de Sócio'] },
+    { nome:'Fluxo Particular (Pondé)', cats:[
+      'Receita Particular (Pondé)','Repasse Particular (Pondé)',
+      'Reserva Imposto Particular','Retirada Particular (Pondé)'] },
+    { nome:'Movimento Interno', cats:[
+      'Aplicação Financeira','Estorno','Outros','Resgate de Aplicação'] }
+  ];
+
+  var CATEGORIAS = (function(){
+    var a=[],i,j;
+    for(i=0;i<BLOCOS.length;i++){
+      for(j=0;j<BLOCOS[i].cats.length;j++) a.push(BLOCOS[i].cats[j]);
+    }
+    return a;
+  })();
 
   // ── CATEGORIAS DE CUSTO ORIGINADO NA PDVEX ──
   // Lista branca explicita. NAO usar match por substring ('PDVEX' no nome):
@@ -67,7 +105,28 @@ var SulSignCore = (function(){
     'Mão de Obra PDVEX':['Carpintaria','Serralheria','Montagem','Pintura','Marcenaria','Ajudante','Eletrica'],
     'Material PDVEX':['Madeira','Metalon','Impressao','Acrilico','Tintas','Ferragens','Eletrica','Consumivel'],
     'Alimentação':['Equipe','Cliente'],
-    'Imposto':['Simples Nacional','ISS','INSS','FGTS','IRRF','Outros'],
+    /* Imposto = SOBRE FATURAMENTO, do periodo corrente. INSS/FGTS/IRRF sairam
+       daqui (Jul/2026) e viraram 'Encargos Trabalhistas': encargo de folha e
+       custo de pessoal, nao carga tributaria sobre venda — misturar os dois
+       fazia a aliquota efetiva da empresa parecer maior do que e.
+       Lancamentos antigos com subcategoria 'INSS'/'FGTS'/'IRRF' continuam
+       legiveis: o subSel preserva valor fora do dominio como '(fora da lista)'. */
+    'Imposto':['Simples Nacional','ISS','IRPJ/CSLL','PIS/COFINS','Outros'],
+    'Encargos Trabalhistas':['INSS','FGTS','IRRF Folha','Contribuicao Sindical','Encargo Rescisorio'],
+    'Folha de Pagamento':['Salario','Adiantamento/Vale','13o Salario','Ferias','Rescisao','Hora Extra','Vale Transporte','Vale Refeicao','Bonus/PLR','Estagio'],
+    'Pró-Labore':['Socio Carlos','Socio Ponde','Socio Jovita','Socio Dudu'],
+    'Segurança do Trabalho':['EPI','ASO/Exames','PCMSO/PGR','Treinamento NR'],
+    'Ocupação':['Aluguel','Condominio','IPTU','Energia','Agua','Internet/Telefone','Seguranca/Alarme','Limpeza'],
+    'Manutenção':['Predial','Maquinas','Ferramentas','TI'],
+    'Marketing':['Anuncios','Site/Dominio','Brindes','Feiras','Representacao'],
+    'Frota':['Combustivel','Manutencao','IPVA/Licenciamento','Multas','Seguro','Pedagio'],
+    'Despesa Financeira':['Tarifa Bancaria','Juros','IOF','Taxa Maquininha','Antecipacao','Multa/Mora'],
+    'Taxas e Licenças':['ART/RRT','Credenciamento','Taxa de Shopping','Alvara','Bombeiro','Seguro de Obra'],
+    'Receita Não Operacional':['Venda de Ativo','Sucata','Indenizacao/Seguro','Bonificacao','Reembolso Recebido'],
+    'Aquisição de Ativo':['Maquinas e Equipamentos','Ferramentas','Veiculos','Informatica','Moveis e Instalacoes','Benfeitorias','Software/Licencas'],
+    'Dívida Anterior':['Parcelamento Federal','Parcelamento Municipal','Parcelamento Estadual','INSS/FGTS Atrasado','Acordo Trabalhista','Acordo Fornecedor','Juros e Multa'],
+    'Distribuição de Lucros':['Socio Carlos','Socio Ponde','Socio Jovita','Socio Dudu'],
+    'Mútuo de Sócio':['Emprestimo Recebido','Devolucao'],
     'Comissão':['Vendedor','Agencia','BV'],
     'Comunicação Visual':['Impressao','Recorte','Instalacao'],
     'Verba Produção':['Adiantamento','Prestacao de Contas'],
@@ -111,6 +170,36 @@ var SulSignCore = (function(){
 
   function ehTransferencia(categoria){
     return CATEGORIAS_TRANSFER.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
+  }
+
+  /* ── MOVIMENTO DE CAPITAL / PATRIMONIO (nao e resultado) ──
+     Sai ou entra na conta de verdade — entao PRECISA existir em lancamentos e
+     PRECISA aparecer no Fluxo de Caixa. Mas nao e receita nem despesa e nao
+     pode entrar em nenhum calculo de margem, DRE ou custo de job:
+
+       Aporte               entrada de capital do socio, nao e venda
+       Mútuo de Sócio       emprestimo do socio, entra e depois volta
+       Dívida Anterior      parcelamento de passivo herdado, anterior a esta
+                            gestao. Nao e imposto do periodo: jogar isso em
+                            'Imposto' destruiria a margem de 2026 com divida
+                            de outra era e inflaria a carga tributaria aparente
+       Aquisição de Ativo   troca de caixa por patrimonio (CAPEX), vira
+                            imobilizado e depois depreciacao — nao despesa
+       Distribuição de Lucros  saida de resultado ja apurado, nao custo
+
+     O par Aporte -> Dívida Anterior fecha em zero no resultado: capital sobe,
+     divida cai, exercicio nao e afetado. Que e exatamente o que aconteceu. */
+  var CATEGORIAS_CAPITAL = ['Aporte','Aquisição de Ativo','Distribuição de Lucros','Dívida Anterior','Mútuo de Sócio'];
+
+  function ehCapital(categoria){
+    return CATEGORIAS_CAPITAL.indexOf(String(categoria==null?'':categoria).trim()) >= 0;
+  }
+
+  /* Atalho para os agregados: tudo que sai do resultado operacional.
+     Use nos KPIs (Dashboard, Painel Financeiro, CEO Dashboard) — NUNCA no
+     Fluxo de Caixa, que espelha o extrato e tem que bater com o banco. */
+  function foraDoResultado(categoria){
+    return ehCapital(categoria) || ehParticular(categoria) || ehTransferencia(categoria);
   }
 
   // ── CÁLCULO OFICIAL DO ORÇAMENTO ──
@@ -166,6 +255,7 @@ var SulSignCore = (function(){
     SUPA_URL: SUPA_URL,
     SUPA_KEY: SUPA_KEY,
     STATUS_PIPELINE: STATUS_PIPELINE,
+    BLOCOS: BLOCOS,
     CATEGORIAS: CATEGORIAS,
     CATEGORIAS_PDVEX: CATEGORIAS_PDVEX,
     CATEGORIAS_LOCACAO: CATEGORIAS_LOCACAO,
@@ -177,6 +267,9 @@ var SulSignCore = (function(){
     ehParticular: ehParticular,
     CATEGORIAS_TRANSFER: CATEGORIAS_TRANSFER,
     ehTransferencia: ehTransferencia,
+    CATEGORIAS_CAPITAL: CATEGORIAS_CAPITAL,
+    ehCapital: ehCapital,
+    foraDoResultado: foraDoResultado,
     calcOrcamento: calcOrcamento,
     fmt: fmt
   };
