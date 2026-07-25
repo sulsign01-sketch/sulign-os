@@ -242,7 +242,12 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
 .cad-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:5mm;height:148mm;}
 .cad-q{border:1px solid #DDE1DF;border-radius:4px;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#fff;}
 .cad-q-cap{background:#EDEFEE;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:8px;letter-spacing:.4px;
-  text-transform:uppercase;color:#333;padding:1.8mm 3mm;border-bottom:1px solid #DDE1DF;flex:0 0 auto;}
+  text-transform:uppercase;color:#333;padding:1.8mm 3mm;border-bottom:1px solid #DDE1DF;flex:0 0 auto;
+  display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.cad-q-close{font-family:inherit;font-size:8.5px;font-weight:bold;line-height:1;padding:1.5px 6px;border:1px solid #E0A0A6;
+  background:#fff;color:#C0182B;border-radius:4px;cursor:pointer;text-transform:none;letter-spacing:0;white-space:nowrap;}
+.cad-q-close:hover{background:#FBE4E6;}
+.cad-q.cad-q-wide{grid-column:1 / span 2;}
 .cad-q-body{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:2mm;position:relative;}
 .cad-q-body img{max-width:100%;max-height:100%;display:block;object-fit:contain;}
 .cad-q-body svg{max-width:100%;max-height:100%;}
@@ -372,7 +377,7 @@ function itemNovo(){
   return { codigo:'', nome:'NOVO ITEM', setor:'', local:'', material:'', acabamento:'', substrato:'', estrutura:'',
     qtd:'1', visL:100, visA:100, sangria:2, impManual:false, impL:104, impA:104,
     forma:'ret', fp1:0,
-    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'',
+    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'', arteFull:false,
     obs:'', instalacao:'', render:[], arte:[] };
 }
 function estadoInicial(){
@@ -898,8 +903,12 @@ function renderCadItem(it, i){
   h += '<div class="cad-grid">';
   h += cadQuadDesenho(it, i);
   h += cadQuadRender(it, i);
-  h += cadQuadImg(it, i, 'detalhe', 'DETALHAMENTO');
-  h += cadQuadImg(it, i, 'arte', 'ARTE FINAL');
+  if(it.arteFull){
+    h += cadQuadImg(it, i, 'arte', 'ARTE FINAL');
+  }else{
+    h += cadQuadImg(it, i, 'detalhe', 'DETALHAMENTO');
+    h += cadQuadImg(it, i, 'arte', 'ARTE FINAL');
+  }
   h += '</div>';
   h += '<div class="cad-aviso"><b>*ATENÇÃO:</b> <span contenteditable data-field="aviso">'+esc(S.aviso)+'</span></div>';
   h += '</div>';
@@ -938,7 +947,17 @@ function cadQuadRender(it, i){
 }
 function cadQuadImg(it, i, campo, rot){
   var arr = imgsDe(it, campo);
-  var h = '<div class="cad-q"><div class="cad-q-cap">'+rot+(arr.length>1?' · 1/'+arr.length+' (demais na página seguinte)':'')+'</div>';
+  var wide = (campo==='arte' && it.arteFull);
+  var capBtn = '';
+  if(campo==='detalhe'){
+    capBtn = '<button class="cad-q-close sec-oculta-print" data-action="arte-full" data-idx="'+i+'" data-val="1" '+
+             'title="Fechar detalhamento — a arte final ocupa os dois quadrantes">✕ fechar</button>';
+  }else if(wide){
+    capBtn = '<button class="cad-q-close sec-oculta-print" data-action="arte-full" data-idx="'+i+'" data-val="0" '+
+             'title="Reabrir o quadrante de detalhamento">＋ detalhamento</button>';
+  }
+  var extra = (arr.length>1?' · 1/'+arr.length+' (demais na página seguinte)':'');
+  var h = '<div class="cad-q'+(wide?' cad-q-wide':'')+'"><div class="cad-q-cap"><span>'+rot+extra+'</span>'+capBtn+'</div>';
   if(arr.length){
     h += '<div class="cad-q-body"><img src="'+arr[0]+'"></div>';
     h += '<div class="cad-q-foot sec-oculta-print">'+
@@ -950,23 +969,27 @@ function cadQuadImg(it, i, campo, rot){
   return h + '</div>';
 }
 
-/* páginas de continuação: SÓ os extras (índice ≥ 1), já que o 1º detalhamento e a 1ª arte
-   ficam nos quadrantes da própria peça. Pareia detalhamento k ↔ arte final k na mesma folha. */
+/* páginas de continuação: os extras não mostrados nos quadrantes da peça.
+   Normal: detalhe[1+] e arte[1+]. Com detalhamento fechado (arteFull): detalhe[0+] e arte[1+].
+   Pareia detalhamento ↔ arte final na mesma folha. */
 function renderCadExtras(it, i){
   var k, h = '';
   var ds = imgsDe(it,'detalhe'), as = imgsDe(it,'arte');
-  var n = Math.max(ds.length, as.length);
-  for(k=1;k<n;k++){
-    var detOn  = !!ds[k];
-    var arteOn = !!as[k];
-    if(!detOn && !arteOn) continue;
-    var rot = (detOn && arteOn) ? 'DETALHAMENTO + ARTE FINAL' : (detOn ? 'DETALHAMENTO' : 'ARTE FINAL');
+  var detStart = it.arteFull ? 0 : 1;   /* se detalhamento fechado, nenhum detalhe fica no quadrante */
+  var arteStart = 1;                      /* arte[0] fica sempre no quadrante */
+  var extraDet = ds.slice(detStart), extraArte = as.slice(arteStart);
+  var n = Math.max(extraDet.length, extraArte.length);
+  for(k=0;k<n;k++){
+    var d = extraDet[k], a = extraArte[k];
+    if(!d && !a) continue;
+    var posD = detStart + k, posA = arteStart + k;
+    var rot = (d && a) ? 'DETALHAMENTO + ARTE FINAL' : (d ? 'DETALHAMENTO' : 'ARTE FINAL');
     h += '<div class="page pg-cad">'+cadTopo()+
       '<div class="cad-aba-solo" style="width:120mm">'+rot+' &nbsp;·&nbsp; '+esc(it.nome||'')+'</div>'+
       '<div class="cad-badge" style="background:'+corItem(i)+';top:30mm;left:6mm">'+(i+1)+'</div>'+
       '<div class="cad-duo">'+
-        (detOn  ? cadDuoCell('DETALHAMENTO '+(k+1), ds[k], i, 'detalhe', k) : '')+
-        (arteOn ? cadDuoCell('ARTE FINAL '+(k+1),   as[k], i, 'arte',    k) : '')+
+        (d ? cadDuoCell('DETALHAMENTO '+(posD+1), d, i, 'detalhe', posD) : '')+
+        (a ? cadDuoCell('ARTE FINAL '+(posA+1),   a, i, 'arte',    posA) : '')+
       '</div></div>';
   }
   return h;
@@ -1207,6 +1230,7 @@ document.addEventListener('click', function(ev){
   else if(ac==='marcar-render'){ abrirMarcador(idx); }
   else if(ac==='trocar-render'){ trocarRender(idx); }
   else if(ac==='des-set'){ S.itens[idx].desenhoSrc = el.getAttribute('data-src'); renderMantendo(); }
+  else if(ac==='arte-full'){ S.itens[idx].arteFull = (el.getAttribute('data-val')==='1'); renderMantendo(); }
   else if(ac==='ref-set'){ S.itens[idx].refSrc = el.getAttribute('data-src'); fecharModal(); render(); }
   else if(ac==='marc-del'){ ev.stopPropagation(); marcCtx.rects.splice(parseInt(el.getAttribute('data-k'),10),1); desenhaMarcas(); }
   else if(ac==='marc-limpar'){ marcCtx.rects = []; desenhaMarcas(); }
