@@ -248,6 +248,19 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
   background:#fff;color:#C0182B;border-radius:4px;cursor:pointer;text-transform:none;letter-spacing:0;white-space:nowrap;}
 .cad-q-close:hover{background:#FBE4E6;}
 .cad-q.cad-q-wide{grid-column:1 / span 2;}
+.cad-status{margin-top:2.5mm;border-top:1.6px solid #333;padding-top:2mm;}
+.cad-status-tit{font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:8.5px;letter-spacing:.5px;color:#222;margin-bottom:1.6mm;}
+.cad-chk{display:flex;align-items:center;gap:5px;font-family:Arial,Helvetica,sans-serif;font-size:8.5px;font-weight:bold;
+  text-transform:uppercase;letter-spacing:.2px;color:#3A423E;margin-bottom:1.2mm;}
+.cad-chk .bx{width:3.4mm;height:3.4mm;border:1.4px solid #7A857F;border-radius:2px;display:inline-flex;align-items:center;justify-content:center;
+  font-size:9px;line-height:1;color:#fff;flex:0 0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.cad-chk.on .bx{background:#1E8E5A;border-color:#1E8E5A;}
+.cad-chk.on.no .bx{background:#C0271D;border-color:#C0271D;}
+.cad-chk.click{cursor:pointer;}
+.cad-status-obs{margin-top:1.6mm;font-family:Arial,Helvetica,sans-serif;font-size:8.5px;line-height:1.35;}
+.cad-status-obs .rot{font-weight:bold;color:#222;}
+.cad-status-obs span[contenteditable]{color:#444;outline:none;}
+.cad-status-obs span[contenteditable]:empty:before{content:attr(data-ph);color:#B7BEB9;}
 .cad-q-body{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:2mm;position:relative;}
 .cad-q-body img{max-width:100%;max-height:100%;display:block;object-fit:contain;}
 .cad-q-body svg{max-width:100%;max-height:100%;}
@@ -377,7 +390,7 @@ function itemNovo(){
   return { codigo:'', nome:'NOVO ITEM', setor:'', local:'', material:'', acabamento:'', substrato:'', estrutura:'',
     qtd:'1', visL:100, visA:100, sangria:2, impManual:false, impL:104, impA:104,
     forma:'ret', fp1:0,
-    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'', arteFull:false,
+    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'', arteFull:false, arteAprov:'', arteObs:'',
     obs:'', instalacao:'', render:[], arte:[] };
 }
 function estadoInicial(){
@@ -885,9 +898,8 @@ function renderCadItem(it, i){
   h += cadF('CÓDIGO:', i, 'codigo', it.codigo||cod);
   var fk = formaDe(it), fopts = '';
   for(var fko in FORMAS){ fopts += '<option value="'+fko+'"'+(fko===fk?' selected':'')+'>'+FORMAS[fko].lbl+'</option>'; }
-  h += '<div class="cad-f"><div class="rot">FORMATO DA ÁREA VISUAL</div><div class="val">'+
-       '<span class="so-print">'+FORMAS[fk].lbl+'</span>'+
-       '<select class="sec-oculta-print" data-action="mudar-forma" data-idx="'+i+'" style="font-family:inherit;font-size:9.5px;font-weight:bold;text-transform:uppercase;padding:1px 2px;border:1px solid #ccc;border-radius:3px;background:#fff;width:100%">'+fopts+'</select>'+
+  h += '<div class="cad-f sec-oculta-print"><div class="rot">FORMATO DA ÁREA VISUAL</div><div class="val">'+
+       '<select data-action="mudar-forma" data-idx="'+i+'" style="font-family:inherit;font-size:9.5px;font-weight:bold;text-transform:uppercase;padding:1px 2px;border:1px solid #ccc;border-radius:3px;background:#fff;width:100%">'+fopts+'</select>'+
        '</div></div>';
   if(FORMAS[fk].p1){
     h += '<div class="cad-f"><div class="rot">'+FORMAS[fk].p1+'</div><div class="val">'+
@@ -913,6 +925,7 @@ function renderCadItem(it, i){
        '<label style="float:right;cursor:pointer;font-weight:normal"><input type="checkbox" data-action="toggle-manual" data-idx="'+i+'" '+(it.impManual?'checked':'')+'> manual</label></div>'+
        '<div class="val"><span contenteditable data-item="'+i+'" data-field="sangria" data-dim="1">'+fmtDim(num(it.sangria))+'</span> CM'+
        ' &nbsp;·&nbsp; <span style="font-weight:normal;text-transform:none;color:#667">área visível '+fmtM2(areaVisual(it))+' m²</span></div></div>';
+  h += cadStatusArte(it, i);
   h += '</div>';
   /* ── área técnica: grade 2×2 de quadrantes (desenho, render, detalhamento, arte) ── */
   h += '<div class="cad-area">';
@@ -982,6 +995,19 @@ function cadQuadImg(it, i, campo, rot){
   }else{
     h += '<div class="cad-q-body"><div class="cad-vazio sec-oculta-print" data-action="upload-img" data-idx="'+i+'" data-campo="'+campo+'">⊕ inserir '+rot.toLowerCase()+'</div></div>';
   }
+  return h + '</div>';
+}
+
+/* bloco STATUS DA ARTE (aparece no PDF): Recebida (auto), Aprovada / Não aprovada, Observação */
+function cadStatusArte(it, i){
+  var recebida = imgsDe(it,'arte').length>0;
+  var ok = it.arteAprov==='ok', no = it.arteAprov==='no';
+  var h = '<div class="cad-status"><div class="cad-status-tit">STATUS DA ARTE</div>';
+  h += '<div class="cad-chk'+(recebida?' on':'')+'"><span class="bx">'+(recebida?'✓':'')+'</span>Recebida</div>';
+  h += '<div class="cad-chk click'+(ok?' on':'')+'" data-action="arte-aprov" data-idx="'+i+'" data-val="ok"><span class="bx">'+(ok?'✓':'')+'</span>Aprovada</div>';
+  h += '<div class="cad-chk click no'+(no?' on':'')+'" data-action="arte-aprov" data-idx="'+i+'" data-val="no"><span class="bx">'+(no?'✕':'')+'</span>Não aprovada</div>';
+  h += '<div class="cad-status-obs"><span class="rot">Obs: </span>'+
+       '<span contenteditable data-item="'+i+'" data-field="arteObs" data-ph="—">'+esc(it.arteObs||'')+'</span></div>';
   return h + '</div>';
 }
 
@@ -1247,6 +1273,7 @@ document.addEventListener('click', function(ev){
   else if(ac==='trocar-render'){ trocarRender(idx); }
   else if(ac==='des-set'){ S.itens[idx].desenhoSrc = el.getAttribute('data-src'); renderMantendo(); }
   else if(ac==='arte-full'){ S.itens[idx].arteFull = (el.getAttribute('data-val')==='1'); renderMantendo(); }
+  else if(ac==='arte-aprov'){ var _v=el.getAttribute('data-val'); S.itens[idx].arteAprov = (S.itens[idx].arteAprov===_v)?'':_v; renderMantendo(); }
   else if(ac==='ref-set'){ S.itens[idx].refSrc = el.getAttribute('data-src'); fecharModal(); render(); }
   else if(ac==='marc-del'){ ev.stopPropagation(); marcCtx.rects.splice(parseInt(el.getAttribute('data-k'),10),1); desenhaMarcas(); }
   else if(ac==='marc-limpar'){ marcCtx.rects = []; desenhaMarcas(); }
@@ -1343,6 +1370,7 @@ document.getElementById('input-img').addEventListener('change', function(){
           var lst = imgsDe(S.itens[alvo.idx], alvo.campo).slice();
           lst.push(data);
           S.itens[alvo.idx][alvo.campo] = lst;
+          if(alvo.campo==='arte') S.itens[alvo.idx].arteAprov = 'ok'; /* auto: recebida (presença) + aprovada ao subir a arte */
         }
         umPronto();
       };
