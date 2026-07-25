@@ -826,8 +826,14 @@ function svgCaderno(it){
   s += '<line x1="'+(x-58)+'" y1="'+(y+hf)+'" x2="'+x+'" y2="'+(y+hf)+'" stroke="'+R+'" stroke-width="0.5"/>';
   /* dimensão final (faca) */
   s += '<rect x="'+x+'" y="'+y+'" width="'+wf+'" height="'+hf+'" fill="none" stroke="'+R+'" stroke-width="1.2" stroke-dasharray="8 5"/>';
-  /* área visível */
-  s += '<rect x="'+xv+'" y="'+yv+'" width="'+wv+'" height="'+hv+'" fill="#FFFFFF" stroke="'+K+'" stroke-width="1.3"/>';
+  /* área visível — forma real (retângulo, elipse/círculo, triângulo, trapézio, telhado, arco) */
+  var fpathC = pathForma(it, xv, yv, wv, hv);
+  if(fpathC){
+    s += '<rect x="'+xv+'" y="'+yv+'" width="'+wv+'" height="'+hv+'" fill="none" stroke="#BBB" stroke-width="0.7" stroke-dasharray="4 4"/>';
+    s += '<path d="'+fpathC+'" fill="#FFFFFF" stroke="'+K+'" stroke-width="1.3"/>';
+  }else{
+    s += '<rect x="'+xv+'" y="'+yv+'" width="'+wv+'" height="'+hv+'" fill="#FFFFFF" stroke="'+K+'" stroke-width="1.3"/>';
+  }
   /* cotas horizontais (topo) */
   s += cotaH(x, x+wf, y-48, fmtDim(LF), R, F, K);
   s += cotaH(xv, xv+wv, y-24, fmtDim(LV), K, F, K);
@@ -877,7 +883,17 @@ function renderCadItem(it, i){
   h += cadF('LOCAL:', i, 'local', it.local);
   h += cadF('PEÇA:', i, 'nome', it.nome);
   h += cadF('CÓDIGO:', i, 'codigo', it.codigo||cod);
-  h += '<div class="cad-f"><div class="rot">DIMENSÃO ÁREA VISÍVEL:</div><div class="val">'+
+  var fk = formaDe(it), fopts = '';
+  for(var fko in FORMAS){ fopts += '<option value="'+fko+'"'+(fko===fk?' selected':'')+'>'+FORMAS[fko].lbl+'</option>'; }
+  h += '<div class="cad-f"><div class="rot">FORMATO DA ÁREA VISUAL</div><div class="val">'+
+       '<span class="so-print">'+FORMAS[fk].lbl+'</span>'+
+       '<select class="sec-oculta-print" data-action="mudar-forma" data-idx="'+i+'" style="font-family:inherit;font-size:9.5px;font-weight:bold;text-transform:uppercase;padding:1px 2px;border:1px solid #ccc;border-radius:3px;background:#fff;width:100%">'+fopts+'</select>'+
+       '</div></div>';
+  if(FORMAS[fk].p1){
+    h += '<div class="cad-f"><div class="rot">'+FORMAS[fk].p1+'</div><div class="val">'+
+         '<span contenteditable data-item="'+i+'" data-field="fp1" data-dim="1">'+fmtDim(num(it.fp1))+'</span> CM</div></div>';
+  }
+  h += '<div class="cad-f"><div class="rot">DIMENSÃO ÁREA VISÍVEL'+(fk==='ret'?':':' (L × A MÁX):')+'</div><div class="val">'+
        '<span contenteditable data-item="'+i+'" data-field="visL" data-dim="1">'+fmtDim(num(it.visL))+'</span> X '+
        '<span contenteditable data-item="'+i+'" data-field="visA" data-dim="1">'+fmtDim(num(it.visA))+'</span> CM</div></div>';
   h += '<div class="cad-f vermelho box-imp"><div class="rot">DIMENSÃO FINAL:</div><div class="val">';
