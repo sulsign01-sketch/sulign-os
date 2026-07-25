@@ -238,6 +238,23 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
   font-family:Arial,Helvetica,sans-serif;font-size:8px;line-height:1.5;color:#E01B24;text-align:center;}
 .cad-aviso b{color:#C0182B;font-weight:bold;}
 
+/* ═══ GRADE 2×2 DE QUADRANTES (área técnica, sem disputa por slot central) ═══ */
+.cad-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:5mm;height:148mm;}
+.cad-q{border:1px solid #DDE1DF;border-radius:4px;display:flex;flex-direction:column;min-height:0;overflow:hidden;background:#fff;}
+.cad-q-cap{background:#EDEFEE;font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:8px;letter-spacing:.4px;
+  text-transform:uppercase;color:#333;padding:1.8mm 3mm;border-bottom:1px solid #DDE1DF;flex:0 0 auto;}
+.cad-q-body{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;padding:2mm;position:relative;}
+.cad-q-body img{max-width:100%;max-height:100%;display:block;object-fit:contain;}
+.cad-q-body svg{max-width:100%;max-height:100%;}
+.cad-q-render-base{position:relative;line-height:0;cursor:pointer;max-width:100%;max-height:100%;}
+.cad-q-render-base img{max-width:100%;max-height:100%;}
+.cad-q .marca{position:absolute;border:1.6px dashed #22C3DD;box-sizing:border-box;}
+.cad-q-foot{flex:0 0 auto;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:1.5mm 2mm;border-top:1px solid #F0F0F0;}
+.cad-q-foot button{font-family:inherit;font-size:8.5px;padding:2.5px 6px;border:1px solid #C4CCC7;background:#fff;border-radius:4px;cursor:pointer;color:#556;}
+.cad-q-foot button:hover{border-color:var(--verde);}
+.cad-q .cad-vazio{border:1.5px dashed #C4CCC7;border-radius:5px;width:100%;min-height:0;flex:1;display:flex;align-items:center;justify-content:center;
+  color:#AEB6B1;font-size:9.5px;text-align:center;padding:3mm;cursor:pointer;}
+
 .cad-aba-solo{background:#DCDCDC;width:78mm;margin-top:0;padding:3.2mm 4mm 3.2mm 19mm;
   font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:9.5px;text-transform:uppercase;color:#111;
   -webkit-clip-path:polygon(0 0,100% 0,calc(100% - 10mm) 100%,0 100%);clip-path:polygon(0 0,100% 0,calc(100% - 10mm) 100%,0 100%);}
@@ -876,26 +893,14 @@ function renderCadItem(it, i){
        '<div class="val"><span contenteditable data-item="'+i+'" data-field="sangria" data-dim="1">'+fmtDim(num(it.sangria))+'</span> CM'+
        ' &nbsp;·&nbsp; <span style="font-weight:normal;text-transform:none;color:#667">área visível '+fmtM2(areaVisual(it))+' m²</span></div></div>';
   h += '</div>';
-  /* ── área técnica ── */
+  /* ── área técnica: grade 2×2 de quadrantes (desenho, render, detalhamento, arte) ── */
   h += '<div class="cad-area">';
-  h += '<div class="cad-render">';
-  var ri = refImg(it);
-  if(ri){
-    h += '<div class="base" data-action="marcar-render" data-idx="'+i+'" title="Clique para marcar a peça no render"><img src="'+ri+'">';
-    for(var k=0;k<it.refRects.length;k++){
-      var r = it.refRects[k];
-      h += '<div class="marca" style="left:'+(r.x*100)+'%;top:'+(r.y*100)+'%;width:'+(r.w*100)+'%;height:'+(r.h*100)+'%"></div>';
-    }
-    h += '</div><div class="cap"><span>RENDER</span><small>SEM ESCALA</small></div>';
-    h += '<div class="cad-ctrl sec-oculta-print">'+
-         '<button data-action="marcar-render" data-idx="'+i+'">✏️ marcar</button>'+
-         '<button data-action="trocar-render" data-idx="'+i+'">🔄 trocar imagem</button></div>';
-  }else{
-    h += '<div class="cad-vazio sec-oculta-print" data-action="upload-render-book">⊕ Inserir o render<br>do projeto</div>';
-  }
+  h += '<div class="cad-grid">';
+  h += cadQuadDesenho(it, i);
+  h += cadQuadRender(it, i);
+  h += cadQuadImg(it, i, 'detalhe', 'DETALHAMENTO');
+  h += cadQuadImg(it, i, 'arte', 'ARTE FINAL');
   h += '</div>';
-  h += '<div class="cad-desenho" data-diagrama="'+i+'">'+conteudoDesenho(it)+'</div>';
-  h += barraDesenho(it, i);
   h += '<div class="cad-aviso"><b>*ATENÇÃO:</b> <span contenteditable data-field="aviso">'+esc(S.aviso)+'</span></div>';
   h += '</div>';
   h += '</div>';
@@ -909,30 +914,51 @@ function renderCadItem(it, i){
   return h;
 }
 
-function barraDesenho(it, i){
-  var k, h = '<div class="cad-desctrl sec-oculta-print">';
-  h += '<span class="lbl">área central:</span>';
-  h += '<button class="'+(it.desenhoSrc?'':'on')+'" data-action="des-set" data-idx="'+i+'" data-src="">📐 desenho gerado</button>';
-  var ds = imgsDe(it,'detalhe'), as = imgsDe(it,'arte');
-  for(k=0;k<ds.length;k++) h += '<button class="'+(it.desenhoSrc==='d:'+k?'on':'')+'" data-action="des-set" data-idx="'+i+'" data-src="d:'+k+'">detalhamento '+(k+1)+'</button>';
-  for(k=0;k<as.length;k++) h += '<button class="'+(it.desenhoSrc==='a:'+k?'on':'')+'" data-action="des-set" data-idx="'+i+'" data-src="a:'+k+'">arte final '+(k+1)+'</button>';
-  h += '<span class="sep"></span>';
-  h += '<button data-action="upload-img" data-idx="'+i+'" data-campo="detalhe">⊕ detalhamento</button>';
-  h += '<button data-action="upload-img" data-idx="'+i+'" data-campo="arte">⊕ arte final</button>';
-  h += '<span class="dica">o que não estiver aqui no centro vira página inteira logo depois</span>';
-  h += '</div>';
-  return h;
+/* ═══ QUADRANTES DA ÁREA TÉCNICA ═══ */
+function cadQuadDesenho(it, i){
+  return '<div class="cad-q"><div class="cad-q-cap">DESENHO TÉCNICO · COTAS</div>'+
+    '<div class="cad-q-body" data-diagrama="'+i+'">'+conteudoDesenho(it)+'</div></div>';
+}
+function cadQuadRender(it, i){
+  var ri = refImg(it), k, h = '<div class="cad-q"><div class="cad-q-cap">RENDER · SEM ESCALA</div>';
+  if(ri){
+    h += '<div class="cad-q-body"><div class="cad-q-render-base" data-action="marcar-render" data-idx="'+i+'" title="Clique para marcar a peça no render"><img src="'+ri+'">';
+    for(k=0;k<it.refRects.length;k++){
+      var r = it.refRects[k];
+      h += '<div class="marca" style="left:'+(r.x*100)+'%;top:'+(r.y*100)+'%;width:'+(r.w*100)+'%;height:'+(r.h*100)+'%"></div>';
+    }
+    h += '</div></div>';
+    h += '<div class="cad-q-foot sec-oculta-print">'+
+      '<button data-action="marcar-render" data-idx="'+i+'">✏️ marcar</button>'+
+      '<button data-action="trocar-render" data-idx="'+i+'">🔄 trocar</button></div>';
+  }else{
+    h += '<div class="cad-q-body"><div class="cad-vazio sec-oculta-print" data-action="upload-render-book">⊕ inserir o render<br>do projeto</div></div>';
+  }
+  return h + '</div>';
+}
+function cadQuadImg(it, i, campo, rot){
+  var arr = imgsDe(it, campo);
+  var h = '<div class="cad-q"><div class="cad-q-cap">'+rot+(arr.length>1?' · 1/'+arr.length+' (demais na página seguinte)':'')+'</div>';
+  if(arr.length){
+    h += '<div class="cad-q-body"><img src="'+arr[0]+'"></div>';
+    h += '<div class="cad-q-foot sec-oculta-print">'+
+      '<button data-action="upload-img" data-idx="'+i+'" data-campo="'+campo+'">⊕ adicionar</button>'+
+      '<button data-action="remover-img" data-idx="'+i+'" data-campo="'+campo+'" data-pos="0">✕ remover</button></div>';
+  }else{
+    h += '<div class="cad-q-body"><div class="cad-vazio sec-oculta-print" data-action="upload-img" data-idx="'+i+'" data-campo="'+campo+'">⊕ inserir '+rot.toLowerCase()+'</div></div>';
+  }
+  return h + '</div>';
 }
 
-/* páginas de continuação do item: detalhamento k pareado com arte final k na MESMA folha
-   (lado a lado no paisagem, empilhado no retrato). O que estiver na área central é omitido aqui. */
+/* páginas de continuação: SÓ os extras (índice ≥ 1), já que o 1º detalhamento e a 1ª arte
+   ficam nos quadrantes da própria peça. Pareia detalhamento k ↔ arte final k na mesma folha. */
 function renderCadExtras(it, i){
   var k, h = '';
   var ds = imgsDe(it,'detalhe'), as = imgsDe(it,'arte');
   var n = Math.max(ds.length, as.length);
-  for(k=0;k<n;k++){
-    var detOn  = ds[k] && it.desenhoSrc!=='d:'+k;
-    var arteOn = as[k] && it.desenhoSrc!=='a:'+k;
+  for(k=1;k<n;k++){
+    var detOn  = !!ds[k];
+    var arteOn = !!as[k];
     if(!detOn && !arteOn) continue;
     var rot = (detOn && arteOn) ? 'DETALHAMENTO + ARTE FINAL' : (detOn ? 'DETALHAMENTO' : 'ARTE FINAL');
     h += '<div class="page pg-cad">'+cadTopo()+
@@ -946,12 +972,10 @@ function renderCadExtras(it, i){
   return h;
 }
 function cadDuoCell(rot, src, i, campo, pos){
-  var pref = (campo==='detalhe') ? 'd' : 'a';
   return '<div class="cad-duo-cell">'+
     '<div class="cad-duo-cap">'+rot+'</div>'+
     '<div class="cad-duo-img"><img src="'+src+'"></div>'+
     '<div class="cad-duo-ctrl sec-oculta-print">'+
-      '<button data-action="des-set" data-idx="'+i+'" data-src="'+pref+':'+pos+'">⇱ usar na área central</button>'+
       '<button data-action="remover-img" data-idx="'+i+'" data-campo="'+campo+'" data-pos="'+pos+'">✕ remover</button>'+
     '</div></div>';
 }
