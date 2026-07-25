@@ -768,7 +768,7 @@ function normaliza(){
     if(!Array.isArray(it.pins)) it.pins = [];
     if(!Array.isArray(it.detalhe)) it.detalhe = [];
     if(!Array.isArray(it.arte)) it.arte = imgsDe(it,'arte');
-    if(it.desenhoSrc===undefined) it.desenhoSrc = '';
+    it.desenhoSrc = ''; /* legado: área central desativada — quadrante sempre mostra o desenho gerado */
     if(it.refSrc===undefined) it.refSrc = '';
     if(it.cor===undefined) it.cor = '';
   }
