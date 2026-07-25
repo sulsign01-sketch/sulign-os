@@ -243,6 +243,17 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
   -webkit-clip-path:polygon(0 0,100% 0,calc(100% - 10mm) 100%,0 100%);clip-path:polygon(0 0,100% 0,calc(100% - 10mm) 100%,0 100%);}
 .cad-palco{padding:4mm 12mm;display:flex;align-items:center;justify-content:center;min-height:150mm;}
 .cad-palco img{max-width:100%;max-height:150mm;display:block;}
+.cad-duo{padding:2mm 12mm;display:flex;gap:8mm;align-items:stretch;justify-content:center;min-height:150mm;}
+.cad-duo-cell{flex:1;display:flex;flex-direction:column;min-width:0;}
+.cad-duo-cap{background:#DCDCDC;padding:2.4mm 4mm;font-family:Arial,Helvetica,sans-serif;font-weight:bold;
+  font-size:8.5px;text-transform:uppercase;letter-spacing:.3px;color:#111;margin-bottom:2mm;}
+.cad-duo-img{flex:1;display:flex;align-items:center;justify-content:center;min-height:0;}
+.cad-duo-img img{max-width:100%;max-height:130mm;display:block;object-fit:contain;}
+.cad-duo-ctrl{margin-top:2mm;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;}
+.cad-duo-ctrl button{font-family:inherit;font-size:9px;padding:3px 7px;border:1px solid #C4CCC7;background:#fff;border-radius:4px;cursor:pointer;color:#556;}
+.cad-duo-ctrl button:hover{border-color:var(--verde);}
+body.fmt-ret .cad-duo{flex-direction:column;gap:5mm;padding:2mm 14mm;}
+body.fmt-ret .cad-duo-img img{max-height:112mm;}
 .cad-planta{position:relative;display:inline-block;line-height:0;}
 .cad-planta img{max-width:100%;max-height:132mm;display:block;}
 .pin{position:absolute;width:7mm;height:7mm;border-radius:50%;color:#fff;text-decoration:none;
@@ -913,24 +924,36 @@ function barraDesenho(it, i){
   return h;
 }
 
-/* páginas de continuação do item: detalhamentos e artes que não estão na área central */
+/* páginas de continuação do item: detalhamento k pareado com arte final k na MESMA folha
+   (lado a lado no paisagem, empilhado no retrato). O que estiver na área central é omitido aqui. */
 function renderCadExtras(it, i){
-  var k, h = '', lista = [];
+  var k, h = '';
   var ds = imgsDe(it,'detalhe'), as = imgsDe(it,'arte');
-  for(k=0;k<ds.length;k++) if(it.desenhoSrc!=='d:'+k) lista.push({t:'DETALHAMENTO', src:ds[k], campo:'detalhe', pos:k});
-  for(k=0;k<as.length;k++) if(it.desenhoSrc!=='a:'+k) lista.push({t:'ARTE FINAL', src:as[k], campo:'arte', pos:k});
-  for(k=0;k<lista.length;k++){
-    var e = lista[k];
+  var n = Math.max(ds.length, as.length);
+  for(k=0;k<n;k++){
+    var detOn  = ds[k] && it.desenhoSrc!=='d:'+k;
+    var arteOn = as[k] && it.desenhoSrc!=='a:'+k;
+    if(!detOn && !arteOn) continue;
+    var rot = (detOn && arteOn) ? 'DETALHAMENTO + ARTE FINAL' : (detOn ? 'DETALHAMENTO' : 'ARTE FINAL');
     h += '<div class="page pg-cad">'+cadTopo()+
-      '<div class="cad-aba-solo" style="width:120mm">'+e.t+' &nbsp;·&nbsp; '+esc(it.nome||'')+'</div>'+
+      '<div class="cad-aba-solo" style="width:120mm">'+rot+' &nbsp;·&nbsp; '+esc(it.nome||'')+'</div>'+
       '<div class="cad-badge" style="background:'+corItem(i)+';top:30mm;left:6mm">'+(i+1)+'</div>'+
-      '<div class="cad-palco"><img src="'+e.src+'"></div>'+
-      '<div class="cad-ctrl sec-oculta-print" style="padding:0 19mm">'+
-        '<button data-action="des-set" data-idx="'+i+'" data-src="'+(e.campo==='detalhe'?'d':'a')+':'+e.pos+'">⇱ usar na área central</button>'+
-        '<button data-action="remover-img" data-idx="'+i+'" data-campo="'+e.campo+'" data-pos="'+e.pos+'">✕ remover</button>'+
+      '<div class="cad-duo">'+
+        (detOn  ? cadDuoCell('DETALHAMENTO '+(k+1), ds[k], i, 'detalhe', k) : '')+
+        (arteOn ? cadDuoCell('ARTE FINAL '+(k+1),   as[k], i, 'arte',    k) : '')+
       '</div></div>';
   }
   return h;
+}
+function cadDuoCell(rot, src, i, campo, pos){
+  var pref = (campo==='detalhe') ? 'd' : 'a';
+  return '<div class="cad-duo-cell">'+
+    '<div class="cad-duo-cap">'+rot+'</div>'+
+    '<div class="cad-duo-img"><img src="'+src+'"></div>'+
+    '<div class="cad-duo-ctrl sec-oculta-print">'+
+      '<button data-action="des-set" data-idx="'+i+'" data-src="'+pref+':'+pos+'">⇱ usar na área central</button>'+
+      '<button data-action="remover-img" data-idx="'+i+'" data-campo="'+campo+'" data-pos="'+pos+'">✕ remover</button>'+
+    '</div></div>';
 }
 
 function renderCad3D(){
