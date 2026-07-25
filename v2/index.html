@@ -331,7 +331,7 @@ var SS20 = {
   loaded: {},           // scripts já injetados
   view: 'dash',
   cache: {},            // cache de dados por sessão de página
-  mask: (function(){ try{ return localStorage.getItem('ss20_mask_vals')==='1'; }catch(e){ return false; } })()
+  mask: (function(){ try{ var v=localStorage.getItem('ss20_mask_vals'); return v===null ? true : v==='1'; }catch(e){ return true; } })()
 };
 
 /* ── OCULTAR VALORES ──
