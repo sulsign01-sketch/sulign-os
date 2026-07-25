@@ -223,7 +223,7 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
 .cad-render{position:absolute;top:3mm;right:8mm;width:62mm;}
 .cad-render .base{position:relative;line-height:0;cursor:pointer;}
 .cad-render .base img{width:100%;display:block;}
-.cad-render .marca{position:absolute;border:1.6px dashed #22C3DD;box-sizing:border-box;}
+.cad-render .marca{position:absolute;border:3.2px dashed #22C3DD;box-sizing:border-box;}
 .cad-render .cap{font-family:Arial,Helvetica,sans-serif;font-size:7.5px;font-weight:bold;margin-top:1.2mm;color:#111;}
 .cad-render .cap span{display:block;text-decoration:underline;}
 .cad-render .cap small{display:block;font-size:6.5px;font-weight:bold;margin-top:.4mm;}
@@ -253,7 +253,7 @@ body.fmt-pais .final .contatos{margin-top:10mm;}
 .cad-q-body svg{max-width:100%;max-height:100%;}
 .cad-q-render-base{position:relative;line-height:0;cursor:pointer;max-width:100%;max-height:100%;}
 .cad-q-render-base img{max-width:100%;max-height:100%;}
-.cad-q .marca{position:absolute;border:1.6px dashed #22C3DD;box-sizing:border-box;}
+.cad-q .marca{position:absolute;border:3.2px dashed #22C3DD;box-sizing:border-box;}
 .cad-q-foot{flex:0 0 auto;display:flex;gap:4px;justify-content:center;flex-wrap:wrap;padding:1.5mm 2mm;border-top:1px solid #F0F0F0;}
 .cad-q-foot button{font-family:inherit;font-size:8.5px;padding:2.5px 6px;border:1px solid #C4CCC7;background:#fff;border-radius:4px;cursor:pointer;color:#556;}
 .cad-q-foot button:hover{border-color:var(--verde);}
@@ -1101,7 +1101,7 @@ function desenhaMarcas(prev){
   for(k=0;k<marcCtx.rects.length;k++){
     r = marcCtx.rects[k];
     h += '<div class="marca-e" data-action="marc-del" data-k="'+k+'" style="position:absolute;left:'+(r.x*100)+'%;top:'+(r.y*100)+
-         '%;width:'+(r.w*100)+'%;height:'+(r.h*100)+'%;border:2px dashed #22C3DD;background:rgba(34,195,221,.14);cursor:pointer"></div>';
+         '%;width:'+(r.w*100)+'%;height:'+(r.h*100)+'%;border:4px dashed #22C3DD;background:rgba(34,195,221,.14);cursor:pointer"></div>';
   }
   if(prev && prev.x1!==undefined){
     var x=Math.min(prev.x0,prev.x1), y=Math.min(prev.y0,prev.y1);
