@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SulSign · Matriz de Preços — Letra Caixa</title>
+<style>
+  * { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  body { font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; background:#f3f1ec; color:#1c1a17; font-size:14px; line-height:1.4; padding-bottom:60px; }
+  header { background:#1c1a17; color:#fff; padding:16px 18px; position:sticky; top:0; z-index:20; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  header h1 { font-size:16px; letter-spacing:1px; text-transform:uppercase; }
+  header .sub { font-size:11px; color:#c9a227; margin-top:2px; letter-spacing:.5px; }
+  .bar { display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:10px 14px; background:#fff; border-bottom:1px solid #e3ded4; position:sticky; top:56px; z-index:19; }
+  .status { font-size:12px; color:#1d7a4f; font-weight:600; display:flex; align-items:center; gap:6px; }
+  .status .dot { width:9px; height:9px; border-radius:50%; background:#1d7a4f; }
+  .status.saving .dot { background:#b06a00; }
+  .btn { border:1px solid #c9a227; background:#fff; color:#8a6d00; padding:7px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; }
+  .btn:active { background:#faf3d8; }
+  .btn.danger { border-color:#c0392b; color:#c0392b; }
+  .wrap { padding:14px; max-width:820px; margin:0 auto; }
+  .cat { background:#fff; border:1px solid #e3ded4; border-radius:12px; margin-bottom:14px; overflow:hidden; }
+  .cat h2 { font-size:13px; text-transform:uppercase; letter-spacing:.8px; padding:12px 14px; background:#faf9f5; border-bottom:1px solid #e3ded4; display:flex; justify-content:space-between; align-items:center; }
+  .cat h2 span.cnt { font-size:11px; color:#8a857c; font-weight:400; }
+  table { width:100%; border-collapse:collapse; }
+  th { font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:#8a857c; text-align:left; padding:6px 8px; border-bottom:1px solid #eee; }
+  th.num, td.num { text-align:right; }
+  th.c, td.c { text-align:center; }
+  td { padding:4px 8px; border-bottom:1px solid #f2efe9; vertical-align:middle; }
+  tr:last-child td { border-bottom:none; }
+  input.f { border:1px solid transparent; background:transparent; padding:6px 6px; border-radius:6px; font-size:13px; width:100%; font-family:inherit; }
+  input.f:focus { border-color:#c9a227; background:#fffdf3; outline:none; }
+  input.pr { text-align:right; font-variant-numeric:tabular-nums; }
+  input.un { width:100%; color:#5a564e; font-size:12px; }
+  td.wn { width:34px; }
+  .chk { width:18px; height:18px; accent-color:#b06a00; }
+  .del { border:none; background:none; color:#c0392b; font-size:16px; cursor:pointer; padding:2px 6px; line-height:1; }
+  .add { width:100%; text-align:left; padding:9px 14px; background:#fbfaf6; border:none; border-top:1px dashed #ddd; color:#8a6d00; font-size:12px; font-weight:600; cursor:pointer; }
+  .add:active { background:#faf3d8; }
+  .note { font-size:11px; color:#8a857c; padding:8px 14px; background:#fbfaf6; border-top:1px solid #f0ece4; }
+  .fix-foot { padding:12px 14px; background:#faf9f5; border-top:1px solid #e3ded4; display:flex; flex-wrap:wrap; gap:16px; align-items:center; font-size:13px; }
+  .fix-foot .field { display:flex; flex-direction:column; gap:2px; }
+  .fix-foot label { font-size:10px; text-transform:uppercase; letter-spacing:.5px; color:#8a857c; }
+  .fix-foot input { border:1px solid #ddd; border-radius:6px; padding:6px 8px; font-size:13px; width:150px; text-align:right; }
+  .fix-foot .out { font-weight:700; color:#8a6d00; font-size:15px; }
+  .legend { font-size:11px; color:#8a857c; text-align:center; margin:6px 0 0; }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:#1c1a17; color:#fff; padding:10px 18px; border-radius:20px; font-size:12px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:50; }
+  .toast.on { opacity:1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Matriz de Preços</h1>
+  <div class="sub">SulSign · Calculadora Letra Caixa — base de custo unitário</div>
+</header>
+
+<div class="bar">
+  <div class="status" id="stat"><span class="dot"></span><span id="statTxt">Salvo</span></div>
+  <div style="flex:1"></div>
+  <button class="btn" data-action="export">Exportar JSON</button>
+  <button class="btn" data-action="import">Importar JSON</button>
+  <button class="btn danger" data-action="reset">Restaurar padrão</button>
+  <input type="file" id="fileImp" accept="application/json" style="display:none">
+</div>
+
+<div class="wrap" id="app"></div>
+<div class="legend">⚠ = valor estimado, precisa da sua conferência · edição salva automaticamente neste dispositivo</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+  var KEY = 'sslc_matriz_v1';
+
+  var CATS = [
+    { k:'mp',  t:'Matérias-primas' },
+    { k:'ins', t:'Insumos' },
+    { k:'ele', t:'Elétrica' },
+    { k:'acb', t:'Acabamentos' },
+    { k:'eqp', t:'Equipamentos (hora-máquina)' },
+    { k:'mo',  t:'Mão de obra (R$/h)' },
+    { k:'log', t:'Logística & extras' },
+    { k:'fix', t:'Despesas fixas (mensais — base do AC)' }
+  ];
+
+  // n=nome, u=unidade, p=preço, e=estimado(⚠)
+  function DEFAULTS(){
+    return {
+      meta: { fatMensal: 0 },
+      mp: [
+        { n:'PVC Expandido 10mm (chapa 2,00×1,00)', u:'chapa', p:340, e:true },
+        { n:'MDF 15mm (chapa 2,75×1,84)',           u:'chapa', p:160, e:true },
+        { n:'MDF Ultra 15mm (chapa 2,75×1,84)',      u:'chapa', p:230, e:true },
+        { n:'Compensado 15mm (chapa 2,20×1,60)',     u:'chapa', p:140, e:true },
+        { n:'Compensado Naval 15mm (chapa 2,20×1,60)',u:'chapa', p:340, e:true },
+        { n:'Acrílico 3mm (chapa 2,00×1,00)',        u:'chapa', p:380, e:true },
+        { n:'Policarbonato compacto 4mm (2,00×1,00)',u:'chapa', p:450, e:true },
+        { n:'P.S. 2mm (chapa 2,00×1,00)',            u:'chapa', p:240, e:true },
+        { n:'ACM 4mm (chapa 1,22×2,44)',             u:'m2',    p:250, e:true }
+      ],
+      ins: [
+        { n:'Fixadores (bucha + parafuso, conj.)', u:'conj', p:2.5, e:true },
+        { n:'Adesivo / cola estrutural (PU, silicone, epóxi)', u:'tubo', p:35, e:true }
+      ],
+      ele: [
+        { n:'LED Pastilha (módulo)', u:'un', p:3.5, e:true },
+        { n:'LED Fita (por metro)', u:'m', p:12, e:true },
+        { n:'Neon Flex', u:'m', p:28, e:true },
+        { n:'Neon COB', u:'m', p:35, e:true },
+        { n:'Perfil Siliconado', u:'m', p:18, e:true },
+        { n:'Fonte de alimentação', u:'un', p:90, e:true },
+        { n:'Cabeamento', u:'m', p:4, e:true },
+        { n:'M.O. Eletricista', u:'h', p:60, e:true }
+      ],
+      acb: [
+        { n:'Adesivo Vinil (aplicado)', u:'m2', p:45, e:true },
+        { n:'Pintura Pantone (por cor)', u:'m2/cor', p:120, e:true },
+        { n:'Seladora', u:'m2', p:25, e:true },
+        { n:'Verniz + Seladora', u:'m2', p:40, e:true },
+        { n:'Tinta PVA', u:'m2', p:18, e:true },
+        { n:'Tinta Acrílica', u:'m2', p:28, e:true },
+        { n:'Tinta PU (alto acabamento)', u:'m2', p:90, e:true },
+        { n:'Natural (sem acabamento)', u:'m2', p:0, e:false },
+        { n:'Pintura + Vinil', u:'m2', p:130, e:true },
+        { n:'Lona Backlight', u:'m2', p:45, e:false }
+      ],
+      eqp: [
+        { n:'Router CNC', u:'h', p:80, e:true },
+        { n:'Laser 150W', u:'h', p:90, e:true },
+        { n:'Plotter de recorte', u:'h', p:40, e:true },
+        { n:'Plotter de impressão', u:'h', p:50, e:true },
+        { n:'Impressora 3D (hora-máquina, filamento à parte)', u:'h', p:8, e:true }
+      ],
+      mo: [
+        { n:'Arte Finalista', u:'h', p:45, e:true },
+        { n:'Programador (CAM/CNC)', u:'h', p:55, e:true },
+        { n:'Operador', u:'h', p:35, e:true },
+        { n:'Auxiliar de montagem', u:'h', p:25, e:true },
+        { n:'Pintor', u:'h', p:40, e:true },
+        { n:'Serralheiro', u:'h', p:45, e:true },
+        { n:'Marceneiro', u:'h', p:45, e:true },
+        { n:'Forrador', u:'h', p:40, e:true },
+        { n:'Aplicador contratado', u:'h', p:50, e:true },
+        { n:'Aplicador no evento', u:'h', p:60, e:true }
+      ],
+      log: [
+        { n:'Frete', u:'viagem', p:250, e:true },
+        { n:'Embalagem', u:'job', p:80, e:true },
+        { n:'Aluguel de Andaime', u:'diária', p:120, e:true },
+        { n:'Genie (plataforma elevatória)', u:'diária', p:600, e:true }
+      ],
+      fix: [
+        { n:'Água', u:'mês', p:0, e:false },
+        { n:'Aluguel', u:'mês', p:0, e:false },
+        { n:'Energia', u:'mês', p:0, e:false },
+        { n:'Folha salarial', u:'mês', p:0, e:false },
+        { n:'Prolabore', u:'mês', p:0, e:false },
+        { n:'Internet', u:'mês', p:0, e:false }
+      ]
+    };
+  }
+
+  var MAT = load();
+
+  function load(){
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) {
+        var o = JSON.parse(raw);
+        if (o && o.mp) { if (!o.meta) o.meta = { fatMensal:0 }; return o; }
+      }
+    } catch(e){}
+    return DEFAULTS();
+  }
+
+  var saveT = null;
+  function save(){
+    setStat(true);
+    try { localStorage.setItem(KEY, JSON.stringify(MAT)); } catch(e){}
+    if (saveT) clearTimeout(saveT);
+    saveT = setTimeout(function(){ setStat(false); }, 350);
+  }
+  function setStat(saving){
+    var s = document.getElementById('stat');
+    var t = document.getElementById('statTxt');
+    if (saving){ s.className='status saving'; t.textContent='Salvando…'; }
+    else { s.className='status'; t.textContent='Salvo'; }
+  }
+
+  function brl(v){
+    v = Number(v)||0;
+    return 'R$ ' + v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  }
+
+  function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+  function render(){
+    var app = document.getElementById('app');
+    var html = '';
+    for (var c=0;c<CATS.length;c++){
+      var cat = CATS[c];
+      var arr = MAT[cat.k] || [];
+      html += '<div class="cat">';
+      html += '<h2>'+cat.t+'<span class="cnt">'+arr.length+' itens</span></h2>';
+      html += '<table><thead><tr><th style="width:52%">Item</th><th style="width:20%">Unidade</th><th class="num" style="width:22%">Preço</th><th class="c wn">⚠</th><th class="wn"></th></tr></thead><tbody>';
+      for (var i=0;i<arr.length;i++){
+        var it = arr[i];
+        html += '<tr>';
+        html += '<td><input class="f" data-a="edit" data-cat="'+cat.k+'" data-i="'+i+'" data-fld="n" value="'+esc(it.n)+'"></td>';
+        html += '<td><input class="f un" data-a="edit" data-cat="'+cat.k+'" data-i="'+i+'" data-fld="u" value="'+esc(it.u)+'"></td>';
+        html += '<td class="num"><input class="f pr" type="number" step="0.01" data-a="edit" data-cat="'+cat.k+'" data-i="'+i+'" data-fld="p" value="'+(Number(it.p)||0)+'"></td>';
+        html += '<td class="c"><input type="checkbox" class="chk" data-a="est" data-cat="'+cat.k+'" data-i="'+i+'"'+(it.e?' checked':'')+'></td>';
+        html += '<td class="c"><button class="del" data-a="del" data-cat="'+cat.k+'" data-i="'+i+'" title="remover">×</button></td>';
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+      html += '<button class="add" data-a="add" data-cat="'+cat.k+'">+ adicionar item em '+cat.t.toLowerCase()+'</button>';
+      if (cat.k==='acb') html += '<div class="note">Tintas em <b>R$/m² por cor</b> — na linha de custo, item com 2+ cores multiplica pela quantidade de cores.</div>';
+      if (cat.k==='fix') html += fixFoot();
+      html += '</div>';
+    }
+    app.innerHTML = html;
+  }
+
+  function fixSum(){
+    var arr = MAT.fix||[], s=0;
+    for (var i=0;i<arr.length;i++) s += Number(arr[i].p)||0;
+    return s;
+  }
+  function fixFoot(){
+    var soma = fixSum();
+    var fat = Number(MAT.meta.fatMensal)||0;
+    var ac = fat>0 ? (soma/fat*100) : 0;
+    var h = '<div class="fix-foot">';
+    h += '<div class="field"><label>Total fixas / mês</label><div class="out">'+brl(soma)+'</div></div>';
+    h += '<div class="field"><label>Faturamento médio / mês</label><input type="number" step="0.01" id="fatMensal" value="'+fat+'"></div>';
+    h += '<div class="field"><label>AC sugerido</label><div class="out">'+(fat>0?ac.toFixed(1)+' %':'—')+'</div></div>';
+    h += '<div class="note" style="flex:1;background:none;border:none;padding:0">Hoje o BDI usa <b>AC 15%</b> fixo. Preencha as fixas e o faturamento pra ter o AC real quando quiser trocar.</div>';
+    h += '</div>';
+    return h;
+  }
+
+  function toast(msg){
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.className='toast on';
+    setTimeout(function(){ t.className='toast'; }, 1600);
+  }
+
+  // ---- eventos delegados ----
+  document.addEventListener('input', function(ev){
+    var el = ev.target;
+    var a = el.getAttribute('data-a');
+    if (a==='edit'){
+      var cat=el.getAttribute('data-cat'), i=+el.getAttribute('data-i'), fld=el.getAttribute('data-fld');
+      var v = el.value;
+      if (fld==='p') v = parseFloat(v)||0;
+      MAT[cat][i][fld] = v;
+      if (fld==='p') { MAT[cat][i].e = false; } // editou o preço → deixa de ser estimado
+      save();
+      if (cat==='fix' && fld==='p'){ refreshFix(); }
+      return;
+    }
+    if (el.id==='fatMensal'){ MAT.meta.fatMensal = parseFloat(el.value)||0; save(); refreshFix(); return; }
+  });
+
+  document.addEventListener('change', function(ev){
+    var el = ev.target;
+    if (el.getAttribute('data-a')==='est'){
+      var cat=el.getAttribute('data-cat'), i=+el.getAttribute('data-i');
+      MAT[cat][i].e = el.checked; save();
+    }
+  });
+
+  document.addEventListener('click', function(ev){
+    var el = ev.target;
+    var a = el.getAttribute('data-a') || el.getAttribute('data-action');
+    if (!a) return;
+    if (a==='add'){
+      var cat = el.getAttribute('data-cat');
+      var u = cat==='mo'||cat==='ele'?'h':(cat==='fix'?'mês':'un');
+      MAT[cat].push({ n:'', u:u, p:0, e:true });
+      save(); render();
+      var inputs = document.querySelectorAll('[data-cat="'+cat+'"][data-fld="n"]');
+      if (inputs.length) inputs[inputs.length-1].focus();
+      return;
+    }
+    if (a==='del'){
+      var cat2=el.getAttribute('data-cat'), i2=+el.getAttribute('data-i');
+      MAT[cat2].splice(i2,1); save(); render();
+      return;
+    }
+    if (a==='export'){
+      var blob = new Blob([JSON.stringify(MAT,null,2)], {type:'application/json'});
+      var url = URL.createObjectURL(blob);
+      var link = document.createElement('a');
+      var d = new Date(); var stamp = d.getFullYear()+('0'+(d.getMonth()+1)).slice(-2)+('0'+d.getDate()).slice(-2);
+      link.href = url; link.download = 'MatrizPrecos_SulSign_'+stamp+'.json';
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+      setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+      toast('Matriz exportada');
+      return;
+    }
+    if (a==='import'){ document.getElementById('fileImp').click(); return; }
+    if (a==='reset'){
+      if (confirm('Restaurar a matriz para os valores padrão? Isso apaga suas edições salvas neste dispositivo.')){
+        MAT = DEFAULTS(); save(); render(); toast('Matriz restaurada');
+      }
+      return;
+    }
+  });
+
+  document.getElementById('fileImp').addEventListener('change', function(ev){
+    var f = ev.target.files && ev.target.files[0];
+    if (!f) return;
+    var r = new FileReader();
+    r.onload = function(){
+      try {
+        var o = JSON.parse(r.result);
+        if (!o || !o.mp) throw new Error('formato');
+        if (!o.meta) o.meta = { fatMensal:0 };
+        MAT = o; save(); render(); toast('Matriz importada');
+      } catch(e){ alert('Arquivo inválido — esperado um JSON de matriz exportado por esta ferramenta.'); }
+    };
+    r.readAsText(f);
+    ev.target.value = '';
+  });
+
+  function refreshFix(){
+    // re-render só o rodapé de fixas sem perder foco em outros campos
+    var cats = document.querySelectorAll('.cat');
+    var last = cats[cats.length-1];
+    if (!last) return;
+    var foot = last.querySelector('.fix-foot');
+    if (foot){
+      var tmp = document.createElement('div');
+      tmp.innerHTML = fixFoot();
+      foot.parentNode.replaceChild(tmp.firstChild, foot);
+    }
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
