@@ -149,7 +149,7 @@
         </div>
         <div class="field" style="flex:1 1 160px">
           <label>Modelo</label>
-          <input type="text" id="iaModel" value="gemini-2.5-flash">
+          <input type="text" id="iaModel" value="gemini-3.6-flash">
         </div>
       </div>
       <div class="hint">Caminho grátis: pegue a chave em aistudio.google.com (começa com AIza), cole no campo acima e pronto — sem servidor. A chave fica só neste navegador; não use em aparelho compartilhado. O endpoint/proxy é a opção mais segura pra depois.</div>
@@ -1893,6 +1893,8 @@ function iaCfgLoad(){
     if (c.key != null) $('iaKey').value = c.key;
     if (c.model) $('iaModel').value = c.model;
   } } catch(e){}
+  var mv = ($('iaModel').value || '').trim();
+  if (mv.indexOf('gemini-3') !== 0 && mv.indexOf('claude') !== 0){ $('iaModel').value = 'gemini-3.6-flash'; iaCfgSave(); }
 }
 function iaCfgSave(){ try { localStorage.setItem(IA_CFG_KEY, JSON.stringify({ endpoint: $('iaEndpoint').value, key: $('iaKey').value, model: $('iaModel').value })); } catch(e){} }
 function iaParse(txt){
@@ -1961,7 +1963,7 @@ function iaAnalisar(){
   var endpoint = ($('iaEndpoint').value || '').trim();
   if (endpoint.indexOf('http') !== 0) endpoint = '';
   var key = ($('iaKey').value || '').trim();
-  var model = ($('iaModel').value || 'gemini-2.5-flash').trim();
+  var model = ($('iaModel').value || 'gemini-3.6-flash').trim();
   if (!endpoint && !key){ iaStatus('Cole a chave da IA (AIza… do Gemini) em "⚙ Configurar IA".'); return; }
   iaStatus('Analisando imagem…'); $('btIA').disabled = true;
   var fin = function(msg){ $('btIA').disabled = false; if (msg) iaStatus(msg); };
@@ -1979,7 +1981,7 @@ function iaAnalisar(){
     fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: (model.indexOf('claude') === 0 ? model : 'claude-sonnet-5'), max_tokens: 1024, messages: [{ role: 'user', content: [ { type: 'image', source: { type: 'base64', media_type: iaImgMt, data: iaImgB64 } }, { type: 'text', text: IA_PROMPT } ] }] }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha na Anthropic: ' + e.message); });
   } else {
-    var gmodel = (model.indexOf('gemini') === 0) ? model : 'gemini-2.5-flash';
+    var gmodel = (model.indexOf('gemini-3') === 0) ? model : 'gemini-3.6-flash';
     fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gmodel + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [ { inline_data: { mime_type: iaImgMt, data: iaImgB64 } }, { text: IA_PROMPT } ] }], generationConfig: { maxOutputTokens: 1024, temperature: 0.2, responseMimeType: 'application/json' } }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no Gemini: ' + e.message); });
   }
