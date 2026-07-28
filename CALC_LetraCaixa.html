@@ -1883,8 +1883,8 @@ var IA_CFG_KEY = 'sslc_ia_cfg';
 var iaImgData = '', iaImgB64 = '', iaImgMt = '';
 var IA_PROMPT =
   'Você é um orçamentista de comunicação visual da Sul Sign. Analise a imagem de letras/letreiro/peça e devolva SOMENTE um objeto JSON (sem markdown, sem texto fora do JSON) com os campos:\n' +
-  '{"texto": "<texto que você lê nas letras, ou descrição curta>", "altura_cm": <número da altura estimada das letras em cm>, "construcao": "caixa"|"chapada", "iluminacao": "frontlit"|"halo"|"dupla"|"nenhuma", "material_corpo": um de ["galv","pvc10","pvc15","pvc20","mdf15","acm","acm_esp3","acm_esp4","inox","acr_lat","print3d"], "acabamento": "nenhum"|"pintura"|"vinil"|"ambos", "cores_pintura": <número de cores da pintura, 1 se não souber>, "confianca": "alta"|"média"|"baixa", "observacoes": "<o que ficou incerto e você estimou>"}\n' +
-  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Se a imagem for uma prancha/briefing com vários elementos, escolha o de maior destaque (letras ou logo principal) para os campos e resuma os demais em observacoes. Responda só com o JSON.';
+  '{"texto": "<texto que você lê nas letras, ou descrição curta>", "altura_cm": <número da altura estimada das letras em cm>, "construcao": "caixa"|"chapada", "iluminacao": "frontlit"|"halo"|"dupla"|"nenhuma", "material_corpo": um de ["galv","pvc10","pvc15","pvc20","mdf15","acm","acm_esp3","acm_esp4","inox","acr_lat","print3d"], "acabamento": "nenhum"|"pintura"|"vinil"|"ambos", "cores_pintura": <número de cores da pintura, 1 se não souber>, "confianca": "alta"|"média"|"baixa", "observacoes": "<o que ficou incerto e você estimou>", "alertas": "<pontos que o orçamentista PRECISA conferir antes de fechar preço>"}\n' +
+  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Se a imagem for uma prancha/briefing com vários elementos, escolha o de maior destaque (letras ou logo principal) para os campos e resuma os demais em observacoes. Em alertas, avise sempre que aplicável: (a) se o texto for um logo/bloco único (blockletter), tratar como BLOCO — usar a medida L×A do conjunto, NÃO contar letra por letra; (b) se as letras/elementos parecerem flutuar, destacados da parede, ou for peça grande em pé, precisa de estrutura de sustentação (serralheria) orçada à parte; (c) se a iluminação estiver marcada para orçar separado (neonflex/outline ou backlight), use iluminacao="nenhuma" e avise; (d) liste os itens secundários da prancha que saem em orçamento próprio. Responda só com o JSON.';
 
 function iaStatus(t){ var e = $('iaStatus'); if (e) e.textContent = t || ''; }
 function iaCfgLoad(){
@@ -1954,7 +1954,8 @@ function iaAplicar(o){
   if (r){
     var conf = o.confianca ? ' · confiança ' + o.confianca : '';
     r.className = '';
-    r.innerHTML = '<b>Rascunho aplicado</b>' + conf + ' — revise tudo:<br>• ' + (ap.length ? ap.join('<br>• ') : '(nada reconhecido)') + (o.observacoes ? ('<br><i>obs: ' + String(o.observacoes).replace(/</g, '&lt;') + '</i>') : '');
+    var alertaHtml = o.alertas ? ('<br><b style="color:#b06a00">⚠ ' + String(o.alertas).replace(/</g, '&lt;') + '</b>') : '';
+    r.innerHTML = '<b>Rascunho aplicado</b>' + conf + ' — revise tudo:<br>• ' + (ap.length ? ap.join('<br>• ') : '(nada reconhecido)') + alertaHtml + (o.observacoes ? ('<br><i>obs: ' + String(o.observacoes).replace(/</g, '&lt;') + '</i>') : '');
   }
   iaStatus('Pronto — rascunho aplicado. Confira antes de fechar.');
 }
