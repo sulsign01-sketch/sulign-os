@@ -31,7 +31,7 @@ const cors: Record<string, string> = {
 const PROMPT =
   'Você é um orçamentista de comunicação visual da Sul Sign. Analise a imagem de letras/letreiro/peça e devolva SOMENTE um objeto JSON (sem markdown, sem texto fora do JSON) com os campos:\n' +
   '{"texto": "<texto que você lê nas letras, ou descrição curta>", "altura_cm": <número da altura estimada das letras em cm>, "construcao": "caixa"|"chapada", "iluminacao": "frontlit"|"halo"|"dupla"|"nenhuma", "material_corpo": um de ["galv","pvc10","pvc15","pvc20","mdf15","acm","acm_esp3","acm_esp4","inox","acr_lat","print3d"], "acabamento": "nenhum"|"pintura"|"vinil"|"ambos", "cores_pintura": <número de cores da pintura, 1 se não souber>, "confianca": "alta"|"média"|"baixa", "observacoes": "<o que ficou incerto e você estimou>"}\n' +
-  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Responda só com o JSON.';
+  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Se a imagem for uma prancha/briefing com vários elementos, escolha o de maior destaque (letras ou logo principal) para os campos e resuma os demais em observacoes. Responda só com o JSON.';
 
 function json(o: unknown, status = 200): Response {
   return new Response(JSON.stringify(o), {
@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
             { text: PROMPT },
           ],
         }],
-        generationConfig: { maxOutputTokens: 2048, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } },
+        generationConfig: { maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "high" } },
       }),
     });
 
