@@ -121,6 +121,42 @@
     <div class="footnote">Guarda o job inteiro (cabeçalho, config da letra, BDI, overrides e linhas). Estanque — nada sai deste dispositivo. Depois vira relatório de custo ou proposta comercial na Seção 3.</div>
   </div>
 
+  <!-- ═══ 0.5 ORÇAMENTO POR IMAGEM (IA) ═══ -->
+  <div class="card" id="iaBar">
+    <h2>0.5 · Orçamento por imagem (IA) <span style="font-size:11px;color:#b06a00;font-weight:400">rascunho — sempre revise</span></h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:1 1 220px">
+        <label>Imagem de referência (foto / render / prancha)</label>
+        <input type="file" id="iaFoto" accept="image/*">
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="button" class="btn" id="btIA">🔍 Analisar imagem</button>
+      </div>
+    </div>
+    <img id="iaPrev" class="hide" style="max-width:220px;max-height:150px;margin-top:6px;border-radius:6px;border:1px solid #ddd" alt="referência">
+    <div id="iaStatus" class="hint" style="margin-top:6px"></div>
+    <div id="iaResumo" class="hide" style="margin-top:8px;font-size:12px;background:#faf9f5;border:1px solid #e3ded4;border-radius:8px;padding:10px;line-height:1.6"></div>
+    <details style="margin-top:8px">
+      <summary style="font-size:12px;color:#8a6d00;cursor:pointer">⚙ Configurar IA (endpoint ou chave)</summary>
+      <div class="row" style="margin-top:8px">
+        <div class="field" style="flex:1 1 100%">
+          <label>Endpoint / proxy (recomendado — chave fica no servidor)</label>
+          <input type="text" id="iaEndpoint" placeholder="https://obeamqkcuytctfczhook.supabase.co/functions/v1/orc-imagem">
+        </div>
+        <div class="field" style="flex:1 1 100%">
+          <label>OU chave Anthropic (fica só neste navegador — use só no seu aparelho)</label>
+          <input type="password" id="iaKey" placeholder="sk-ant-…">
+        </div>
+        <div class="field" style="flex:1 1 160px">
+          <label>Modelo</label>
+          <input type="text" id="iaModel" value="claude-sonnet-5">
+        </div>
+      </div>
+      <div class="hint">Config salva neste dispositivo. O proxy é mais seguro; a chave direta é prática pra testar, mas não use num aparelho compartilhado.</div>
+    </details>
+    <div class="footnote">A IA lê a imagem e pré-preenche os campos como <b>rascunho</b>. Sempre confira material, altura e iluminação antes de fechar preço.</div>
+  </div>
+
   <!-- ═══ 1. PROJETO ═══ -->
   <div class="card">
     <h2>1 · Projeto</h2>
@@ -1842,6 +1878,88 @@ function gerarProposta(){
   rep.innerHTML = h; rep.className = 'show'; rep.scrollIntoView({ behavior: 'smooth' });
 }
 
+/* ── Orçamento por imagem (IA) ── */
+var IA_CFG_KEY = 'sslc_ia_cfg';
+var iaImgData = '', iaImgB64 = '', iaImgMt = '';
+var IA_PROMPT =
+  'Você é um orçamentista de comunicação visual da Sul Sign. Analise a imagem de letras/letreiro/peça e devolva SOMENTE um objeto JSON (sem markdown, sem texto fora do JSON) com os campos:\n' +
+  '{"texto": "<texto que você lê nas letras, ou descrição curta>", "altura_cm": <número da altura estimada das letras em cm>, "construcao": "caixa"|"chapada", "iluminacao": "frontlit"|"halo"|"dupla"|"nenhuma", "material_corpo": um de ["galv","pvc10","pvc15","pvc20","mdf15","acm","acm_esp3","acm_esp4","inox","acr_lat","print3d"], "acabamento": "nenhum"|"pintura"|"vinil"|"ambos", "cores_pintura": <número de cores da pintura, 1 se não souber>, "confianca": "alta"|"média"|"baixa", "observacoes": "<o que ficou incerto e você estimou>"}\n' +
+  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Responda só com o JSON.';
+
+function iaStatus(t){ var e = $('iaStatus'); if (e) e.textContent = t || ''; }
+function iaCfgLoad(){
+  try { var r = localStorage.getItem(IA_CFG_KEY); if (r){ var c = JSON.parse(r);
+    if (c.endpoint != null) $('iaEndpoint').value = c.endpoint;
+    if (c.key != null) $('iaKey').value = c.key;
+    if (c.model) $('iaModel').value = c.model;
+  } } catch(e){}
+}
+function iaCfgSave(){ try { localStorage.setItem(IA_CFG_KEY, JSON.stringify({ endpoint: $('iaEndpoint').value, key: $('iaKey').value, model: $('iaModel').value })); } catch(e){} }
+function iaParse(txt){
+  if (!txt) return null;
+  txt = String(txt).replace(/```json/gi, '').replace(/```/g, '').trim();
+  try { return JSON.parse(txt); } catch(e){
+    var m = txt.match(/\{[\s\S]*\}/);
+    if (m){ try { return JSON.parse(m[0]); } catch(e2){} }
+    return null;
+  }
+}
+function iaExtrai(resp){
+  if (!resp) return null;
+  if (resp.ok === false) return null;
+  if (resp.data && typeof resp.data === 'object') return resp.data;
+  if (resp.content && resp.content.length){
+    var txt = '';
+    for (var i = 0; i < resp.content.length; i++){ if (resp.content[i].type === 'text') txt += resp.content[i].text; }
+    return iaParse(txt);
+  }
+  if (typeof resp === 'string') return iaParse(resp);
+  if (resp.texto || resp.altura_cm || resp.construcao) return resp;
+  return null;
+}
+function iaSetSelect(id, val){ var s = $(id); if (!s) return false; for (var i = 0; i < s.options.length; i++){ if (s.options[i].value === val){ s.value = val; return true; } } return false; }
+function iaAplicar(o){
+  if (!o){ iaStatus('Não consegui interpretar a resposta da IA — revise manual.'); return; }
+  var ap = [];
+  if (o.texto){ $('inTexto').value = o.texto; ap.push('texto: "' + o.texto + '"'); }
+  if (o.altura_cm){ $('inAltura').value = o.altura_cm; ap.push('altura: ' + o.altura_cm + ' cm'); }
+  if (o.construcao){ var cb = document.querySelector('#tgConstr button[data-constr="' + o.construcao + '"]'); if (cb){ cb.click(); ap.push('construção: ' + o.construcao); } }
+  if (o.iluminacao){
+    var ib = document.querySelector('#tgIlum button[data-ilum="' + o.iluminacao + '"]');
+    if (ib && !ib.disabled){ ib.click(); ap.push('iluminação: ' + ilumLabel()); }
+    else if (o.iluminacao === 'nenhuma'){ var allI = document.querySelectorAll('#tgIlum button'); for (var z = 0; z < allI.length; z++) allI[z].className = ''; ilum = 'nenhuma'; ap.push('iluminação: sem'); }
+  }
+  if (o.material_corpo && iaSetSelect('inCorpo', o.material_corpo)) ap.push('material: ' + o.material_corpo);
+  if (o.acabamento && iaSetSelect('inAcab', o.acabamento)) ap.push('acabamento: ' + o.acabamento);
+  if (o.cores_pintura && $('inCores')) $('inCores').value = Math.max(1, parseInt(o.cores_pintura, 10) || 1);
+  calc();
+  atualizarHdr();
+  var r = $('iaResumo');
+  if (r){
+    var conf = o.confianca ? ' · confiança ' + o.confianca : '';
+    r.className = '';
+    r.innerHTML = '<b>Rascunho aplicado</b>' + conf + ' — revise tudo:<br>• ' + (ap.length ? ap.join('<br>• ') : '(nada reconhecido)') + (o.observacoes ? ('<br><i>obs: ' + String(o.observacoes).replace(/</g, '&lt;') + '</i>') : '');
+  }
+  iaStatus('Pronto — rascunho aplicado. Confira antes de fechar.');
+}
+function iaAnalisar(){
+  if (!iaImgB64){ iaStatus('Escolha uma imagem primeiro.'); return; }
+  var endpoint = ($('iaEndpoint').value || '').trim();
+  var key = ($('iaKey').value || '').trim();
+  var model = ($('iaModel').value || 'claude-sonnet-5').trim();
+  if (!endpoint && !key){ iaStatus('Configure o endpoint (proxy) ou a chave em "⚙ Configurar IA".'); return; }
+  iaStatus('Analisando imagem…'); $('btIA').disabled = true;
+  var fin = function(msg){ $('btIA').disabled = false; if (msg) iaStatus(msg); };
+  var handle = function(resp){ var o = iaExtrai(resp); if (!o){ fin('A IA respondeu mas não li o JSON. Tente de novo.'); return; } fin(''); iaAplicar(o); };
+  if (endpoint){
+    fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: iaImgB64, media_type: iaImgMt, model: model }) })
+      .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no proxy: ' + e.message); });
+  } else {
+    fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: model, max_tokens: 1024, messages: [{ role: 'user', content: [ { type: 'image', source: { type: 'base64', media_type: iaImgMt, data: iaImgB64 } }, { type: 'text', text: IA_PROMPT } ] }] }) })
+      .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha na IA: ' + e.message); });
+  }
+}
+
 /* ── Fase 4: sincronização com a Matriz de Preços (sslc_matriz_v1) ── */
 var MATRIZ_KEY = 'sslc_matriz_v1';
 var MATRIZ_MAP = [
@@ -1906,6 +2024,27 @@ ccRender();
 if ($('usarMatriz')) $('usarMatriz').addEventListener('change', function(){ if (this.checked) syncMatriz(false); calc(); });
 if ($('btSyncMatriz')) $('btSyncMatriz').addEventListener('click', function(){ syncMatriz(false); calc(); });
 if ($('usarMatriz') && $('usarMatriz').checked) syncMatriz(true);
+
+/* ── IA: wiring ── */
+iaCfgLoad();
+if ($('iaEndpoint')) $('iaEndpoint').addEventListener('input', iaCfgSave);
+if ($('iaKey')) $('iaKey').addEventListener('input', iaCfgSave);
+if ($('iaModel')) $('iaModel').addEventListener('input', iaCfgSave);
+if ($('btIA')) $('btIA').addEventListener('click', iaAnalisar);
+if ($('iaFoto')) $('iaFoto').addEventListener('change', function(ev){
+  var f = ev.target.files && ev.target.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function(){
+    iaImgData = rd.result;
+    iaImgB64 = String(rd.result).split(',')[1] || '';
+    iaImgMt = f.type || 'image/jpeg';
+    var p = $('iaPrev'); if (p){ p.src = iaImgData; p.className = ''; }
+    fotoData = iaImgData;
+    if ($('fotoPrev')){ $('fotoPrev').src = iaImgData; $('fotoPrev').className = ''; }
+    iaStatus('Imagem carregada. Toque em Analisar.');
+  };
+  rd.readAsDataURL(f);
+});
 
 calc();
 </script>
