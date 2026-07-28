@@ -149,7 +149,7 @@
         </div>
         <div class="field" style="flex:1 1 160px">
           <label>Modelo</label>
-          <input type="text" id="iaModel" value="claude-sonnet-5">
+          <input type="text" id="iaModel" value="gemini-2.5-flash">
         </div>
       </div>
       <div class="hint">Caminho grátis: pegue a chave em aistudio.google.com (começa com AIza), cole no campo acima e pronto — sem servidor. A chave fica só neste navegador; não use em aparelho compartilhado. O endpoint/proxy é a opção mais segura pra depois.</div>
@@ -1904,6 +1904,15 @@ function iaParse(txt){
     return null;
   }
 }
+function iaErro(resp){
+  if (!resp) return '';
+  if (resp.ok === false && resp.error) return String(resp.error);
+  if (resp.error){
+    if (typeof resp.error === 'string') return resp.error;
+    if (resp.error.message) return (resp.error.status ? resp.error.status + ': ' : '') + resp.error.message;
+  }
+  return '';
+}
 function iaExtrai(resp){
   if (!resp) return null;
   if (resp.ok === false) return null;
@@ -1950,22 +1959,29 @@ function iaAplicar(o){
 function iaAnalisar(){
   if (!iaImgB64){ iaStatus('Escolha uma imagem primeiro.'); return; }
   var endpoint = ($('iaEndpoint').value || '').trim();
+  if (endpoint.indexOf('http') !== 0) endpoint = '';
   var key = ($('iaKey').value || '').trim();
-  var model = ($('iaModel').value || 'claude-sonnet-5').trim();
-  if (!endpoint && !key){ iaStatus('Configure o endpoint (proxy) ou a chave em "⚙ Configurar IA".'); return; }
+  var model = ($('iaModel').value || 'gemini-2.5-flash').trim();
+  if (!endpoint && !key){ iaStatus('Cole a chave da IA (AIza… do Gemini) em "⚙ Configurar IA".'); return; }
   iaStatus('Analisando imagem…'); $('btIA').disabled = true;
   var fin = function(msg){ $('btIA').disabled = false; if (msg) iaStatus(msg); };
-  var handle = function(resp){ var o = iaExtrai(resp); if (!o){ fin('A IA respondeu mas não li o JSON. Tente de novo.'); return; } fin(''); iaAplicar(o); };
+  var handle = function(resp){
+    var er = iaErro(resp);
+    if (er){ fin('IA: ' + er); return; }
+    var o = iaExtrai(resp);
+    if (!o){ fin('A IA respondeu mas não li o JSON. Tente de novo.'); return; }
+    fin(''); iaAplicar(o);
+  };
   if (endpoint){
     fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: iaImgB64, media_type: iaImgMt, model: model }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no proxy: ' + e.message); });
-  } else if (key.indexOf('AIza') === 0){
+  } else if (key.indexOf('sk-ant') === 0){
+    fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: (model.indexOf('claude') === 0 ? model : 'claude-sonnet-5'), max_tokens: 1024, messages: [{ role: 'user', content: [ { type: 'image', source: { type: 'base64', media_type: iaImgMt, data: iaImgB64 } }, { type: 'text', text: IA_PROMPT } ] }] }) })
+      .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha na Anthropic: ' + e.message); });
+  } else {
     var gmodel = (model.indexOf('gemini') === 0) ? model : 'gemini-2.5-flash';
     fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gmodel + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [ { inline_data: { mime_type: iaImgMt, data: iaImgB64 } }, { text: IA_PROMPT } ] }], generationConfig: { maxOutputTokens: 1024, temperature: 0.2, responseMimeType: 'application/json' } }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no Gemini: ' + e.message); });
-  } else {
-    fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: model, max_tokens: 1024, messages: [{ role: 'user', content: [ { type: 'image', source: { type: 'base64', media_type: iaImgMt, data: iaImgB64 } }, { type: 'text', text: IA_PROMPT } ] }] }) })
-      .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha na IA: ' + e.message); });
   }
 }
 
