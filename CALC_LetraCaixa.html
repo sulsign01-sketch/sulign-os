@@ -101,18 +101,76 @@
 
 <div class="wrap">
 
+  <!-- ═══ 0. CENTRO DE CUSTO ═══ -->
+  <div class="card" id="ccBar">
+    <h2>0 · Centro de Custo</h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:2 1 220px">
+        <label>Rascunhos salvos (neste dispositivo)</label>
+        <select id="ccSelect"><option value="">— novo / não salvo —</option></select>
+      </div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sm" id="btCcOpen">📂 Reabrir</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sm" id="btCcDup">⧉ Duplicar</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sec sm" id="btCcDel">🗑 Excluir</button></div>
+    </div>
+    <div class="row" style="align-items:center;margin-top:8px">
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn" id="btCcSave">💾 Salvar</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sec" id="btCcSaveNew">➕ Salvar como novo</button></div>
+      <div class="field" style="flex:1 1 auto"><span id="ccStatus" class="hint"></span></div>
+    </div>
+    <div class="footnote">Guarda o job inteiro (cabeçalho, config da letra, BDI, overrides e linhas). Estanque — nada sai deste dispositivo. Depois vira relatório de custo ou proposta comercial na Seção 3.</div>
+  </div>
+
   <!-- ═══ 1. PROJETO ═══ -->
   <div class="card">
     <h2>1 · Projeto</h2>
     <div class="row">
       <div class="field" style="flex:2 1 200px">
         <label>Cliente / Job (para o relatório)</label>
-        <input type="text" id="inCliente" placeholder="Ex.: Igreja NF — fachada">
+        <input type="text" id="inCliente" placeholder="Ex.: Igreja NF — fachada" data-action="hdr">
       </div>
       <div class="field" style="flex:1 1 160px">
         <label>Foto / render da letra</label>
         <input type="file" id="inFoto" accept="image/*">
         <img id="fotoPrev" class="hide" style="max-width:160px;max-height:110px;margin-top:6px;border-radius:6px;border:1px solid #ddd" alt="render">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Nº do job</label>
+        <input type="text" id="inNum" placeholder="SS-2026_07-##" data-action="hdr">
+      </div>
+      <div class="field">
+        <label>Contato</label>
+        <input type="text" id="inContato" placeholder="Nome / telefone">
+      </div>
+      <div class="field" style="flex:2 1 200px">
+        <label>Evento / Projeto</label>
+        <input type="text" id="inEvento" placeholder="Ex.: Stand PDVEX — Feira X">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Data</label>
+        <input type="date" id="inDataJob" data-action="hdr">
+      </div>
+      <div class="field">
+        <label>Prazo / entrega</label>
+        <input type="date" id="inPrazo">
+      </div>
+      <div class="field">
+        <label>Local / cidade</label>
+        <input type="text" id="inLocal" placeholder="Ex.: Rio de Janeiro — RJ">
+      </div>
+      <div class="field">
+        <label>Responsável</label>
+        <input type="text" id="inResp" placeholder="Ex.: Carlos">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1 1 100%">
+        <label>Observações</label>
+        <input type="text" id="inObs" placeholder="Condições, ressalvas, prazo de validade…">
       </div>
     </div>
     <div class="row">
@@ -161,7 +219,7 @@
     <div class="toggle-group" id="tgIlum">
       <button data-ilum="nenhuma" class="on">Sem luz</button>
       <button data-ilum="frontlit" id="btFront">Frontlit</button>
-      <button data-ilum="halo">Backlit / Halo</button>
+      <button data-ilum="halo">Bafo de luz</button>
       <button data-ilum="dupla" id="btDupla">Dupla</button>
     </div>
 
@@ -212,6 +270,11 @@
           <option value="ambos">Pintura + vinil</option>
         </select>
       </div>
+      <div class="field">
+        <label>Nº de cores (pintura)</label>
+        <input type="number" id="inCores" value="1" min="1" step="1" data-action="calc">
+        <div class="hint">Multiplica a área pintada por cor</div>
+      </div>
     </div>
 
     <div class="chk">
@@ -243,8 +306,9 @@
       <div class="field">
         <label>Instalação</label>
         <select id="inInstala" data-action="calc">
-          <option value="sim">Incluir instalação</option>
-          <option value="nao">Só fabricação (retira)</option>
+          <option value="sulsign">Instalação Sul Sign</option>
+          <option value="pdvex">Instalação PDVEX (fora do preço)</option>
+          <option value="nenhuma">Sem instalação (retira)</option>
         </select>
       </div>
       <div class="field">
@@ -424,6 +488,13 @@
       <button class="btn" data-fn="relatorio">🖨 Gerar relatório de custo</button>
       <button class="btn sec" data-fn="descritivo">📝 Gerar descritivo</button>
     </div>
+    <div class="btnrow" style="align-items:center">
+      <button class="btn" style="background:#c9a227;color:#000" data-fn="proposta">📃 Gerar proposta comercial</button>
+      <select id="propTipo" style="padding:8px;border:1px solid #ccc;border-radius:8px;font-size:13px;font-family:inherit">
+        <option value="b2b">preço B2B (Sul Sign → PDVEX)</option>
+        <option value="b2c">preço B2C (cliente final)</option>
+      </select>
+    </div>
     <div id="descBox" class="hide" style="margin-top:12px">
       <textarea id="descTxt" style="width:100%;min-height:150px;padding:10px;border:1px solid #ccc;border-radius:8px;font-size:13px;line-height:1.55;font-family:inherit"></textarea>
       <div class="btnrow">
@@ -436,9 +507,21 @@
   <!-- ═══ 4. BDI ═══ -->
   <div class="card">
     <h2>4 · BDI &amp; Comercial</h2>
+    <div class="row" style="align-items:flex-end;margin-bottom:12px">
+      <div class="field" style="flex:2 1 220px">
+        <label>Preset de BDI (salvo neste dispositivo)</label>
+        <select id="bdiPreset"><option value="">— escolher preset —</option></select>
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="button" class="btn sec sm" id="btBdiSave">💾 Salvar preset atual</button>
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="button" class="btn sec sm" id="btBdiDel">🗑 Excluir</button>
+      </div>
+    </div>
     <label style="font-size:11px;color:#666;font-weight:700">SUL SIGN → PDVEX (preço B2B)</label>
     <div class="bdi-grid" style="margin:6px 0 14px">
-      <div class="field"><label>AC %</label><input type="number" id="bdiAC" value="8" data-action="calc"></div>
+      <div class="field"><label>AC %</label><input type="number" id="bdiAC" value="15" data-action="calc"></div>
       <div class="field"><label>DF %</label><input type="number" id="bdiDF" value="2" data-action="calc"></div>
       <div class="field"><label>RI %</label><input type="number" id="bdiRI" value="3" data-action="calc"></div>
       <div class="field"><label>Lucro %</label><input type="number" id="bdiLucro" value="18" data-action="calc"></div>
@@ -463,6 +546,13 @@
   <div class="card">
     <details>
       <summary>⚙ 5 · Base de preços (editável — insumos e M.O.)</summary>
+      <div class="row" style="margin-top:10px;align-items:center;background:#faf9f5;border:1px solid #e3ded4;border-radius:8px;padding:8px 10px">
+        <label style="display:flex;align-items:center;gap:8px;flex:1 1 260px;font-size:13px;margin:0">
+          <input type="checkbox" id="usarMatriz" checked> Puxar preços da Matriz (sobrescreve os equivalentes)
+        </label>
+        <button type="button" class="btn sec sm" id="btSyncMatriz">🔄 Sincronizar agora</button>
+        <span id="matrizStatus" class="hint" style="flex:1 1 100%"></span>
+      </div>
       <div class="row" style="margin-top:10px">
         <div class="field"><label>Galvanizada #26 (R$/m²)</label><input type="number" id="pGalv" value="95" data-action="calc"></div>
         <div class="field"><label>PVC exp. 5mm (R$/m²)</label><input type="number" id="pPvc5" value="52" data-action="calc"></div>
@@ -641,7 +731,9 @@ function selText(id){ var s = $(id); return s.options[s.selectedIndex].text; }
 })();
 
 document.body.addEventListener('input', function(e){
-  if (e.target.getAttribute('data-action') === 'calc') calc();
+  var a = e.target.getAttribute('data-action');
+  if (a === 'calc') calc();
+  else if (a === 'hdr') atualizarHdr();
 });
 document.body.addEventListener('change', function(e){
   if (e.target.id === 'estPerfil') {
@@ -680,6 +772,7 @@ document.body.addEventListener('change', function(e){
 document.body.addEventListener('click', function(e){
   var fn = e.target.getAttribute('data-fn');
   if (fn === 'relatorio') gerarRelatorio();
+  if (fn === 'proposta') gerarProposta();
   if (fn === 'descritivo') gerarDescritivo();
   if (fn === 'copiadesc') copiarDescritivo();
   if (fn === 'nest') runNesting();
@@ -950,8 +1043,9 @@ function calc(){
   var ac = $('inAcab').value;
   var areaAcab = areaFaceTot + (constr === 'chapada' ? 0 : areaLateralTot);
   if (ac === 'pintura' || ac === 'ambos') {
-    var vP = areaAcab * num('pPintura');
-    addLinha('Pintura automotiva', areaAcab.toFixed(2) + ' m²', brl(num('pPintura')) + '/m²', vP);
+    var nCores = Math.max(1, Math.round(num('inCores')) || 1);
+    var vP = areaAcab * num('pPintura') * nCores;
+    addLinha('Pintura automotiva' + (nCores > 1 ? ' (' + nCores + ' cores)' : ''), areaAcab.toFixed(2) + ' m²' + (nCores > 1 ? ' × ' + nCores : ''), brl(num('pPintura')) + '/m²', vP);
     mpTotal += vP;
   }
   if (ac === 'vinil' || ac === 'ambos') {
@@ -972,7 +1066,7 @@ function calc(){
     var modulos = Math.ceil(areaFaceTot * num('pDensLed') * fator);
     if (modulos < qtd * 3) modulos = qtd * 3;
     var vMod = modulos * num('pModulo');
-    addLinha('Módulos LED (' + ilum + ')', modulos + ' un', brl(num('pModulo')) + '/un', vMod);
+    addLinha('Módulos LED (' + ilumLabel() + ')', modulos + ' un', brl(num('pModulo')) + '/un', vMod);
     mpTotal += vMod;
 
     wattsTot = modulos * 0.72 * 1.25;
@@ -1001,10 +1095,13 @@ function calc(){
 
   /* ── instalação ── */
   var vInst = 0;
-  if ($('inInstala').value === 'sim') {
+  var instVal = $('inInstala').value;
+  if (instVal === 'sulsign') {
     var fAlt = parseFloat($('inAlturaInst').value);
     vInst = (num('pInstBase') + num('pInstLetra') * qtd) * fAlt * (ilum !== 'nenhuma' ? 1.3 : 1);
-    addLinha('Instalação (fator altura ' + fAlt + ')', '1 vb', '—', vInst);
+    addLinha('Instalação Sul Sign (fator altura ' + fAlt + ')', '1 vb', '—', vInst);
+  } else if (instVal === 'pdvex') {
+    addLinha('Instalação por conta da PDVEX [fora do preço Sul Sign]', '—', '—', 0);
   }
 
   /* ── total efetivo: aplica overrides manuais + linhas avulsas ── */
@@ -1178,14 +1275,17 @@ function gerarRelatorio(){
   h += '<div class="r-tools"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button><button class="btn sec sm" data-fn="printnow">🖨 Imprimir</button><button class="btn sec sm" data-fn="fechareport">✕ Fechar</button></div>';
   h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">RELATÓRIO DE CUSTO — LETRA CAIXA / LETRAS 3D</div></div>';
   h += '<div class="r-body">';
-  h += '<p><b>Job:</b> ' + ($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Data:</b> ' + new Date().toLocaleDateString('pt-BR') + '</p>';
+  h += '<p><b>Nº:</b> ' + ($('inNum').value || '—') + ' &nbsp;·&nbsp; <b>Cliente:</b> ' + ($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Contato:</b> ' + ($('inContato').value || '—') + '</p>';
+  h += '<p><b>Evento/Projeto:</b> ' + ($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + ($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Data:</b> ' + fmtDataBR($('inDataJob').value) + ' &nbsp;·&nbsp; <b>Prazo:</b> ' + fmtDataBR($('inPrazo').value) + ' &nbsp;·&nbsp; <b>Responsável:</b> ' + ($('inResp').value || '—') + ' &nbsp;·&nbsp; <b>Instalação:</b> ' + instRespLabel() + '</p>';
+  if ($('inObs').value) h += '<p><b>Obs.:</b> ' + $('inObs').value.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</p>';
   if (fotoData) h += '<img src="' + fotoData + '" style="max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0" alt="render do job">';
   var dtxt = ($('descTxt').value || montarDescritivo()).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:16px 0 8px">Descritivo da peça</h3>';
   h += '<div class="r-desc" contenteditable="true">' + dtxt + '</div>';
   h += '<div class="r-desc-hint">✎ Texto editável — toque no parágrafo para ajustar antes de imprimir</div>';
   h += '<p style="margin-top:4px"><b>Texto:</b> ' + $('inTexto').value + ' &nbsp;·&nbsp; <b>Letras:</b> ' + c.qtd + ' &nbsp;·&nbsp; <b>Altura:</b> ' + num('inAltura') + ' cm &nbsp;·&nbsp; <b>Prof.:</b> ' + num('inProf') + ' cm</p>';
-  h += '<p style="margin-top:4px"><b>Construção:</b> ' + (constr === 'chapada' ? 'Letra chapada' : 'Letra caixa') + ' &nbsp;·&nbsp; <b>Iluminação:</b> ' + ilum + ' &nbsp;·&nbsp; <b>Material:</b> ' + selText('inCorpo') + (constr === 'caixa' ? ' &nbsp;·&nbsp; <b>Fundo:</b> ' + selText('inFundo') : '') + ' &nbsp;·&nbsp; <b>Acabamento:</b> ' + selText('inAcab') + '</p>';
+  h += '<p style="margin-top:4px"><b>Construção:</b> ' + (constr === 'chapada' ? 'Letra chapada' : 'Letra caixa') + ' &nbsp;·&nbsp; <b>Iluminação:</b> ' + ilumLabel() + ' &nbsp;·&nbsp; <b>Material:</b> ' + selText('inCorpo') + (constr === 'caixa' ? ' &nbsp;·&nbsp; <b>Fundo:</b> ' + selText('inFundo') : '') + ' &nbsp;·&nbsp; <b>Acabamento:</b> ' + selText('inAcab') + '</p>';
   if (ovAreaFace > 0) h += '<p style="margin-top:4px"><b>Nesting:</b> medidas reais aplicadas — ' + ovAreaFace.toFixed(2) + ' m² de faces, ' + ovCorteML.toFixed(1) + ' ml de corte, ' + ovChapas + ' chapa(s)</p>';
   h += '<table><thead><tr><th>Item</th><th class="num">Qtd</th><th class="num">Unit.</th><th class="num">Total</th></tr></thead><tbody>';
   for (var i = 0; i < c.linhas.length; i++) {
@@ -1270,13 +1370,16 @@ function montarDescritivo(){
   if (ac === 'ambos') t += ' Acabamento em pintura automotiva com face adesivada em vinil impresso digital.';
 
   if (ilum === 'frontlit') t += ' Iluminação interna frontlit em módulos de LED IP65 com fonte chaveada dimensionada, face translúcida com difusão homogênea, sem pontos aparentes.';
-  if (ilum === 'halo') t += ' Retroiluminação (efeito halo/backlight) em módulos de LED IP65 com afastamento da parede por espaçadores, fonte chaveada dimensionada.';
-  if (ilum === 'dupla') t += ' Iluminação dupla: frontlit na face translúcida e retroiluminação halo, módulos de LED IP65 com fonte chaveada dimensionada.';
+  if (ilum === 'halo') t += ' Retroiluminação (efeito bafo de luz) em módulos de LED IP65 com afastamento da parede por espaçadores, fonte chaveada dimensionada.';
+  if (ilum === 'dupla') t += ' Iluminação dupla: frontlit na face translúcida e retroiluminação bafo de luz, módulos de LED IP65 com fonte chaveada dimensionada.';
 
   if ($('inGabarito').checked) t += ' Acompanha gabarito de furação em MDF 3mm para instalação.';
 
-  if ($('inInstala').value === 'sim') {
-    t += ' Instalação inclusa' + (ilum !== 'nenhuma' ? ', com ligação à infraestrutura elétrica existente no ponto' : '') + '.';
+  var instV = $('inInstala').value;
+  if (instV === 'sulsign') {
+    t += ' Instalação inclusa (Sul Sign)' + (ilum !== 'nenhuma' ? ', com ligação à infraestrutura elétrica existente no ponto' : '') + '.';
+  } else if (instV === 'pdvex') {
+    t += ' Instalação por conta da PDVEX — fornecimento pela Sul Sign posto obra, acompanhando fixadores/fita conforme aplicação.';
   } else {
     t += ' Fornecimento sem instalação (retirada na Sul Sign), acompanhando fita dupla-face de alta performance/fixadores conforme aplicação.';
   }
@@ -1503,7 +1606,307 @@ function limparOverride(){
   calc();
 }
 
-$('hdrData').textContent = new Date().toLocaleDateString('pt-BR');
+/* ══════════ Fase 2 — cabeçalho, instalação, presets de BDI ══════════ */
+function fmtDataBR(v){
+  if (!v) return '—';
+  var p = String(v).split('-');
+  if (p.length === 3) return p[2] + '/' + p[1] + '/' + p[0];
+  return v;
+}
+function instRespLabel(){
+  var v = $('inInstala').value;
+  if (v === 'sulsign') return 'Sul Sign';
+  if (v === 'pdvex') return 'PDVEX (fora do preço)';
+  return 'Sem instalação';
+}
+function ilumLabel(){
+  if (ilum === 'frontlit') return 'Frontlit';
+  if (ilum === 'halo') return 'Bafo de luz';
+  if (ilum === 'dupla') return 'Dupla (frontlit + bafo de luz)';
+  return 'Sem iluminação';
+}
+function atualizarHdr(){
+  var pre = $('inNum').value ? $('inNum').value + ' · ' : '';
+  var cli = $('inCliente').value || 'Novo job';
+  var dt = $('inDataJob').value ? fmtDataBR($('inDataJob').value) : new Date().toLocaleDateString('pt-BR');
+  $('hdrData').textContent = pre + cli + ' · ' + dt;
+}
+
+var BDI_KEY = 'sslc_bdi_presets';
+var BDI_FIELDS = ['bdiAC','bdiDF','bdiRI','bdiLucro','bdiImp','bdiBV','bdiDesc','bdi2AC','bdi2DF','bdi2RI','bdi2Lucro','bdi2Imp','bdi2BV','bdi2Desc'];
+function bdiDefaults(){
+  return [
+    { nome:'Sul Sign — atual (AC 15)', v:{bdiAC:15,bdiDF:2,bdiRI:3,bdiLucro:18,bdiImp:10,bdiBV:0,bdiDesc:0,bdi2AC:5,bdi2DF:0,bdi2RI:0,bdi2Lucro:25,bdi2Imp:10,bdi2BV:0,bdi2Desc:0} },
+    { nome:'Sul Sign — 57% (AC 8 documentado)', v:{bdiAC:8,bdiDF:2,bdiRI:3,bdiLucro:18,bdiImp:10,bdiBV:0,bdiDesc:0,bdi2AC:5,bdi2DF:0,bdi2RI:0,bdi2Lucro:25,bdi2Imp:10,bdi2BV:0,bdi2Desc:0} }
+  ];
+}
+function bdiLoad(){
+  try { var r = localStorage.getItem(BDI_KEY); if (r){ var a = JSON.parse(r); if (a && a.length) return a; } } catch(e){}
+  return bdiDefaults();
+}
+function bdiStore(arr){ try { localStorage.setItem(BDI_KEY, JSON.stringify(arr)); } catch(e){} }
+function bdiRender(){
+  var sel = $('bdiPreset');
+  var arr = bdiLoad();
+  var cur = sel.value;
+  var html = '<option value="">— escolher preset —</option>';
+  for (var i = 0; i < arr.length; i++) { html += '<option value="' + i + '">' + String(arr[i].nome).replace(/</g, '&lt;') + '</option>'; }
+  sel.innerHTML = html;
+  if (cur) sel.value = cur;
+}
+function bdiApply(idx){
+  var arr = bdiLoad();
+  var p = arr[idx];
+  if (!p) return;
+  for (var i = 0; i < BDI_FIELDS.length; i++) { if (p.v[BDI_FIELDS[i]] != null) $(BDI_FIELDS[i]).value = p.v[BDI_FIELDS[i]]; }
+  calc();
+}
+function bdiCapture(){
+  var v = {};
+  for (var i = 0; i < BDI_FIELDS.length; i++) { v[BDI_FIELDS[i]] = num(BDI_FIELDS[i]); }
+  return v;
+}
+function bdiSave(){
+  var nome = prompt('Nome do preset de BDI:', '');
+  if (!nome) return;
+  var arr = bdiLoad();
+  var v = bdiCapture();
+  var found = -1;
+  for (var i = 0; i < arr.length; i++) { if (arr[i].nome === nome) { found = i; break; } }
+  if (found >= 0) arr[found].v = v; else arr.push({ nome: nome, v: v });
+  bdiStore(arr); bdiRender();
+  $('bdiPreset').value = (found >= 0 ? found : arr.length - 1);
+}
+function bdiDel(){
+  var sel = $('bdiPreset');
+  if (!sel.value) { alert('Escolha um preset para excluir.'); return; }
+  var arr = bdiLoad();
+  var idx = parseInt(sel.value, 10);
+  if (!confirm('Excluir o preset "' + arr[idx].nome + '"?')) return;
+  arr.splice(idx, 1); bdiStore(arr); bdiRender(); sel.value = '';
+}
+
+$('bdiPreset').addEventListener('change', function(){ if (this.value !== '') bdiApply(parseInt(this.value, 10)); });
+$('btBdiSave').addEventListener('click', bdiSave);
+$('btBdiDel').addEventListener('click', bdiDel);
+
+if (!$('inDataJob').value) $('inDataJob').value = new Date().toISOString().slice(0, 10);
+bdiRender();
+atualizarHdr();
+
+/* ══════════ Fase 3 — Centro de Custo + Proposta comercial ══════════ */
+var CC_KEY = 'sslc_centros';
+var ccCurrentId = '';
+function ccClone(o){ try { return JSON.parse(JSON.stringify(o)); } catch(e){ return {}; } }
+function optExists(selId, val){ var s = $(selId); if (!s) return false; for (var i = 0; i < s.options.length; i++){ if (s.options[i].value === val) return true; } return false; }
+
+function ccSnapshot(){
+  var inp = {};
+  var els = document.querySelectorAll('input[id],select[id],textarea[id]');
+  for (var i = 0; i < els.length; i++){
+    var el = els[i];
+    if (el.type === 'file') continue;
+    if (el.closest && el.closest('#report')) continue;
+    if (el.id === 'ccSelect' || el.id === 'fileImp' || el.id === 'bdiPreset') continue;
+    if (el.type === 'checkbox') inp[el.id] = el.checked;
+    else inp[el.id] = el.value;
+  }
+  return {
+    inputs: inp, ilum: ilum, constr: constr,
+    ov: { a: ovAreaFace, c: ovCorteML, ch: ovChapas },
+    manualQtds: ccClone(manualQtds), manualTotals: ccClone(manualTotals),
+    avulsas: linhasAvulsas.slice(), foto: fotoData || '',
+    customMats: ccClone(customMats), customAcabs: ccClone(customAcabs)
+  };
+}
+
+function ccRestore(s){
+  if (!s) return;
+  customMats = s.customMats || {};
+  customAcabs = s.customAcabs || {};
+  var cm, sels = ['inCorpo', 'inFrente', 'inFundo'];
+  for (cm in customMats){ if (customMats.hasOwnProperty(cm)){
+    for (var si = 0; si < sels.length; si++){
+      if (!optExists(sels[si], cm)){ var op = document.createElement('option'); op.value = cm; op.textContent = customMats[cm].nome + ' (custom)'; $(sels[si]).appendChild(op); }
+    }
+  }}
+  var ca;
+  for (ca in customAcabs){ if (customAcabs.hasOwnProperty(ca)){
+    if (!optExists('inAcab', ca)){ var opa = document.createElement('option'); opa.value = ca; opa.textContent = customAcabs[ca].nome + ' (custom)'; $('inAcab').appendChild(opa); }
+  }}
+  var inp = s.inputs || {}, id;
+  for (id in inp){ if (!inp.hasOwnProperty(id)) continue; var el = $(id); if (!el) continue; if (el.type === 'checkbox') el.checked = inp[id]; else el.value = inp[id]; }
+  ovAreaFace = s.ov ? (parseFloat(s.ov.a) || 0) : 0;
+  ovCorteML = s.ov ? (parseFloat(s.ov.c) || 0) : 0;
+  ovChapas = s.ov ? (parseFloat(s.ov.ch) || 0) : 0;
+  manualQtds = s.manualQtds || {};
+  manualTotals = s.manualTotals || {};
+  linhasAvulsas = s.avulsas || [];
+  fotoData = s.foto || '';
+  if (fotoData){ $('fotoPrev').src = fotoData; $('fotoPrev').className = ''; } else { $('fotoPrev').className = 'hide'; }
+  if ($('btLimpar')) $('btLimpar').className = (ovAreaFace > 0 ? 'btn sec sm' : 'btn sec sm hide');
+  var cb = document.querySelector('#tgConstr button[data-constr="' + (s.constr || 'caixa') + '"]');
+  if (cb) cb.click(); else constr = s.constr || 'caixa';
+  var wantIlum = s.ilum || 'nenhuma';
+  var ib = document.querySelector('#tgIlum button[data-ilum="' + wantIlum + '"]');
+  if (ib && !ib.disabled){ ib.click(); }
+  else { var allI = document.querySelectorAll('#tgIlum button'); for (var z = 0; z < allI.length; z++) allI[z].className = ''; ilum = wantIlum; }
+  atualizarHdr();
+  calc();
+}
+
+function ccLoad(){ try { var r = localStorage.getItem(CC_KEY); if (r){ var a = JSON.parse(r); if (a && a.length != null) return a; } } catch(e){} return []; }
+function ccStore(arr){ localStorage.setItem(CC_KEY, JSON.stringify(arr)); }
+function ccName(){
+  var n = $('inNum').value.trim(), c = $('inCliente').value.trim();
+  return (n ? n + ' · ' : '') + (c || 'Sem cliente');
+}
+function ccSetStatus(t){ var e = $('ccStatus'); if (e) e.textContent = t; }
+function ccRender(){
+  var sel = $('ccSelect'), arr = ccLoad();
+  var html = '<option value="">— novo / não salvo —</option>';
+  for (var i = 0; i < arr.length; i++){ html += '<option value="' + arr[i].id + '">' + String(arr[i].nome).replace(/</g, '&lt;') + '</option>'; }
+  sel.innerHTML = html;
+  if (ccCurrentId) sel.value = ccCurrentId;
+}
+function ccSave(asNew){
+  var arr = ccLoad(), snap = ccSnapshot(), nome = ccName(), id;
+  if (asNew || !ccCurrentId){ id = 'cc_' + Date.now(); arr.push({ id: id, nome: nome, ts: Date.now(), snap: snap }); }
+  else {
+    id = ccCurrentId; var found = -1;
+    for (var i = 0; i < arr.length; i++){ if (arr[i].id === id){ found = i; break; } }
+    if (found >= 0){ arr[found].nome = nome; arr[found].ts = Date.now(); arr[found].snap = snap; }
+    else { arr.push({ id: id, nome: nome, ts: Date.now(), snap: snap }); }
+  }
+  ccCurrentId = id;
+  try { ccStore(arr); }
+  catch(e){
+    for (var k = 0; k < arr.length; k++){ if (arr[k].snap) arr[k].snap.foto = ''; }
+    try { ccStore(arr); ccRender(); ccSetStatus('Salvo sem foto (memória do navegador cheia).'); return; }
+    catch(e2){ alert('Não foi possível salvar — memória cheia. Exclua rascunhos antigos.'); return; }
+  }
+  ccRender();
+  ccSetStatus('Salvo: ' + nome + ' · ' + new Date().toLocaleTimeString('pt-BR').slice(0, 5));
+}
+function ccFind(idv){ var arr = ccLoad(); for (var i = 0; i < arr.length; i++){ if (arr[i].id === idv) return { arr: arr, it: arr[i], idx: i }; } return { arr: arr, it: null, idx: -1 }; }
+function ccOpen(){
+  var v = $('ccSelect').value; if (!v){ alert('Escolha um rascunho para reabrir.'); return; }
+  var r = ccFind(v); if (!r.it){ alert('Rascunho não encontrado.'); return; }
+  ccCurrentId = r.it.id; ccRestore(r.it.snap); ccSetStatus('Reaberto: ' + r.it.nome);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function ccDup(){
+  var v = $('ccSelect').value; if (!v){ alert('Escolha um rascunho para duplicar.'); return; }
+  var r = ccFind(v); if (!r.it) return;
+  var copy = { id: 'cc_' + Date.now(), nome: r.it.nome + ' (cópia)', ts: Date.now(), snap: r.it.snap };
+  r.arr.push(copy); ccStore(r.arr); ccCurrentId = copy.id; ccRender(); ccSetStatus('Duplicado: ' + copy.nome);
+}
+function ccDel(){
+  var v = $('ccSelect').value; if (!v){ alert('Escolha um rascunho para excluir.'); return; }
+  var r = ccFind(v); if (r.idx < 0) return;
+  if (!confirm('Excluir o rascunho "' + r.it.nome + '"?')) return;
+  r.arr.splice(r.idx, 1); ccStore(r.arr);
+  if (ccCurrentId === r.it.id) ccCurrentId = '';
+  ccRender(); $('ccSelect').value = ''; ccSetStatus('Excluído.');
+}
+
+function gerarProposta(){
+  if (!lastCalc) calc();
+  var c = lastCalc;
+  var tipo = $('propTipo') ? $('propTipo').value : 'b2b';
+  var valorTotal = (tipo === 'b2c') ? c.pvB2C : c.pv;
+  var valorLetra = valorTotal / c.qtd;
+  var h = '';
+  h += '<div class="r-tools"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button><button class="btn sec sm" data-fn="printnow">🖨 Imprimir</button><button class="btn sec sm" data-fn="fechareport">✕ Fechar</button></div>';
+  h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">PROPOSTA COMERCIAL</div></div>';
+  h += '<div class="r-body">';
+  h += '<p><b>Nº:</b> ' + ($('inNum').value || '—') + ' &nbsp;·&nbsp; <b>Cliente:</b> ' + ($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Contato:</b> ' + ($('inContato').value || '—') + '</p>';
+  h += '<p><b>Evento/Projeto:</b> ' + ($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + ($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Data:</b> ' + fmtDataBR($('inDataJob').value) + ' &nbsp;·&nbsp; <b>Prazo:</b> ' + fmtDataBR($('inPrazo').value) + ' &nbsp;·&nbsp; <b>Responsável:</b> ' + ($('inResp').value || '—') + ' &nbsp;·&nbsp; <b>Instalação:</b> ' + instRespLabel() + '</p>';
+  if (fotoData) h += '<img src="' + fotoData + '" style="max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0" alt="render do job">';
+  var dtxt = ($('descTxt').value || montarDescritivo()).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:16px 0 8px">Escopo</h3>';
+  h += '<div class="r-desc" contenteditable="true">' + dtxt + '</div>';
+  h += '<div class="r-desc-hint">✎ Texto editável — ajuste antes de imprimir</div>';
+  h += '<p style="margin-top:8px"><b>Peça:</b> ' + $('inTexto').value + ' &nbsp;·&nbsp; <b>Qtd:</b> ' + c.qtd + ' letra(s) &nbsp;·&nbsp; <b>Altura:</b> ' + num('inAltura') + ' cm</p>';
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #c9a227;padding-bottom:5px;margin:22px 0 10px">Investimento</h3>';
+  h += '<table><thead><tr><th>Descrição</th><th class="num">Valor</th></tr></thead><tbody>';
+  h += '<tr><td>' + ($('inTexto').value || 'Letras') + ' — ' + c.qtd + ' letra(s) · ' + brl(valorLetra) + '/letra</td><td class="num">' + brl(valorTotal) + '</td></tr>';
+  h += '<tr class="r-tot"><td>TOTAL</td><td class="num">' + brl(valorTotal) + '</td></tr>';
+  h += '</tbody></table>';
+  if ($('inObs').value) h += '<p style="margin-top:10px"><b>Condições:</b> ' + $('inObs').value.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</p>';
+  h += '<div class="r-foot" style="margin-top:18px;font-size:10px;color:#666;border-top:1px solid #ccc;padding-top:8px">Proposta comercial · Sul Sign Group · CNPJ 03.952.317/0001-16 · Valores em reais. Validade e condições de pagamento a combinar.</div>';
+  h += '</div>';
+  h += '<div class="r-tools" style="background:transparent;padding:8px 0"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button></div>';
+  var rep = $('report');
+  rep.innerHTML = h; rep.className = 'show'; rep.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ── Fase 4: sincronização com a Matriz de Preços (sslc_matriz_v1) ── */
+var MATRIZ_KEY = 'sslc_matriz_v1';
+var MATRIZ_MAP = [
+  { calc:'pPvc10',  mat:'pvc expandido 10mm' },
+  { calc:'pMdf15',  mat:'mdf 15mm' },
+  { calc:'pAcm',    mat:'acm 4mm' },
+  { calc:'pAcrLeit',mat:'acrilico 3mm' },
+  { calc:'pVinil',  mat:'adesivo vinil' },
+  { calc:'pPintura',mat:'pintura pantone' },
+  { calc:'pModulo', mat:'led pastilha' },
+  { calc:'pFonte',  mat:'fonte de aliment' },
+  { calc:'pHora3d', mat:'impressora 3d' },
+  { calc:'pFiacao', mat:'cabeamento' }
+];
+function normNome(s){
+  s = String(s || '').toLowerCase();
+  if (s.normalize) s = s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return s;
+}
+function matrizAreaChapa(nome){
+  var m = String(nome).match(/([\d.,]+)\s*[\u00d7xX]\s*([\d.,]+)/);
+  if (!m) return 0;
+  var a = parseFloat(m[1].replace(',', '.')), b = parseFloat(m[2].replace(',', '.'));
+  if (isNaN(a) || isNaN(b)) return 0;
+  return a * b;
+}
+function matrizPrecoM2(it){
+  var u = (it.u || '').toLowerCase();
+  var p = Number(it.p) || 0;
+  if (u === 'chapa'){ var ar = matrizAreaChapa(it.n); return ar > 0 ? p / ar : null; }
+  return p;
+}
+function setMatrizStatus(t){ var e = $('matrizStatus'); if (e) e.textContent = t; }
+function syncMatriz(silent){
+  var mat = null;
+  try { var r = localStorage.getItem(MATRIZ_KEY); mat = r ? JSON.parse(r) : null; } catch(e){ mat = null; }
+  if (!mat || !mat.mp){ if (!silent) setMatrizStatus('Nenhuma matriz encontrada neste dispositivo — preencha na página da Matriz.'); return 0; }
+  var pool = [].concat(mat.mp || [], mat.acb || [], mat.ele || [], mat.eqp || []);
+  var n = 0;
+  for (var i = 0; i < MATRIZ_MAP.length; i++){
+    var mp = MATRIZ_MAP[i];
+    var el = $(mp.calc); if (!el) continue;
+    var it = null;
+    for (var j = 0; j < pool.length; j++){ if (normNome(pool[j].n).indexOf(mp.mat) === 0){ it = pool[j]; break; } }
+    if (!it) continue;
+    var val = matrizPrecoM2(it);
+    if (val == null) continue;
+    el.value = (Math.round(val * 100) / 100);
+    n++;
+  }
+  if (!silent) setMatrizStatus(n + ' preço(s) puxado(s) da Matriz.');
+  return n;
+}
+
+$('btCcSave').addEventListener('click', function(){ ccSave(false); });
+$('btCcSaveNew').addEventListener('click', function(){ ccSave(true); });
+$('btCcOpen').addEventListener('click', ccOpen);
+$('btCcDup').addEventListener('click', ccDup);
+$('btCcDel').addEventListener('click', ccDel);
+ccRender();
+
+if ($('usarMatriz')) $('usarMatriz').addEventListener('change', function(){ if (this.checked) syncMatriz(false); calc(); });
+if ($('btSyncMatriz')) $('btSyncMatriz').addEventListener('click', function(){ syncMatriz(false); calc(); });
+if ($('usarMatriz') && $('usarMatriz').checked) syncMatriz(true);
+
 calc();
 </script>
 </body>
