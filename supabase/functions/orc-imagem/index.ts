@@ -66,7 +66,7 @@ Deno.serve(async (req: Request) => {
             { text: PROMPT },
           ],
         }],
-        generationConfig: { maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "high" } },
+        generationConfig: { maxOutputTokens: 8192, responseMimeType: "application/json", thinkingConfig: { thinkingLevel: "low" } },
       }),
     });
 
