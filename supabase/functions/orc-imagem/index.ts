@@ -17,10 +17,10 @@
 //   https://obeamqkcuytctfczhook.supabase.co/functions/v1/orc-imagem
 //
 // Se quiser mais cota, troque o modelo no secret opcional GEMINI_MODEL
-// (ex.: gemini-3.5-flash). Padrão: gemini-2.5-flash (grátis, com visão).
+// (ex.: gemini-3.6-flash ou gemini-3.5-flash). Padrão: gemini-3.6-flash (grátis, com visão).
 
 const GEMINI_KEY = Deno.env.get("GEMINI_API_KEY") ?? "";
-const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-2.5-flash";
+const GEMINI_MODEL = Deno.env.get("GEMINI_MODEL") ?? "gemini-3.6-flash";
 
 const cors: Record<string, string> = {
   "Access-Control-Allow-Origin": "*",
@@ -50,7 +50,7 @@ Deno.serve(async (req: Request) => {
     const image = body.image;
     const media_type = body.media_type || "image/jpeg";
     // usa o modelo do cliente só se for um gemini-*; senão, o padrão do servidor
-    const model = (typeof body.model === "string" && body.model.indexOf("gemini") === 0)
+    const model = (typeof body.model === "string" && body.model.indexOf("gemini-3") === 0)
       ? body.model
       : GEMINI_MODEL;
     if (!image) return json({ ok: false, error: "sem imagem" }, 400);
