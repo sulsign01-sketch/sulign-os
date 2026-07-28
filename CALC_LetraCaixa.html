@@ -527,6 +527,19 @@
       <button class="btn sec sm" data-fn="addmat">➕ Nova materialidade</button>
       <button class="btn sec sm" data-fn="addacab">➕ Novo acabamento</button>
     </div>
+    <div class="row" style="align-items:flex-end;gap:8px;margin-top:4px">
+      <div class="field" style="flex:2 1 220px">
+        <label>Puxar componente da Matriz (M.O., elétrica, insumos…)</label>
+        <select id="compPicker"></select>
+      </div>
+      <div class="field" style="flex:0 0 80px">
+        <label>Qtd</label>
+        <input type="text" inputmode="decimal" id="compQtd" value="1">
+      </div>
+      <div class="field" style="flex:0 0 auto">
+        <button type="button" class="btn sec sm" id="btAddComp">+ Puxar componente</button>
+      </div>
+    </div>
     <div class="btnrow">
       <button class="btn" data-fn="relatorio">🖨 Gerar relatório de custo</button>
       <button class="btn sec" data-fn="descritivo">📝 Gerar descritivo</button>
@@ -719,6 +732,7 @@ var nestResult = null;
 var manualTotals = {};   // override manual por linha do memorial (chave = prefixo da descrição)
 var manualQtds = {};     // override manual de quantidade por linha
 var linhasAvulsas = [];  // linhas adicionadas pelo usuário {desc, val}
+var compExtras = [];  // componentes puxados da Matriz {nome, unidade, preco, qtd}
 var customMats = {};     // materialidades criadas pelo usuário {codigo: {nome, preco}}
 var customAcabs = {};    // acabamentos criados pelo usuário {codigo: {nome, preco}}
 var fotoData = '';       // dataURL da foto/render do job
@@ -811,6 +825,12 @@ document.body.addEventListener('change', function(e){
     if (linhasAvulsas[ixa]) linhasAvulsas[ixa].val = isNaN(va) ? 0 : va;
     calc();
   }
+  if (e.target.hasAttribute('data-cqty')) {
+    var ixc = parseInt(e.target.getAttribute('data-cqty'));
+    var vq = parseFloat(e.target.value);
+    if (compExtras[ixc]) compExtras[ixc].qtd = isNaN(vq) ? 0 : vq;
+    calc();
+  }
 });
 document.body.addEventListener('click', function(e){
   var fn = e.target.getAttribute('data-fn');
@@ -869,6 +889,10 @@ document.body.addEventListener('click', function(e){
   if (fn === 'fechareport') $('report').className = '';
   if (e.target.hasAttribute('data-ldel')) {
     linhasAvulsas.splice(parseInt(e.target.getAttribute('data-ldel')), 1);
+    calc();
+  }
+  if (e.target.hasAttribute('data-cdel')) {
+    compExtras.splice(parseInt(e.target.getAttribute('data-cdel')), 1);
     calc();
   }
 });
@@ -1166,6 +1190,7 @@ function calc(){
     custoTotal += eff;
   }
   for (var la = 0; la < linhasAvulsas.length; la++) custoTotal += linhasAvulsas[la].val;
+  for (var lc = 0; lc < compExtras.length; lc++) custoTotal += (Number(compExtras[lc].preco) || 0) * (Number(compExtras[lc].qtd) || 0);
 
   /* ── BDI ── */
   var somaMk = (num('bdiAC') + num('bdiDF') + num('bdiRI') + num('bdiLucro') + num('bdiImp')) / 100;
@@ -1200,6 +1225,10 @@ function calc(){
   }
   for (var j2 = 0; j2 < linhasAvulsas.length; j2++) {
     html += '<tr><td>' + linhasAvulsas[j2].desc + ' <button class="mini" data-ldel="' + j2 + '" title="remover">✕</button></td><td class="num">—</td><td class="num">—</td><td class="num"><input class="lt" type="number" step="0.01" data-lav="' + j2 + '" value="' + linhasAvulsas[j2].val.toFixed(2) + '"></td></tr>';
+  }
+  for (var jc = 0; jc < compExtras.length; jc++) {
+    var ce = compExtras[jc];
+    html += '<tr><td>' + String(ce.nome).replace(/</g, '&lt;') + ' <button class="mini" data-cdel="' + jc + '" title="remover">✕</button></td><td class="num"><input class="lt" type="number" step="0.01" style="width:60px" data-cqty="' + jc + '" value="' + ce.qtd + '"> ' + (ce.unidade || 'un') + '</td><td class="num">' + brl(ce.preco) + '</td><td class="num">' + brl(ce.preco * ce.qtd) + '</td></tr>';
   }
   html += '<tr class="tot"><td colspan="3">CUSTO TOTAL</td><td class="num">' + brl(custoTotal) + '</td></tr>';
   tb.innerHTML = html;
@@ -1760,7 +1789,7 @@ function ccSnapshot(){
     inputs: inp, ilum: ilum, constr: constr,
     ov: { a: ovAreaFace, c: ovCorteML, ch: ovChapas },
     manualQtds: ccClone(manualQtds), manualTotals: ccClone(manualTotals),
-    avulsas: linhasAvulsas.slice(), foto: fotoData || '',
+    avulsas: linhasAvulsas.slice(), compExtras: compExtras.slice(), foto: fotoData || '',
     customMats: ccClone(customMats), customAcabs: ccClone(customAcabs)
   };
 }
@@ -1787,6 +1816,7 @@ function ccRestore(s){
   manualQtds = s.manualQtds || {};
   manualTotals = s.manualTotals || {};
   linhasAvulsas = s.avulsas || [];
+  compExtras = s.compExtras || [];
   fotoData = s.foto || '';
   if (fotoData){ $('fotoPrev').src = fotoData; $('fotoPrev').className = ''; } else { $('fotoPrev').className = 'hide'; }
   if ($('btLimpar')) $('btLimpar').className = (ovAreaFace > 0 ? 'btn sec sm' : 'btn sec sm hide');
@@ -2060,6 +2090,47 @@ function syncMatriz(silent){
   return n;
 }
 
+function matrizFallback(){
+  return {
+    mp:[{n:'PVC Expandido 10mm',u:'chapa',p:340},{n:'MDF 15mm',u:'chapa',p:160},{n:'MDF Ultra 15mm',u:'chapa',p:230},{n:'Compensado 15mm',u:'chapa',p:140},{n:'Compensado Naval 15mm',u:'chapa',p:340},{n:'Acrílico 3mm',u:'chapa',p:380},{n:'Policarbonato 4mm',u:'chapa',p:450},{n:'P.S. 2mm',u:'chapa',p:240},{n:'ACM 4mm',u:'m2',p:250}],
+    ins:[{n:'Fixadores',u:'conj',p:2.5},{n:'Adesivo/cola estrutural',u:'tubo',p:35}],
+    ele:[{n:'LED Pastilha (módulo)',u:'un',p:3.5},{n:'LED Fita',u:'m',p:12},{n:'Neon Flex',u:'m',p:28},{n:'Neon COB',u:'m',p:35},{n:'Perfil Siliconado',u:'m',p:18},{n:'Fonte de alimentação',u:'un',p:90},{n:'Cabeamento',u:'m',p:4},{n:'M.O. Eletricista',u:'h',p:60}],
+    acb:[{n:'Adesivo Vinil',u:'m2',p:45},{n:'Pintura Pantone',u:'m2/cor',p:120},{n:'Seladora',u:'m2',p:25},{n:'Verniz+Seladora',u:'m2',p:40},{n:'Tinta PVA',u:'m2',p:18},{n:'Tinta Acrílica',u:'m2',p:28},{n:'Tinta PU',u:'m2',p:90},{n:'Pintura+Vinil',u:'m2',p:130},{n:'Lona Backlight',u:'m2',p:45}],
+    eqp:[{n:'Router CNC',u:'h',p:80},{n:'Laser 150W',u:'h',p:90},{n:'Plotter de recorte',u:'h',p:40},{n:'Plotter de impressão',u:'h',p:50},{n:'Impressora 3D',u:'h',p:8}],
+    mo:[{n:'Arte Finalista',u:'h',p:45},{n:'Programador',u:'h',p:55},{n:'Operador',u:'h',p:35},{n:'Auxiliar de montagem',u:'h',p:25},{n:'Pintor',u:'h',p:40},{n:'Serralheiro',u:'h',p:45},{n:'Marceneiro',u:'h',p:45},{n:'Forrador',u:'h',p:40},{n:'Aplicador contratado',u:'h',p:50},{n:'Aplicador no evento',u:'h',p:60}],
+    log:[{n:'Frete',u:'viagem',p:250},{n:'Embalagem',u:'job',p:80},{n:'Aluguel de Andaime',u:'diária',p:120},{n:'Genie',u:'diária',p:600}]
+  };
+}
+function matrizDados(){
+  try { var r = localStorage.getItem('sslc_matriz_v1'); if (r){ var o = JSON.parse(r); if (o && o.mp) return o; } } catch(e){}
+  return matrizFallback();
+}
+var COMP_CATS = [['mo','Mão de obra'],['ele','Elétrica'],['ins','Insumos'],['eqp','Equipamentos'],['log','Logística & extras'],['mp','Matérias-primas'],['acb','Acabamentos']];
+function preencherPickerComp(){
+  var sel = $('compPicker'); if (!sel) return;
+  var mat = matrizDados();
+  var html = '<option value="">— escolher componente da Matriz —</option>';
+  for (var ci = 0; ci < COMP_CATS.length; ci++){
+    var k = COMP_CATS[ci][0], arr = mat[k] || [];
+    if (!arr.length) continue;
+    html += '<optgroup label="' + COMP_CATS[ci][1] + '">';
+    for (var i = 0; i < arr.length; i++){
+      html += '<option value="' + k + ':' + i + '">' + String(arr[i].n).replace(/</g, '&lt;') + ' (' + brl(arr[i].p) + '/' + (arr[i].u || 'un') + ')</option>';
+    }
+    html += '</optgroup>';
+  }
+  sel.innerHTML = html;
+}
+function addComp(){
+  var sel = $('compPicker'); if (!sel || !sel.value) return;
+  var parts = sel.value.split(':'), mat = matrizDados();
+  var it = (mat[parts[0]] || [])[parseInt(parts[1], 10)];
+  if (!it) return;
+  var qtd = parseFloat(($('compQtd').value || '1').replace(',', '.')) || 1;
+  compExtras.push({ nome: it.n, unidade: it.u || 'un', preco: Number(it.p) || 0, qtd: qtd });
+  sel.value = ''; $('compQtd').value = '1';
+  calc();
+}
 $('btCcSave').addEventListener('click', function(){ ccSave(false); });
 $('btCcSaveNew').addEventListener('click', function(){ ccSave(true); });
 $('btCcOpen').addEventListener('click', ccOpen);
@@ -2073,6 +2144,8 @@ if ($('usarMatriz') && $('usarMatriz').checked) syncMatriz(true);
 
 /* ── IA: wiring ── */
 iaCfgLoad();
+preencherPickerComp();
+if ($('btAddComp')) $('btAddComp').addEventListener('click', addComp);
 if ($('iaEndpoint')) $('iaEndpoint').addEventListener('input', iaCfgSave);
 if ($('iaKey')) $('iaKey').addEventListener('input', iaCfgSave);
 if ($('iaModel')) $('iaModel').addEventListener('input', iaCfgSave);
