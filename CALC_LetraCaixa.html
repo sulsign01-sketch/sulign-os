@@ -144,15 +144,15 @@
           <input type="text" id="iaEndpoint" placeholder="https://obeamqkcuytctfczhook.supabase.co/functions/v1/orc-imagem">
         </div>
         <div class="field" style="flex:1 1 100%">
-          <label>OU chave Anthropic (fica só neste navegador — use só no seu aparelho)</label>
-          <input type="password" id="iaKey" placeholder="sk-ant-…">
+          <label>Chave da IA — cole aqui (fica só neste navegador, use só no seu aparelho)</label>
+          <input type="password" id="iaKey" placeholder="AIza… (Gemini grátis) ou sk-ant… (Anthropic)">
         </div>
         <div class="field" style="flex:1 1 160px">
           <label>Modelo</label>
           <input type="text" id="iaModel" value="claude-sonnet-5">
         </div>
       </div>
-      <div class="hint">Config salva neste dispositivo. O proxy é mais seguro; a chave direta é prática pra testar, mas não use num aparelho compartilhado.</div>
+      <div class="hint">Caminho grátis: pegue a chave em aistudio.google.com (começa com AIza), cole no campo acima e pronto — sem servidor. A chave fica só neste navegador; não use em aparelho compartilhado. O endpoint/proxy é a opção mais segura pra depois.</div>
     </details>
     <div class="footnote">A IA lê a imagem e pré-preenche os campos como <b>rascunho</b>. Sempre confira material, altura e iluminação antes de fechar preço.</div>
   </div>
@@ -1913,6 +1913,11 @@ function iaExtrai(resp){
     for (var i = 0; i < resp.content.length; i++){ if (resp.content[i].type === 'text') txt += resp.content[i].text; }
     return iaParse(txt);
   }
+  if (resp.candidates && resp.candidates.length){
+    var gt = '', c0 = resp.candidates[0];
+    if (c0 && c0.content && c0.content.parts){ for (var k = 0; k < c0.content.parts.length; k++){ if (c0.content.parts[k].text) gt += c0.content.parts[k].text; } }
+    return iaParse(gt);
+  }
   if (typeof resp === 'string') return iaParse(resp);
   if (resp.texto || resp.altura_cm || resp.construcao) return resp;
   return null;
@@ -1954,6 +1959,10 @@ function iaAnalisar(){
   if (endpoint){
     fetch(endpoint, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: iaImgB64, media_type: iaImgMt, model: model }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no proxy: ' + e.message); });
+  } else if (key.indexOf('AIza') === 0){
+    var gmodel = (model.indexOf('gemini') === 0) ? model : 'gemini-2.5-flash';
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gmodel + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [ { inline_data: { mime_type: iaImgMt, data: iaImgB64 } }, { text: IA_PROMPT } ] }], generationConfig: { maxOutputTokens: 1024, temperature: 0.2, responseMimeType: 'application/json' } }) })
+      .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no Gemini: ' + e.message); });
   } else {
     fetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' }, body: JSON.stringify({ model: model, max_tokens: 1024, messages: [{ role: 'user', content: [ { type: 'image', source: { type: 'base64', media_type: iaImgMt, data: iaImgB64 } }, { type: 'text', text: IA_PROMPT } ] }] }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha na IA: ' + e.message); });
