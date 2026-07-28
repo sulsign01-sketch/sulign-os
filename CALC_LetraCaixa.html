@@ -1971,7 +1971,12 @@ function iaAnalisar(){
     var er = iaErro(resp);
     if (er){ fin('IA: ' + er); return; }
     var o = iaExtrai(resp);
-    if (!o){ fin('A IA respondeu mas não li o JSON. Tente de novo.'); return; }
+    if (!o){
+      var fr = resp && resp.candidates && resp.candidates[0] && resp.candidates[0].finishReason;
+      if (fr === 'MAX_TOKENS') fin('Resposta cortada (limite de tokens). Tente de novo — se repetir, use uma imagem com menos texto.');
+      else fin('A IA respondeu mas não li o JSON' + (fr ? ' (' + fr + ')' : '') + '. Tente de novo.');
+      return;
+    }
     fin(''); iaAplicar(o);
   };
   if (endpoint){
@@ -1982,7 +1987,7 @@ function iaAnalisar(){
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha na Anthropic: ' + e.message); });
   } else {
     var gmodel = (model.indexOf('gemini-3') === 0) ? model : 'gemini-3.6-flash';
-    fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gmodel + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [ { inline_data: { mime_type: iaImgMt, data: iaImgB64 } }, { text: IA_PROMPT } ] }], generationConfig: { maxOutputTokens: 1024, temperature: 0.2, responseMimeType: 'application/json' } }) })
+    fetch('https://generativelanguage.googleapis.com/v1beta/models/' + gmodel + ':generateContent', { method: 'POST', headers: { 'content-type': 'application/json', 'x-goog-api-key': key }, body: JSON.stringify({ contents: [{ parts: [ { inline_data: { mime_type: iaImgMt, data: iaImgB64 } }, { text: IA_PROMPT } ] }], generationConfig: { maxOutputTokens: 2048, responseMimeType: 'application/json', thinkingConfig: { thinkingLevel: 'low' } } }) })
       .then(function(r){ return r.json(); }).then(handle).catch(function(e){ fin('Falha no Gemini: ' + e.message); });
   }
 }
