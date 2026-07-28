@@ -186,6 +186,13 @@
       </div>
     </div>
     <div class="row">
+      <div class="field"><label>Setor</label><input type="text" id="inSetor" placeholder="Ex.: Acesso ao evento"></div>
+      <div class="field"><label>Local</label><input type="text" id="inLocalArte" placeholder="Ex.: Photo opportunity"></div>
+      <div class="field"><label>Peça</label><input type="text" id="inPeca" placeholder="Ex.: Logo blockletter"></div>
+      <div class="field"><label>Código</label><input type="text" id="inCodigo" placeholder="Ex.: RG-2.2-01" data-action="hdr"></div>
+    </div>
+    <div class="footnote">Setor · Local · Peça · Código — mesma identificação do book de artes.</div>
+    <div class="row">
       <div class="field">
         <label>Data</label>
         <input type="date" id="inDataJob" data-action="hdr">
@@ -195,7 +202,7 @@
         <input type="date" id="inPrazo">
       </div>
       <div class="field">
-        <label>Local / cidade</label>
+        <label>Cidade / região</label>
         <input type="text" id="inLocal" placeholder="Ex.: Rio de Janeiro — RJ">
       </div>
       <div class="field">
@@ -1312,7 +1319,8 @@ function gerarRelatorio(){
   h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">RELATÓRIO DE CUSTO — LETRA CAIXA / LETRAS 3D</div></div>';
   h += '<div class="r-body">';
   h += '<p><b>Nº:</b> ' + ($('inNum').value || '—') + ' &nbsp;·&nbsp; <b>Cliente:</b> ' + ($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Contato:</b> ' + ($('inContato').value || '—') + '</p>';
-  h += '<p><b>Evento/Projeto:</b> ' + ($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + ($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Evento/Projeto:</b> ' + ($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Cidade:</b> ' + ($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Setor:</b> ' + ($('inSetor').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + ($('inLocalArte').value || '—') + ' &nbsp;·&nbsp; <b>Peça:</b> ' + ($('inPeca').value || '—') + ' &nbsp;·&nbsp; <b>Código:</b> ' + ($('inCodigo').value || '—') + '</p>';
   h += '<p><b>Data:</b> ' + fmtDataBR($('inDataJob').value) + ' &nbsp;·&nbsp; <b>Prazo:</b> ' + fmtDataBR($('inPrazo').value) + ' &nbsp;·&nbsp; <b>Responsável:</b> ' + ($('inResp').value || '—') + ' &nbsp;·&nbsp; <b>Instalação:</b> ' + instRespLabel() + '</p>';
   if ($('inObs').value) h += '<p><b>Obs.:</b> ' + $('inObs').value.replace(/&/g,'&amp;').replace(/</g,'&lt;') + '</p>';
   if (fotoData) h += '<img src="' + fotoData + '" style="max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0" alt="render do job">';
@@ -1662,10 +1670,11 @@ function ilumLabel(){
   return 'Sem iluminação';
 }
 function atualizarHdr(){
-  var pre = $('inNum').value ? $('inNum').value + ' · ' : '';
-  var cli = $('inCliente').value || 'Novo job';
+  var cod = $('inCodigo') && $('inCodigo').value ? $('inCodigo').value : '';
+  var pre = cod ? cod + ' · ' : ($('inNum').value ? $('inNum').value + ' · ' : '');
+  var peca = $('inPeca') && $('inPeca').value ? $('inPeca').value : ($('inCliente').value || 'Novo job');
   var dt = $('inDataJob').value ? fmtDataBR($('inDataJob').value) : new Date().toLocaleDateString('pt-BR');
-  $('hdrData').textContent = pre + cli + ' · ' + dt;
+  $('hdrData').textContent = pre + peca + ' · ' + dt;
 }
 
 var BDI_KEY = 'sslc_bdi_presets';
@@ -1857,7 +1866,8 @@ function gerarProposta(){
   h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">PROPOSTA COMERCIAL</div></div>';
   h += '<div class="r-body">';
   h += '<p><b>Nº:</b> ' + ($('inNum').value || '—') + ' &nbsp;·&nbsp; <b>Cliente:</b> ' + ($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Contato:</b> ' + ($('inContato').value || '—') + '</p>';
-  h += '<p><b>Evento/Projeto:</b> ' + ($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + ($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Evento/Projeto:</b> ' + ($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Cidade:</b> ' + ($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Setor:</b> ' + ($('inSetor').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + ($('inLocalArte').value || '—') + ' &nbsp;·&nbsp; <b>Peça:</b> ' + ($('inPeca').value || '—') + ' &nbsp;·&nbsp; <b>Código:</b> ' + ($('inCodigo').value || '—') + '</p>';
   h += '<p><b>Data:</b> ' + fmtDataBR($('inDataJob').value) + ' &nbsp;·&nbsp; <b>Prazo:</b> ' + fmtDataBR($('inPrazo').value) + ' &nbsp;·&nbsp; <b>Responsável:</b> ' + ($('inResp').value || '—') + ' &nbsp;·&nbsp; <b>Instalação:</b> ' + instRespLabel() + '</p>';
   if (fotoData) h += '<img src="' + fotoData + '" style="max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0" alt="render do job">';
   var dtxt = ($('descTxt').value || montarDescritivo()).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -1883,8 +1893,8 @@ var IA_CFG_KEY = 'sslc_ia_cfg';
 var iaImgData = '', iaImgB64 = '', iaImgMt = '';
 var IA_PROMPT =
   'Você é um orçamentista de comunicação visual da Sul Sign. Analise a imagem de letras/letreiro/peça e devolva SOMENTE um objeto JSON (sem markdown, sem texto fora do JSON) com os campos:\n' +
-  '{"texto": "<texto que você lê nas letras, ou descrição curta>", "altura_cm": <número da altura estimada das letras em cm>, "construcao": "caixa"|"chapada", "iluminacao": "frontlit"|"halo"|"dupla"|"nenhuma", "material_corpo": um de ["galv","pvc10","pvc15","pvc20","mdf15","acm","acm_esp3","acm_esp4","inox","acr_lat","print3d"], "acabamento": "nenhum"|"pintura"|"vinil"|"ambos", "cores_pintura": <número de cores da pintura, 1 se não souber>, "confianca": "alta"|"média"|"baixa", "observacoes": "<o que ficou incerto e você estimou>", "alertas": "<pontos que o orçamentista PRECISA conferir antes de fechar preço>"}\n' +
-  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Se a imagem for uma prancha/briefing com vários elementos, escolha o de maior destaque (letras ou logo principal) para os campos e resuma os demais em observacoes. Em alertas, avise sempre que aplicável: (a) se o texto for um logo/bloco único (blockletter), tratar como BLOCO — usar a medida L×A do conjunto, NÃO contar letra por letra; (b) se as letras/elementos parecerem flutuar, destacados da parede, ou for peça grande em pé, precisa de estrutura de sustentação (serralheria) orçada à parte; (c) se a iluminação estiver marcada para orçar separado (neonflex/outline ou backlight), use iluminacao="nenhuma" e avise; (d) liste os itens secundários da prancha que saem em orçamento próprio. Responda só com o JSON.';
+  '{"setor": "<setor/zona do evento, ex.: Acesso ao evento>", "local": "<local/ponto, ex.: Photo opportunity>", "peca": "<nome curto da peça, ex.: Logo blockletter>", "texto": "<texto que você lê nas letras, ou descrição curta>", "altura_cm": <número da altura estimada das letras em cm>, "construcao": "caixa"|"chapada", "iluminacao": "frontlit"|"halo"|"dupla"|"nenhuma", "material_corpo": um de ["galv","pvc10","pvc15","pvc20","mdf15","acm","acm_esp3","acm_esp4","inox","acr_lat","print3d"], "acabamento": "nenhum"|"pintura"|"vinil"|"ambos", "cores_pintura": <número de cores da pintura, 1 se não souber>, "confianca": "alta"|"média"|"baixa", "observacoes": "<o que ficou incerto e você estimou>", "alertas": "<pontos que o orçamentista PRECISA conferir antes de fechar preço>"}\n' +
+  'Regras: "halo" = efeito bafo de luz (retroiluminação). Sem luz aparente => "nenhuma". Peça fina recortada colada na parede => "chapada"; peça com profundidade/caixa => "caixa". Estime a altura pela proporção com elementos conhecidos; na dúvida, valor plausível. Se a imagem for uma prancha/briefing com vários elementos, escolha o de maior destaque (letras ou logo principal) para os campos e resuma os demais em observacoes. Em alertas, avise sempre que aplicável: (a) se o texto for um logo/bloco único (blockletter), tratar como BLOCO — usar a medida L×A do conjunto, NÃO contar letra por letra; (b) se as letras/elementos parecerem flutuar, destacados da parede, ou for peça grande em pé, precisa de estrutura de sustentação (serralheria) orçada à parte; (c) se a iluminação estiver marcada para orçar separado (neonflex/outline ou backlight), use iluminacao="nenhuma" e avise; (d) liste os itens secundários da prancha que saem em orçamento próprio. Quando o briefing tiver estrutura numerada (ex.: "2. Acesso ao evento" = setor, "2.2 Photo opportunity" = local/peça), preencha setor/local/peca a partir dela. Responda só com o JSON.';
 
 function iaStatus(t){ var e = $('iaStatus'); if (e) e.textContent = t || ''; }
 function iaCfgLoad(){
@@ -1939,6 +1949,9 @@ function iaAplicar(o){
   var ap = [];
   if (o.texto){ $('inTexto').value = o.texto; ap.push('texto: "' + o.texto + '"'); }
   if (o.altura_cm){ $('inAltura').value = o.altura_cm; ap.push('altura: ' + o.altura_cm + ' cm'); }
+  if (o.setor && $('inSetor')){ $('inSetor').value = o.setor; ap.push('setor: ' + o.setor); }
+  if (o.local && $('inLocalArte')){ $('inLocalArte').value = o.local; ap.push('local: ' + o.local); }
+  if (o.peca && $('inPeca')){ $('inPeca').value = o.peca; ap.push('peça: ' + o.peca); }
   if (o.construcao){ var cb = document.querySelector('#tgConstr button[data-constr="' + o.construcao + '"]'); if (cb){ cb.click(); ap.push('construção: ' + o.construcao); } }
   if (o.iluminacao){
     var ib = document.querySelector('#tgIlum button[data-ilum="' + o.iluminacao + '"]');
