@@ -78,6 +78,7 @@
     { k:'acb', t:'Acabamentos' },
     { k:'eqp', t:'Equipamentos (hora-máquina)' },
     { k:'mo',  t:'Mão de obra (R$/h)' },
+    { k:'srv', t:'Serviços & taxas' },
     { k:'log', t:'Logística & extras' },
     { k:'fix', t:'Despesas fixas (mensais — base do AC)' }
   ];
@@ -99,7 +100,8 @@
       ],
       ins: [
         { n:'Fixadores (bucha + parafuso, conj.)', u:'conj', p:2.5, e:true },
-        { n:'Adesivo / cola estrutural (PU, silicone, epóxi)', u:'tubo', p:35, e:true }
+        { n:'Adesivo / cola estrutural (PU, silicone, epóxi)', u:'tubo', p:35, e:true },
+        { n:'Vedação · silicone/veda-calha (externa)', u:'tubo', p:35, e:true }
       ],
       ele: [
         { n:'LED Pastilha (módulo)', u:'un', p:3.5, e:true },
@@ -142,11 +144,16 @@
         { n:'Aplicador contratado', u:'h', p:50, e:true },
         { n:'Aplicador no evento', u:'h', p:60, e:true }
       ],
+      srv: [
+        { n:'ART / RRT (responsabilidade técnica)', u:'doc', p:300, e:true },
+        { n:'Serviços de terceiros (pintura, cromação, galvanização)', u:'vb', p:0, e:false }
+      ],
       log: [
         { n:'Frete', u:'viagem', p:250, e:true },
         { n:'Embalagem', u:'job', p:80, e:true },
         { n:'Aluguel de Andaime', u:'diária', p:120, e:true },
-        { n:'Genie (plataforma elevatória)', u:'diária', p:600, e:true }
+        { n:'Genie (plataforma elevatória)', u:'diária', p:600, e:true },
+        { n:'Deslocamento / diária de equipe', u:'diária', p:200, e:true }
       ],
       fix: [
         { n:'Água', u:'mês', p:0, e:false },
