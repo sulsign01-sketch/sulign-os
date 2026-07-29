@@ -168,12 +168,24 @@
 
   var MAT = load();
 
+  function mergeDefaults(o, defs){
+    for (var k in defs){
+      if (!defs.hasOwnProperty(k) || k === 'meta') continue;
+      if (!o[k]) { o[k] = defs[k].slice(); continue; }
+      for (var i = 0; i < defs[k].length; i++){
+        var it = defs[k][i], found = false;
+        for (var j = 0; j < o[k].length; j++){ if (String(o[k][j].n) === String(it.n)) { found = true; break; } }
+        if (!found) o[k].push({ n:it.n, u:it.u, p:it.p, e:it.e });
+      }
+    }
+    return o;
+  }
   function load(){
     try {
       var raw = localStorage.getItem(KEY);
       if (raw) {
         var o = JSON.parse(raw);
-        if (o && o.mp) { if (!o.meta) o.meta = { fatMensal:0 }; return o; }
+        if (o && o.mp) { if (!o.meta) o.meta = { fatMensal:0 }; return mergeDefaults(o, DEFAULTS()); }
       }
     } catch(e){}
     return DEFAULTS();
