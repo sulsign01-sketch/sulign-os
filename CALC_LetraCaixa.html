@@ -2160,12 +2160,37 @@ function matrizFallback(){
     acb:[{n:'Adesivo Vinil',u:'m2',p:45},{n:'Pintura Pantone',u:'m2/cor',p:120},{n:'Seladora',u:'m2',p:25},{n:'Verniz+Seladora',u:'m2',p:40},{n:'Tinta PVA',u:'m2',p:18},{n:'Tinta Acrílica',u:'m2',p:28},{n:'Tinta PU',u:'m2',p:90},{n:'Pintura+Vinil',u:'m2',p:130},{n:'Lona Backlight',u:'m2',p:45}],
     eqp:[{n:'Router CNC',u:'h',p:80},{n:'Laser 150W',u:'h',p:90},{n:'Plotter de recorte',u:'h',p:40},{n:'Plotter de impressão',u:'h',p:50},{n:'Impressora 3D',u:'h',p:8}],
     mo:[{n:'Arte Finalista',u:'h',p:45},{n:'Programador',u:'h',p:55},{n:'Operador',u:'h',p:35},{n:'Auxiliar de montagem',u:'h',p:25},{n:'Pintor',u:'h',p:40},{n:'Serralheiro',u:'h',p:45},{n:'Marceneiro',u:'h',p:45},{n:'Forrador',u:'h',p:40},{n:'Aplicador contratado',u:'h',p:50},{n:'Aplicador no evento',u:'h',p:60}],
-    log:[{n:'Frete',u:'viagem',p:250},{n:'Embalagem',u:'job',p:80},{n:'Aluguel de Andaime',u:'diária',p:120},{n:'Genie',u:'diária',p:600},{n:'Deslocamento/diária de equipe',u:'diária',p:200}],
-    srv:[{n:'ART/RRT (responsabilidade técnica)',u:'doc',p:300},{n:'Serviços de terceiros (pintura/cromação/galvanização)',u:'vb',p:0}]
+    log:[{n:'Frete',u:'viagem',p:250},{n:'Embalagem',u:'job',p:80},{n:'Aluguel de Andaime',u:'diária',p:120},{n:'Genie',u:'diária',p:600},{n:'Deslocamento / diária de equipe',u:'diária',p:200}],
+    srv:[{n:'ART / RRT (responsabilidade técnica)',u:'doc',p:300},{n:'Serviços de terceiros (pintura, cromação, galvanização)',u:'vb',p:0}]
+  };
+}
+function matrizSeedAdd(){
+  return {
+    ins:[{n:'Vedação · silicone/veda-calha (externa)',u:'tubo',p:35}],
+    log:[{n:'Deslocamento / diária de equipe',u:'diária',p:200}],
+    srv:[{n:'ART / RRT (responsabilidade técnica)',u:'doc',p:300},{n:'Serviços de terceiros (pintura, cromação, galvanização)',u:'vb',p:0}]
   };
 }
 function matrizDados(){
-  try { var r = localStorage.getItem('sslc_matriz_v1'); if (r){ var o = JSON.parse(r); if (o && o.mp) return o; } } catch(e){}
+  try {
+    var r = localStorage.getItem('sslc_matriz_v1');
+    if (r){
+      var o = JSON.parse(r);
+      if (o && o.mp){
+        var seed = matrizSeedAdd();
+        for (var k in seed){
+          if (!seed.hasOwnProperty(k)) continue;
+          if (!o[k]) o[k] = [];
+          for (var i = 0; i < seed[k].length; i++){
+            var it = seed[k][i], f = false;
+            for (var j = 0; j < o[k].length; j++){ if (String(o[k][j].n) === it.n){ f = true; break; } }
+            if (!f) o[k].push({ n: it.n, u: it.u, p: it.p });
+          }
+        }
+        return o;
+      }
+    }
+  } catch(e){}
   return matrizFallback();
 }
 var COMP_CATS = [['mo','Mão de obra'],['ele','Elétrica'],['ins','Insumos'],['eqp','Equipamentos'],['srv','Serviços & taxas'],['log','Logística & extras'],['mp','Matérias-primas'],['acb','Acabamentos']];
