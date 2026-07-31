@@ -316,8 +316,42 @@ body.fmt-ret .cad-duo-img img{max-height:112mm;}
 .cad-desctrl button:hover{border-color:var(--verde);}
 .pg-cad .item-ctrl{top:auto;bottom:5mm;left:4mm;right:auto;flex-direction:row;}
 
+/* ══ TARJA DE STATUS DA ARTE (auxílio de gestão — nunca sai no PDF) ══ */
+.tarja-status{position:absolute;left:0;right:0;top:38%;z-index:40;display:flex;flex-direction:column;
+  align-items:center;gap:7px;pointer-events:none;}
+.tarja-status .fx{pointer-events:auto;cursor:pointer;transform:rotate(-7deg);color:#fff;
+  font-family:'Arial Narrow','Helvetica Neue Condensed',Arial,sans-serif;font-weight:bold;
+  font-size:34px;line-height:1.05;letter-spacing:3px;text-transform:uppercase;text-align:center;
+  padding:10px 34px;border:4px solid rgba(255,255,255,.9);border-radius:4px;opacity:.93;
+  box-shadow:0 8px 26px rgba(0,0,0,.35);max-width:92%;}
+.tarja-status .fx:active{opacity:1;}
+.tarja-status .dica{transform:rotate(-7deg);background:rgba(0,0,0,.62);color:#fff;font-size:10px;
+  padding:3px 10px;border-radius:11px;letter-spacing:.4px;}
+body.fmt-pais .tarja-status .fx{font-size:40px;}
+#btn-tarja.on{background:#F0C419 !important;color:#1A1F1C !important;border-color:#F0C419 !important;font-weight:bold;}
+.item-ctrl button.bt-tarja.on{background:#F0C419;border-color:#D6A800;color:#1A1F1C;}
+.item-ctrl button.bt-tarja{opacity:.75;}
+.item-ctrl button.bt-tarja.on{opacity:1;}
+.tarja-status .ocultar{pointer-events:auto;cursor:pointer;transform:rotate(-7deg);background:rgba(0,0,0,.62);
+  color:#fff;font-size:10px;padding:3px 10px;border-radius:11px;border:none;font-family:inherit;letter-spacing:.4px;}
+#modal-caixa table.st-tab td.tg{text-align:center;cursor:pointer;font-size:14px;opacity:.3;user-select:none;}
+#modal-caixa table.st-tab td.tg.on{opacity:1;}
+#modal-caixa .bt-sec{background:#fff;color:var(--verde-escuro);border:1px solid #C4CCC7;border-radius:5px;
+  padding:7px 10px;font-family:inherit;font-size:11px;cursor:pointer;margin-right:6px;}
+#modal-caixa .st-op{display:flex;align-items:center;gap:9px;padding:11px 12px;margin-bottom:7px;
+  border:1px solid var(--cinza-claro);border-radius:6px;cursor:pointer;font-size:12.5px;font-weight:bold;letter-spacing:.4px;}
+#modal-caixa .st-op .bola{width:15px;height:15px;border-radius:50%;flex:0 0 auto;}
+#modal-caixa .st-op.ativo{border-color:var(--verde);background:var(--verde-claro);}
+#modal-caixa table.st-tab{width:100%;border-collapse:collapse;font-size:11px;}
+#modal-caixa table.st-tab th{text-align:left;font-size:9px;letter-spacing:.6px;color:#8A938E;border-bottom:1px solid #D8DEDA;padding:4px 3px;}
+#modal-caixa table.st-tab td{padding:5px 3px;border-bottom:1px solid #EDEFEE;vertical-align:top;}
+#modal-caixa table.st-tab .tag{display:inline-block;color:#fff;font-size:8.5px;padding:2px 6px;border-radius:9px;letter-spacing:.3px;}
+#modal-caixa .bt-exp{background:var(--verde);color:#fff;border:none;border-radius:5px;padding:9px 12px;
+  font-family:inherit;font-size:12px;cursor:pointer;margin-right:6px;margin-top:4px;}
+
 @media print{
   .so-print{display:inline !important;}
+  .tarja-status,#btn-tarja{display:none !important;}
   body.fmt-pais .page{width:297mm;height:210mm;}
   .cad-ctrl,.pin-bar,.cad-vazio,.cad-desctrl{display:none !important;}
   .cad-legenda .lg{cursor:default;}
@@ -357,6 +391,8 @@ body.fmt-ret .cad-duo-img img{max-height:112mm;}
   <button data-action="carregar">📂 Carregar</button>
   <button data-action="baixar">⬇ HTML</button>
   <button data-action="gerar-lg">🚚 Gerar LG</button>
+  <button data-action="tarja-modo" id="btn-tarja">🏷 Tarjas</button>
+  <button data-action="lista-status">📋 Status</button>
   <button data-action="mudar-formato" id="btn-formato">▭ Paisagem</button>
   <button data-action="imprimir">🖨 PDF</button>
   <span id="status-msg"></span>
@@ -390,7 +426,7 @@ function itemNovo(){
   return { codigo:'', nome:'NOVO ITEM', setor:'', local:'', material:'', acabamento:'', substrato:'', estrutura:'',
     qtd:'1', visL:100, visA:100, sangria:2, impManual:false, impL:104, impA:104,
     forma:'ret', fp1:0,
-    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'', arteFull:false, arteAprov:'', arteObs:'',
+    refSrc:'', refRects:[], pins:[], cor:'', detalhe:[], desenhoSrc:'', arteFull:false, arteAprov:'', arteObs:'', statusArte:'', tarjaOff:false,
     obs:'', instalacao:'', render:[], arte:[] };
 }
 function estadoInicial(){
@@ -679,7 +715,9 @@ function renderItem(it, i){
   h += '</div>';
   h += '</div>'; /* pg-corpo */
   h += '<div class="pg-foot"><span>SULSIGN GROUP · '+TIPOS[S.tipo].book+' · '+esc(S.titulo).toUpperCase()+'</span><span>'+esc(cod)+'</span></div>';
+  h += tarjaHTML(it, i);
   h += '<div class="item-ctrl">'+
+    (tarjaOn ? '<button class="bt-tarja'+(it.tarjaOff?'':' on')+'" data-action="tarja-item" data-idx="'+i+'" title="Tarja de status nesta página">🏷</button>' : '')+
     '<button data-action="mover-cima" data-idx="'+i+'" title="Subir">↑</button>'+
     '<button data-action="mover-baixo" data-idx="'+i+'" title="Descer">↓</button>'+
     '<button data-action="duplicar-item" data-idx="'+i+'" title="Duplicar">⧉</button>'+
@@ -760,6 +798,11 @@ function render(){
   document.getElementById('sel-tipo').value = S.tipo;
   var bf = document.getElementById('btn-formato');
   if(bf) bf.textContent = pais ? '▭ Paisagem' : '▯ Retrato';
+  var bt = document.getElementById('btn-tarja');
+  if(bt){
+    bt.className = tarjaOn ? 'on' : '';
+    bt.textContent = tarjaOn ? ('🏷 Tarjas '+tarjasVisiveis()+'/'+S.itens.length) : '🏷 Tarjas';
+  }
 }
 
 
@@ -789,6 +832,8 @@ function normaliza(){
     it.desenhoSrc = ''; /* legado: área central desativada — quadrante sempre mostra o desenho gerado */
     if(it.refSrc===undefined) it.refSrc = '';
     if(it.cor===undefined) it.cor = '';
+    if(it.statusArte===undefined) it.statusArte = '';
+    if(it.tarjaOff===undefined) it.tarjaOff = false;
   }
 }
 
@@ -942,7 +987,9 @@ function renderCadItem(it, i){
   h += '<div class="cad-aviso"><b>*ATENÇÃO:</b> <span contenteditable data-field="aviso">'+esc(S.aviso)+'</span></div>';
   h += '</div>';
   h += '</div>';
+  h += tarjaHTML(it, i);
   h += '<div class="item-ctrl">'+
+    (tarjaOn ? '<button class="bt-tarja'+(it.tarjaOff?'':' on')+'" data-action="tarja-item" data-idx="'+i+'" title="Tarja de status nesta página">🏷</button>' : '')+
     '<button data-action="mover-cima" data-idx="'+i+'" title="Subir">↑</button>'+
     '<button data-action="mover-baixo" data-idx="'+i+'" title="Descer">↓</button>'+
     '<button data-action="duplicar-item" data-idx="'+i+'" title="Duplicar">⧉</button>'+
@@ -1009,6 +1056,193 @@ function cadStatusArte(it, i){
   h += '<div class="cad-status-obs"><span class="rot">Obs: </span>'+
        '<span contenteditable data-item="'+i+'" data-field="arteObs" data-ph="—">'+esc(it.arteObs||'')+'</span></div>';
   return h + '</div>';
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   STATUS DA ARTE — TARJA DE TELA + LISTA EXPORTÁVEL
+   A tarja é ferramenta de gestão: some no PDF (classe sec-oculta-print
+   + regra !important no @media print). O status fica gravado no item,
+   então segue junto no salvar/carregar do Supabase.
+   ═══════════════════════════════════════════════════════════════════ */
+var STATUS_ARTE = [
+  { k:'aguard_arte', lbl:'AGUARDANDO ARTE',         cor:'#C0182B' },
+  { k:'aguard_det',  lbl:'AGUARDANDO DETALHAMENTO', cor:'#B8860B' },
+  { k:'recebida',    lbl:'RECEBIDA',                cor:'#1B2A6B' },
+  { k:'aprovada',    lbl:'APROVADA',                cor:'#1B6B3A' },
+  { k:'producao',    lbl:'EM PRODUÇÃO',             cor:'#8E44AD' }
+];
+var tarjaOn = false;
+try{ tarjaOn = localStorage.getItem('ss_book_tarja')==='1'; }catch(e){}
+
+function stInfo(k){
+  for(var si=0; si<STATUS_ARTE.length; si++){ if(STATUS_ARTE[si].k===k) return STATUS_ARTE[si]; }
+  return STATUS_ARTE[0];
+}
+/* status automático enquanto o item não for marcado à mão */
+function statusAuto(it){
+  if(!imgsDe(it,'arte').length) return 'aguard_arte';
+  if(it.arteAprov==='ok') return 'aprovada';
+  return 'recebida';
+}
+function statusDe(it){ return it.statusArte || statusAuto(it); }
+
+function tarjaHTML(it, i){
+  if(!tarjaOn || it.tarjaOff) return '';
+  var st = stInfo(statusDe(it));
+  return '<div class="tarja-status sec-oculta-print">'+
+    '<div class="fx" style="background:'+st.cor+'" data-action="tarja-set" data-idx="'+i+'">'+st.lbl+'</div>'+
+    '<div class="dica">'+(i+1)+' · '+esc((it.nome||'').substring(0,38))+(it.statusArte?'':' · automático')+' — toque para alterar</div>'+
+    '<button class="ocultar" data-action="tarja-item" data-idx="'+i+'">🚫 ocultar a tarja desta página</button>'+
+  '</div>';
+}
+/* quantas páginas estão com a tarja ligada */
+function tarjasVisiveis(){
+  var n=0, i;
+  for(i=0;i<S.itens.length;i++){ if(!S.itens[i].tarjaOff) n++; }
+  return n;
+}
+function tarjaTodas(v){
+  for(var i=0;i<S.itens.length;i++) S.itens[i].tarjaOff = !v;
+  if(v) tarjaOn = true;
+  try{ localStorage.setItem('ss_book_tarja', tarjaOn?'1':'0'); }catch(e){}
+}
+function abrirTarjaModal(i){
+  var it = S.itens[i], atual = statusDe(it), k, sx;
+  var h = '<button class="fechar" data-action="fechar-modal">✕</button>'+
+          '<h3>Status da arte — '+esc(it.nome||('item '+(i+1)))+'</h3>';
+  for(k=0;k<STATUS_ARTE.length;k++){
+    sx = STATUS_ARTE[k];
+    h += '<div class="st-op'+(sx.k===atual?' ativo':'')+'" data-action="tarja-op" data-idx="'+i+'" data-val="'+sx.k+'">'+
+         '<span class="bola" style="background:'+sx.cor+'"></span>'+sx.lbl+'</div>';
+  }
+  h += '<div class="st-op'+(it.statusArte?'':' ativo')+'" data-action="tarja-op" data-idx="'+i+'" data-val="" '+
+       'style="font-weight:normal;color:#8A938E"><span class="bola" style="background:#C4CCC7"></span>'+
+       'AUTOMÁTICO (pelo conteúdo do item)</div>';
+  h += '<div style="border-top:1px solid #EDEFEE;margin-top:10px;padding-top:10px">'+
+       '<button class="bt-sec" data-action="tarja-item" data-idx="'+i+'" data-fecha="1">🚫 Ocultar a tarja desta página</button>'+
+       '</div>';
+  abrirModal(h);
+}
+
+/* página do book em que o item aparece — conta as páginas já renderizadas */
+function paginaDoItem(i){
+  var pgs = document.querySelectorAll('#doc .page');
+  var alvo = document.getElementById('pg-item-'+i);
+  for(var p=0;p<pgs.length;p++){ if(pgs[p]===alvo) return p+1; }
+  return 0;
+}
+function linhasStatus(){
+  var L = [], i, it, st;
+  for(i=0;i<S.itens.length;i++){
+    it = S.itens[i]; st = stInfo(statusDe(it));
+    L.push({ ord:i+1, cod:it.codigo||codigoLogico(i), nome:it.nome||'—', setor:it.setor||'',
+             pag:paginaDoItem(i), lbl:st.lbl, cor:st.cor, auto:!it.statusArte, tarja:!it.tarjaOff });
+  }
+  return L;
+}
+function resumoStatus(L){
+  var c = [], i, k, achou;
+  for(i=0;i<STATUS_ARTE.length;i++) c.push({ lbl:STATUS_ARTE[i].lbl, cor:STATUS_ARTE[i].cor, n:0 });
+  for(i=0;i<L.length;i++){
+    for(k=0;k<c.length;k++){ if(c[k].lbl===L[i].lbl){ c[k].n++; } }
+  }
+  return c;
+}
+function abrirListaStatus(){
+  var L = linhasStatus(), i;
+  var h = '<button class="fechar" data-action="fechar-modal">✕</button>'+
+          '<h3>Status das artes — '+esc(S.numero||'')+'</h3>';
+  h += '<div style="font-size:10.5px;color:#8A938E;margin-bottom:6px">Coluna 🏷 = tarja na tela daquela página. '+
+       '<button class="bt-sec" data-action="tarja-todas" style="padding:4px 8px">todas</button>'+
+       '<button class="bt-sec" data-action="tarja-nenhuma" style="padding:4px 8px">nenhuma</button></div>';
+  h += '<table class="st-tab"><tr><th>🏷</th><th>Nº</th><th>PEÇA</th><th>PÁG.</th><th>STATUS</th></tr>';
+  for(i=0;i<L.length;i++){
+    h += '<tr><td class="tg'+(L[i].tarja?' on':'')+'" data-action="tarja-item" data-idx="'+i+'" data-lista="1">🏷</td>'+
+         '<td>'+L[i].ord+'</td>'+
+         '<td><b>'+esc(L[i].nome)+'</b><br><small style="color:#8A938E">'+esc(L[i].cod)+
+         (L[i].setor?' · '+esc(L[i].setor):'')+'</small></td>'+
+         '<td>'+(L[i].pag||'—')+'</td>'+
+         '<td><span class="tag" style="background:'+L[i].cor+'">'+L[i].lbl+'</span></td></tr>';
+  }
+  h += '</table>';
+  h += '<div style="margin-top:12px">'+
+       '<button class="bt-exp" data-action="status-html">⬇ Documento (HTML)</button>'+
+       '<button class="bt-exp" data-action="status-csv">⬇ Planilha (CSV)</button></div>';
+  h += '<div style="font-size:10px;color:#8A938E;margin-top:8px">Páginas conforme o formato aberto agora ('+
+       (S.formato==='paisagem'?'paisagem':'retrato')+').</div>';
+  abrirModal(h);
+}
+function baixarArquivo(nome, texto, tipo){
+  var blob = new Blob([texto], {type:tipo});
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = nome;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+function dataHoje(){
+  var d = new Date();
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+}
+/* documento à parte: lista simples de status, pronta p/ imprimir ou mandar por e-mail */
+function docStatusHTML(){
+  var L = linhasStatus(), R = resumoStatus(L), i;
+  var h = '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">'+
+    '<meta name="viewport" content="width=device-width, initial-scale=1.0">'+
+    '<title>Status das Artes — '+esc(S.numero||'')+'</title><style>'+
+    '@page{size:A4 portrait;margin:12mm}'+
+    'body{font-family:Arial,Helvetica,sans-serif;color:#1A1F1C;margin:0;padding:20px;background:#fff}'+
+    '.cab{border-bottom:3px solid #2F6B50;padding-bottom:9px;margin-bottom:14px}'+
+    '.marca{font-family:"Arial Narrow",Arial,sans-serif;font-weight:bold;letter-spacing:3px;font-size:13px;color:#2F6B50}'+
+    'h1{font-family:"Arial Narrow",Arial,sans-serif;font-size:23px;letter-spacing:1px;margin:3px 0 5px}'+
+    '.meta{font-size:11px;color:#5A635E;line-height:1.6}'+
+    '.res{margin:12px 0 14px;display:flex;flex-wrap:wrap;gap:6px}'+
+    '.res span{color:#fff;font-size:10px;font-weight:bold;padding:4px 10px;border-radius:11px}'+
+    'table{width:100%;border-collapse:collapse}'+
+    'th{background:#2F6B50;color:#fff;font-size:9.5px;text-align:left;padding:6px 7px;letter-spacing:.6px}'+
+    'td{font-size:11px;padding:6px 7px;border-bottom:1px solid #E4E8E6}'+
+    'tr:nth-child(even) td{background:#F6F8F7}'+
+    '.tag{display:inline-block;color:#fff;font-size:9px;font-weight:bold;padding:3px 8px;border-radius:10px;white-space:nowrap}'+
+    '.pe{font-size:10px;color:#8A938E;margin-top:14px;line-height:1.5}'+
+    '.bt{background:#2F6B50;color:#fff;border:none;border-radius:5px;padding:9px 14px;font-size:12px;cursor:pointer;margin-bottom:14px}'+
+    '@media print{.bt{display:none}}'+
+    '</style></head><body>';
+  h += '<button class="bt" onclick="window.print()">🖨 Imprimir / salvar em PDF</button>';
+  h += '<div class="cab"><div class="marca">SULSIGN GROUP</div>'+
+       '<h1>STATUS DAS ARTES</h1><div class="meta">'+
+       '<b>'+esc(S.numero||'—')+'</b> · '+esc(S.titulo||'')+(S.revisao?' · '+esc(S.revisao):'')+'<br>'+
+       (S.cliente?'Cliente: '+esc(S.cliente)+(S.agencia?' · Agência: '+esc(S.agencia):'')+'<br>':'')+
+       'Emitido em '+dataHoje()+' · '+L.length+' peça'+(L.length===1?'':'s')+
+       '</div></div>';
+  h += '<div class="res">';
+  for(i=0;i<R.length;i++){
+    if(!R[i].n) continue;
+    h += '<span style="background:'+R[i].cor+'">'+R[i].lbl+': '+R[i].n+'</span>';
+  }
+  h += '</div>';
+  h += '<table><tr><th>Nº</th><th>CÓDIGO</th><th>PEÇA</th><th>SETOR</th><th>PÁG. BOOK</th><th>STATUS</th></tr>';
+  for(i=0;i<L.length;i++){
+    h += '<tr><td>'+L[i].ord+'</td><td>'+esc(L[i].cod)+'</td><td>'+esc(L[i].nome)+'</td>'+
+         '<td>'+esc(L[i].setor||'—')+'</td><td>'+(L[i].pag||'—')+'</td>'+
+         '<td><span class="tag" style="background:'+L[i].cor+'">'+L[i].lbl+'</span></td></tr>';
+  }
+  h += '</table>';
+  h += '<div class="pe">Páginas referentes ao book no formato '+(S.formato==='paisagem'?'paisagem':'retrato')+
+       '. Status sem marcação manual são deduzidos do conteúdo do item (arte enviada / aprovada).</div>';
+  h += '</body></html>';
+  return h;
+}
+function docStatusCSV(){
+  var L = linhasStatus(), i, lin = [];
+  function q(v){ return '"'+String(v==null?'':v).replace(/"/g,'""')+'"'; }
+  lin.push(['N','Codigo','Peca','Setor','Pagina do book','Status'].map(q).join(';'));
+  for(i=0;i<L.length;i++){
+    lin.push([L[i].ord, L[i].cod, L[i].nome, L[i].setor, (L[i].pag||''), L[i].lbl].map(q).join(';'));
+  }
+  return '\ufeff' + lin.join('\r\n');
+}
+function nomeArqStatus(ext){
+  return (S.numero||'BOOK')+'_STATUS_ARTES_'+(S.revisao||'R0')+'.'+ext;
 }
 
 /* páginas de continuação: os extras não mostrados nos quadrantes da peça.
@@ -1307,6 +1541,33 @@ document.addEventListener('click', function(ev){
     lst.splice(pos,1);
     S.itens[idx][cmp] = lst;
     render(); }
+  else if(ac==='tarja-modo'){
+    tarjaOn = !tarjaOn;
+    try{ localStorage.setItem('ss_book_tarja', tarjaOn?'1':'0'); }catch(e){}
+    renderMantendo();
+    msg(tarjaOn ? ('Tarjas ligadas em '+tarjasVisiveis()+' de '+S.itens.length+' páginas — só na tela, nunca no PDF.') : 'Tarjas desligadas em todo o documento.');
+  }
+  else if(ac==='tarja-set'){ abrirTarjaModal(idx); }
+  else if(ac==='tarja-item'){
+    ev.stopPropagation();
+    S.itens[idx].tarjaOff = !S.itens[idx].tarjaOff;
+    if(!S.itens[idx].tarjaOff && !tarjaOn){
+      tarjaOn = true;
+      try{ localStorage.setItem('ss_book_tarja','1'); }catch(e){}
+    }
+    if(el.getAttribute('data-fecha')) fecharModal();
+    renderMantendo();
+    if(el.getAttribute('data-lista')) abrirListaStatus();
+  }
+  else if(ac==='tarja-todas'){ tarjaTodas(true); renderMantendo(); abrirListaStatus(); }
+  else if(ac==='tarja-nenhuma'){ tarjaTodas(false); renderMantendo(); abrirListaStatus(); }
+  else if(ac==='tarja-op'){
+    S.itens[idx].statusArte = el.getAttribute('data-val')||'';
+    fecharModal(); renderMantendo();
+  }
+  else if(ac==='lista-status'){ abrirListaStatus(); }
+  else if(ac==='status-html'){ baixarArquivo(nomeArqStatus('html'), docStatusHTML(), 'text/html;charset=utf-8'); msg('Documento de status baixado.'); }
+  else if(ac==='status-csv'){ baixarArquivo(nomeArqStatus('csv'), docStatusCSV(), 'text/csv;charset=utf-8'); msg('CSV de status baixado.'); }
   else if(ac==='salvar'){ salvar(); }
   else if(ac==='carregar'){ carregarLista(); }
   else if(ac==='baixar'){ baixarHTML(); }
