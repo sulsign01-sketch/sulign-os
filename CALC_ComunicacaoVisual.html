@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SulSign OS — Calculadora Comunicação Visual · v1</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #f2f2f0; color: #1a1a1a; font-size: 14px; }
+  .header { background: #000; color: #fff; padding: 16px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .header h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.5px; }
+  .header .sub { font-size: 11px; color: #b5b5b5; letter-spacing: 1.5px; text-transform: uppercase; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 14px; }
+  .card { background: #fff; border-radius: 10px; padding: 14px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  .card h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: #555; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 12px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+  .field { flex: 1 1 130px; min-width: 110px; }
+  .field label { display: block; font-size: 11px; color: #666; margin-bottom: 3px; font-weight: 600; }
+  .field input, .field select { width: 100%; padding: 9px 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; background: #fafafa; }
+  .field input:focus, .field select:focus { outline: none; border-color: #000; background: #fff; }
+  .field .hint { font-size: 10px; color: #999; margin-top: 2px; }
+  .toggle-group { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .toggle-group button { flex: 1 1 auto; padding: 10px 8px; border: 1.5px solid #ccc; background: #fff; border-radius: 8px; font-size: 12px; font-weight: 600; color: #555; cursor: pointer; }
+  .toggle-group button.on { background: #000; color: #fff; border-color: #000; }
+  .kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .kpi { background: #f7f7f5; border-radius: 8px; padding: 10px; border-left: 3px solid #000; }
+  .kpi .k-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: #777; }
+  .kpi .k-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .kpi.gold { border-left-color: #c9a227; background: #fdf9ec; }
+  .kpi.gold .k-value { color: #8a6d00; font-size: 22px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th { text-align: left; font-size: 10px; text-transform: uppercase; color: #888; padding: 6px 4px; border-bottom: 1px solid #ddd; }
+  td { padding: 7px 4px; border-bottom: 1px solid #f0f0ee; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .tot td { font-weight: 700; border-top: 2px solid #000; }
+  .mini { padding: 2px 7px; font-size: 11px; border: 1px solid #999; background: #fff; border-radius: 5px; cursor: pointer; }
+  .bdi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(90px, 1fr)); gap: 8px; }
+  .footnote { font-size: 10.5px; color: #999; margin-top: 8px; line-height: 1.5; }
+  details summary { cursor: pointer; font-size: 12px; font-weight: 700; color: #444; padding: 6px 0; }
+  .hide { display: none !important; }
+  .btn { padding: 11px 16px; border: none; border-radius: 8px; background: #000; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+  .btn.sec { background: #fff; color: #000; border: 1.5px solid #000; }
+  .btn.sm { padding: 8px 12px; font-size: 12px; }
+  .btnrow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* ── linha-cartão do item ── */
+  .lc { border: 1px solid #e4e2dc; border-radius: 9px; padding: 10px; margin-bottom: 10px; background: #fbfbf9; }
+  .lc .lc-top { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+  .lc .lc-dims { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .lc .lc-dims .field { flex: 1 1 70px; min-width: 62px; }
+  .lc input, .lc select { padding: 8px 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; background: #fff; width: 100%; }
+  .lc .price-ov { background: #fff3c4 !important; border-color: #d4b106 !important; }
+  .lc .lc-out { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; margin-top: 9px; padding-top: 8px; border-top: 1px dashed #e0ddd4; }
+  .lc .lc-out .o { font-size: 12px; color: #666; }
+  .lc .lc-out .o b { color: #1a1a1a; font-size: 14px; }
+  .lc .lc-out .o.cst b { color: #8a6d00; }
+  .lc .lc-acts { margin-left: auto; display: flex; gap: 6px; }
+
+  /* ── RELATÓRIO (na tela + impressão) ── */
+  #report { display: none; font-size: 12.5px; color: #000; background: #fff; max-width: 980px; margin: 0 auto 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.07); }
+  #report.show { display: block; }
+  #report .r-tools { padding: 10px 18px; background: #f2f2f0; display: flex; gap: 8px; flex-wrap: wrap; }
+  #report .r-head { background: #000; color: #fff; padding: 18px; }
+  #report h1 { font-size: 18px; }
+  #report .r-sub { font-size: 10px; letter-spacing: 2px; color: #ccc; }
+  #report .r-body { padding: 18px; }
+  #report table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  #report th { border-bottom: 1px solid #000; text-align: left; font-size: 10px; padding: 5px 4px; }
+  #report td { border-bottom: 1px solid #ddd; padding: 5px 4px; }
+  #report .num { text-align: right; }
+  #report .r-tot td { font-weight: 700; border-top: 2px solid #000; }
+  #report .r-foot { margin-top: 20px; font-size: 9.5px; color: #666; border-top: 1px solid #ccc; padding-top: 8px; }
+  #report .r-desc { border: 1.5px dashed #c9a227; border-radius: 6px; padding: 10px 12px; margin: 8px 0 4px; line-height: 1.6; font-size: 12.5px; }
+  #report .r-desc:focus { outline: 2px solid #c9a227; }
+  #report .r-desc-hint { font-size: 10px; color: #a07800; margin-bottom: 12px; }
+  @media print {
+    .btnrow, .mini, #docbar, #report .r-tools, #report .r-desc-hint { display: none !important; }
+    body.docmode > .header, body.docmode > .wrap { display: none !important; }
+    #report.show { display: block !important; box-shadow: none; border-radius: 0; }
+    #report .r-desc { border: none; padding: 0; }
+    .header, #report .r-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+  body.docmode { background: #fff; }
+  body.docmode > .header, body.docmode > .wrap { display: none !important; }
+  body.docmode #report { box-shadow: none; border-radius: 0; margin: 0 auto; }
+  body.docmode #report .r-tools, body.docmode #report .r-desc-hint { display: none; }
+  #docbar { display: none; }
+  body.docmode #docbar { display: flex; position: sticky; top: 0; z-index: 10; background: #000; padding: 12px 16px; gap: 8px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>SUL SIGN GROUP</h1>
+    <div class="sub">Calculadora · Comunicação Visual · v1</div>
+  </div>
+  <div class="sub" id="hdrData"></div>
+</div>
+
+<div class="wrap">
+
+  <!-- ═══ 0. CENTRO DE CUSTO ═══ -->
+  <div class="card" id="ccBar">
+    <h2>0 · Centro de Custo</h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:2 1 220px">
+        <label>Rascunhos salvos (neste dispositivo)</label>
+        <select id="ccSelect"><option value="">— novo / não salvo —</option></select>
+      </div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sm" id="btCcOpen">📂 Reabrir</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sm" id="btCcDup">⧉ Duplicar</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sec sm" id="btCcDel">🗑 Excluir</button></div>
+    </div>
+    <div class="row" style="align-items:center;margin-top:8px">
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn" id="btCcSave">💾 Salvar</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sec" id="btCcSaveNew">➕ Salvar como novo</button></div>
+      <div class="field" style="flex:1 1 auto"><span id="ccStatus" class="hint"></span></div>
+    </div>
+    <div class="footnote">Guarda o job inteiro (cabeçalho, itens, overrides e BDI). Estanque — nada sai deste dispositivo. Vira relatório de custo ou proposta comercial na Seção 3.</div>
+  </div>
+
+  <!-- ═══ 1. PROJETO ═══ -->
+  <div class="card">
+    <h2>1 · Projeto</h2>
+    <div class="row">
+      <div class="field" style="flex:2 1 200px">
+        <label>Cliente / Job (para o relatório)</label>
+        <input type="text" id="inCliente" placeholder="Ex.: WIPI — comunicação visual" data-action="hdr">
+      </div>
+      <div class="field" style="flex:1 1 160px">
+        <label>Foto / arte de referência</label>
+        <input type="file" id="inFoto" accept="image/*">
+        <img id="fotoPrev" class="hide" style="max-width:160px;max-height:110px;margin-top:6px;border-radius:6px;border:1px solid #ddd" alt="referência">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Nº do job</label><input type="text" id="inNum" placeholder="SS-2026_07-##" data-action="hdr"></div>
+      <div class="field"><label>Contato</label><input type="text" id="inContato" placeholder="Nome / telefone"></div>
+      <div class="field" style="flex:2 1 200px"><label>Evento / Projeto</label><input type="text" id="inEvento" placeholder="Ex.: Loja / stand / fachada"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Setor</label><input type="text" id="inSetor" placeholder="Ex.: Interno / externo"></div>
+      <div class="field"><label>Local</label><input type="text" id="inLocalArte" placeholder="Ex.: Fachada / vitrine"></div>
+      <div class="field"><label>Peça</label><input type="text" id="inPeca" placeholder="Ex.: Adesivo jateado" data-action="hdr"></div>
+      <div class="field"><label>Código</label><input type="text" id="inCodigo" placeholder="Ex.: CV-01"></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Data</label><input type="date" id="inDataJob" data-action="hdr"></div>
+      <div class="field"><label>Prazo / entrega</label><input type="date" id="inPrazo"></div>
+      <div class="field"><label>Cidade / região</label><input type="text" id="inLocal" placeholder="Ex.: Rio de Janeiro — RJ"></div>
+      <div class="field"><label>Responsável</label><input type="text" id="inResp" placeholder="Ex.: Carlos"></div>
+    </div>
+    <div class="row">
+      <div class="field" style="flex:1 1 100%"><label>Observações / condições</label><input type="text" id="inObs" placeholder="Ex.: aplicação inclusa; validade 15 dias; 50% sinal"></div>
+    </div>
+    <div class="toggle-group" style="margin-top:4px" id="grInstala">
+      <button type="button" data-instala="sulsign" class="on">Aplicação inclusa (Sul Sign)</button>
+      <button type="button" data-instala="pdvex">Aplicação PDVEX</button>
+      <button type="button" data-instala="sem">Só fornecimento</button>
+    </div>
+  </div>
+
+  <!-- ═══ 2. ITENS ═══ -->
+  <div class="card">
+    <h2>2 · Itens de comunicação visual</h2>
+    <div class="row" style="align-items:flex-end;margin-bottom:6px">
+      <div class="field" style="flex:2 1 220px">
+        <label>Base de custo (PDVEX)</label>
+        <div class="toggle-group" style="margin:0" id="grBase">
+          <button type="button" data-base="custo" class="on">Custo abr/25 (col. D)</button>
+          <button type="button" data-base="pdvex">Venda PDVEX mai/25 (col. E)</button>
+        </div>
+      </div>
+      <div class="field" style="flex:1 1 100%">
+        <span class="hint">Materiais Mubisys usam preço único (impressão). A base acima só troca a coluna dos itens PDVEX. Cada linha aceita preço manual (↺ volta ao base).</span>
+      </div>
+    </div>
+    <div id="linhasBox"></div>
+    <div class="btnrow">
+      <button type="button" class="btn sm" data-fn="addlinha">＋ Adicionar item</button>
+      <button type="button" class="btn sec sm" data-fn="addavulso">＋ Item avulso (valor fixo)</button>
+      <button type="button" class="btn sec sm" data-fn="addmat">＋ Material personalizado</button>
+    </div>
+    <div id="avulsosBox" style="margin-top:10px"></div>
+  </div>
+
+  <!-- ═══ 3. RESULTADO ═══ -->
+  <div class="card">
+    <h2>3 · Resultado & Comercial</h2>
+    <div class="kpi-grid">
+      <div class="kpi"><div class="k-label">Área total</div><div class="k-value" id="kM2">—</div></div>
+      <div class="kpi"><div class="k-label">Custo total</div><div class="k-value" id="kCusto">—</div></div>
+      <div class="kpi"><div class="k-label">Custo médio / m²</div><div class="k-value" id="kCustoM2">—</div></div>
+      <div class="kpi gold"><div class="k-label">Preço B2B (Sul Sign → PDVEX)</div><div class="k-value" id="kVenda">—</div></div>
+      <div class="kpi gold"><div class="k-label">B2B / m²</div><div class="k-value" id="kVendaM2">—</div></div>
+      <div class="kpi gold"><div class="k-label">Preço B2C sugerido (→ cliente)</div><div class="k-value" id="kB2C">—</div></div>
+      <div class="kpi"><div class="k-label">Margem Sul Sign (B2B)</div><div class="k-value" id="kMargem">—</div></div>
+      <div class="kpi"><div class="k-label">Impostos embutidos (B2B)</div><div class="k-value" id="kImp">—</div></div>
+      <div class="kpi"><div class="k-label">Margem PDVEX (B2C)</div><div class="k-value" id="kMgPdv">—</div></div>
+    </div>
+    <div class="row" style="margin-top:12px;align-items:flex-end">
+      <div class="field" style="flex:1 1 200px">
+        <label>Proposta comercial usa</label>
+        <select id="propTipo">
+          <option value="b2b">preço B2B (Sul Sign → PDVEX)</option>
+          <option value="b2c">preço B2C (cliente final)</option>
+        </select>
+      </div>
+    </div>
+    <div class="btnrow">
+      <button type="button" class="btn" data-fn="relatorio">📊 Relatório de custo (interno)</button>
+      <button type="button" class="btn sec" data-fn="proposta">📄 Proposta comercial</button>
+      <button type="button" class="btn sec" data-fn="descritivo">✎ Gerar descritivo</button>
+    </div>
+    <div id="descBox" class="hide" style="margin-top:10px">
+      <div class="field">
+        <label>Descritivo técnico (editável)</label>
+        <textarea id="descTxt" rows="4" style="width:100%;padding:9px;border:1px solid #ccc;border-radius:6px;font-size:13px;font-family:inherit"></textarea>
+      </div>
+      <div class="btnrow"><button type="button" class="btn sm sec" data-fn="copiadesc">📋 Copiar</button></div>
+    </div>
+  </div>
+
+  <!-- ═══ 4. BDI ═══ -->
+  <div class="card">
+    <h2>4 · BDI &amp; Comercial</h2>
+    <div class="row" style="align-items:flex-end">
+      <div class="field" style="flex:2 1 220px">
+        <label>Preset de BDI (salvo neste dispositivo)</label>
+        <select id="bdiPreset"><option value="">— escolher preset —</option></select>
+      </div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sec sm" id="btBdiSave">💾 Salvar preset atual</button></div>
+      <div class="field" style="flex:0 0 auto"><button type="button" class="btn sec sm" id="btBdiDel">🗑</button></div>
+    </div>
+    <label style="font-size:11px;color:#666;font-weight:700">SUL SIGN → PDVEX (preço B2B)</label>
+    <div class="bdi-grid" style="margin:6px 0 14px">
+      <div class="field"><label>AC %</label><input type="number" id="bdiAC" value="8" data-action="calc"></div>
+      <div class="field"><label>DF %</label><input type="number" id="bdiDF" value="2" data-action="calc"></div>
+      <div class="field"><label>RI %</label><input type="number" id="bdiRI" value="3" data-action="calc"></div>
+      <div class="field"><label>Lucro %</label><input type="number" id="bdiLucro" value="18" data-action="calc"></div>
+      <div class="field"><label>Impostos %</label><input type="number" id="bdiImp" value="10" data-action="calc"></div>
+      <div class="field"><label>BV / Comissão %</label><input type="number" id="bdiBV" value="0" data-action="calc"></div>
+      <div class="field"><label>Desconto %</label><input type="number" id="bdiDesc" value="0" data-action="calc"></div>
+    </div>
+    <label style="font-size:11px;color:#8a6d00;font-weight:700">PDVEX → CLIENTE FINAL (preço B2C, parâmetros da PDVEX sobre o B2B)</label>
+    <div class="bdi-grid" style="margin-top:6px">
+      <div class="field"><label>AC %</label><input type="number" id="bdi2AC" value="5" data-action="calc"></div>
+      <div class="field"><label>DF %</label><input type="number" id="bdi2DF" value="0" data-action="calc"></div>
+      <div class="field"><label>RI %</label><input type="number" id="bdi2RI" value="0" data-action="calc"></div>
+      <div class="field"><label>Lucro %</label><input type="number" id="bdi2Lucro" value="25" data-action="calc"></div>
+      <div class="field"><label>Impostos %</label><input type="number" id="bdi2Imp" value="10" data-action="calc"></div>
+      <div class="field"><label>BV / Comissão %</label><input type="number" id="bdi2BV" value="0" data-action="calc"></div>
+      <div class="field"><label>Desconto %</label><input type="number" id="bdi2Desc" value="0" data-action="calc"></div>
+    </div>
+    <div class="footnote">Padrão Sul Sign documentado: AC 8 + DF 2 + RI 3 + Lucro 18 + Impostos 10. A camada PDVEX aplica os parâmetros dela sobre o preço B2B — o custo da PDVEX é o que ela paga à Sul Sign.</div>
+  </div>
+
+  <!-- ═══ 5. TABELA DE REFERÊNCIA ═══ -->
+  <div class="card">
+    <h2>5 · Tabela de referência (custos)</h2>
+    <details>
+      <summary>Ver catálogo de materiais e preços</summary>
+      <div style="overflow-x:auto;margin-top:8px"><table id="tbCatalogo"><thead><tr><th>Material</th><th>Máquina</th><th class="num">Custo abr/25</th><th class="num">Venda PDVEX mai/25</th></tr></thead><tbody></tbody></table></div>
+      <div class="footnote">PDVEX: “TABELA DE PREÇOS CUSTO PDVEX — COMUNICAÇÃO VISUAL” (custo abr/25 · venda PDVEX mai/25). Mubisys: base de impressão (preço único).</div>
+    </details>
+  </div>
+
+</div>
+
+<!-- ═══ RELATÓRIO / PROPOSTA ═══ -->
+<div id="report"></div>
+
+<script>
+/* ══════════════════ HELPERS ══════════════════ */
+function $(id){ return document.getElementById(id); }
+function num(id){ var v = parseFloat($(id).value); return isNaN(v) ? 0 : v; }
+function numv(v){ var n = parseFloat(String(v == null ? '' : v).replace(',', '.')); return isNaN(n) ? 0 : n; }
+function brl(v){ return 'R$ ' + (Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+function esc(s){ return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function fmtDataBR(iso){ if(!iso) return '—'; var p = iso.split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; }
+
+/* ══════════════════ CATÁLOGO ══════════════════ */
+/* src: 'pdvex' => custo (col D) + pdvex (col E) alternáveis · 'mub' => preço único */
+var MAT = [
+  { id:'ad_fosco_s', g:'PDVEX · Adesivos', n:'Adesivo fosco corte reto', mq:'Solvente', src:'pdvex', custo:30, pdvex:75 },
+  { id:'ad_fosco_uv', g:'PDVEX · Adesivos', n:'Adesivo fosco corte reto', mq:'UV', src:'pdvex', custo:35, pdvex:75 },
+  { id:'ad_bo_s', g:'PDVEX · Adesivos', n:'Adesivo blackout corte reto', mq:'Solvente', src:'pdvex', custo:35, pdvex:75 },
+  { id:'ad_bo_uv', g:'PDVEX · Adesivos', n:'Adesivo blackout corte reto', mq:'UV', src:'pdvex', custo:40, pdvex:75 },
+  { id:'ad_lamfosca', g:'PDVEX · Adesivos', n:'Adesivo + laminação fosca', mq:'Solvente', src:'pdvex', custo:55, pdvex:90 },
+  { id:'ad_pisomax', g:'PDVEX · Adesivos', n:'Adesivo + laminação PisoMax', mq:'Solvente', src:'pdvex', custo:60, pdvex:150 },
+  { id:'ad_transp_s', g:'PDVEX · Adesivos', n:'Adesivo transparente corte reto', mq:'Solvente', src:'pdvex', custo:35, pdvex:75 },
+  { id:'ad_transp_uv', g:'PDVEX · Adesivos', n:'Adesivo transparente corte reto', mq:'UV', src:'pdvex', custo:40, pdvex:75 },
+  { id:'ad_retro', g:'PDVEX · Adesivos', n:'Adesivo transp. + laminação branca (retroverso)', mq:'Solvente', src:'pdvex', custo:55, pdvex:90 },
+  { id:'ad_rem_s', g:'PDVEX · Adesivos', n:'Adesivo removível corte reto', mq:'Solvente', src:'pdvex', custo:35, pdvex:75 },
+  { id:'ad_rem_uv', g:'PDVEX · Adesivos', n:'Adesivo removível corte reto', mq:'UV', src:'pdvex', custo:40, pdvex:75 },
+  { id:'ad_perf_s', g:'PDVEX · Adesivos', n:'Adesivo perfurado corte reto', mq:'Solvente', src:'pdvex', custo:55, pdvex:90 },
+  { id:'ad_perf_uv', g:'PDVEX · Adesivos', n:'Adesivo perfurado corte reto', mq:'UV', src:'pdvex', custo:60, pdvex:90 },
+  { id:'jat_sol', g:'PDVEX · Adesivos', n:'Adesivo jateado corte reto', mq:'Solvente', src:'pdvex', custo:55, pdvex:90 },
+  { id:'jat_uv', g:'PDVEX · Adesivos', n:'Adesivo jateado corte reto', mq:'UV', src:'pdvex', custo:60, pdvex:90 },
+  { id:'ad_contorno_s', g:'PDVEX · Adesivos', n:'Adesivo + corte contorno (mascarado)', mq:'Solvente', src:'pdvex', custo:100, pdvex:180 },
+  { id:'ad_contorno_uv', g:'PDVEX · Adesivos', n:'Adesivo + corte contorno (mascarado)', mq:'UV', src:'pdvex', custo:100, pdvex:180 },
+  { id:'ad_recorte', g:'PDVEX · Adesivos', n:'Adesivo recorte (mascarado)', mq:'Recorte', src:'pdvex', custo:100, pdvex:180 },
+  { id:'jat_rec', g:'PDVEX · Adesivos', n:'Adesivo jateado recorte (mascarado)', mq:'Recorte', src:'pdvex', custo:100, pdvex:180 },
+  { id:'pf230', g:'PDVEX · Impressão', n:'Papel fotográfico 230g (fosco)', mq:'Látex', src:'pdvex', custo:65, pdvex:100 },
+  { id:'lona_f320_s', g:'PDVEX · Lonas', n:'Lona fosca 3,20 m', mq:'Solvente', src:'pdvex', custo:32, pdvex:75 },
+  { id:'lona_f320_uv', g:'PDVEX · Lonas', n:'Lona fosca 3,20 m', mq:'UV', src:'pdvex', custo:40, pdvex:75 },
+  { id:'lona_f500', g:'PDVEX · Lonas', n:'Lona fosca 5,00 m', mq:'UV', src:'pdvex', custo:50, pdvex:90 },
+  { id:'lona_bl_uv', g:'PDVEX · Lonas', n:'Lona backlight 3,2 m', mq:'UV', src:'pdvex', custo:45, pdvex:75 },
+  { id:'lona_bl_s', g:'PDVEX · Lonas', n:'Lona backlight 3,2 m', mq:'Solvente', src:'pdvex', custo:40, pdvex:75 },
+  { id:'lona_bo_uv', g:'PDVEX · Lonas', n:'Lona BO — frente e verso', mq:'UV', src:'pdvex', custo:70, pdvex:120 },
+  { id:'lona_bo_s', g:'PDVEX · Lonas', n:'Lona BO — frente e verso', mq:'Solvente', src:'pdvex', custo:60, pdvex:120 },
+  { id:'piso_anti', g:'PDVEX · Lonas', n:'Piso antiderrapante 138 cm', mq:'UV', src:'pdvex', custo:100, pdvex:150 },
+  { id:'lona_sanet', g:'PDVEX · Lonas', n:'Lona Sanete 3,2 m', mq:'Solvente', src:'pdvex', custo:55, pdvex:90 },
+  { id:'ps1_ad', g:'PDVEX · Rígidos', n:'PS 1mm adesivado', mq:'Solvente', src:'pdvex', custo:100, pdvex:150 },
+  { id:'ps2_ad', g:'PDVEX · Rígidos', n:'PS 2mm adesivado', mq:'Solvente', src:'pdvex', custo:120, pdvex:180 },
+  { id:'ps3_ad', g:'PDVEX · Rígidos', n:'PS 3mm adesivado', mq:'Solvente', src:'pdvex', custo:150, pdvex:225 },
+  { id:'pvc10_ad', g:'PDVEX · Rígidos', n:'PVC 10mm adesivado', mq:'Ecosolvente', src:'pdvex', custo:180, pdvex:270 },
+  { id:'ps1_fv', g:'PDVEX · Rígidos', n:'PS 1mm adesivado frente e verso', mq:'Solvente', src:'pdvex', custo:140, pdvex:210 },
+  { id:'ps2_fv', g:'PDVEX · Rígidos', n:'PS 2mm adesivado frente e verso', mq:'Solvente', src:'pdvex', custo:160, pdvex:240 },
+  { id:'ps3_fv', g:'PDVEX · Rígidos', n:'PS 3mm adesivado frente e verso', mq:'Solvente', src:'pdvex', custo:190, pdvex:285 },
+  { id:'ps1_dobra', g:'PDVEX · Rígidos', n:'PS 1mm adesivado + dobra quente', mq:'Solvente', src:'pdvex', custo:150, pdvex:270 },
+  { id:'ps2_dobra', g:'PDVEX · Rígidos', n:'PS 2mm adesivado + dobra quente', mq:'Solvente', src:'pdvex', custo:170, pdvex:310 },
+  { id:'ps3_dobra', g:'PDVEX · Rígidos', n:'PS 3mm adesivado + dobra quente', mq:'Solvente', src:'pdvex', custo:200, pdvex:360 },
+  { id:'ps1_dir', g:'PDVEX · Rígidos', n:'PS 1mm impressão direta', mq:'Solvente', src:'pdvex', custo:120, pdvex:180 },
+  { id:'ps2_dir', g:'PDVEX · Rígidos', n:'PS 2mm impressão direta', mq:'Solvente', src:'pdvex', custo:140, pdvex:210 },
+  { id:'ps3_dir', g:'PDVEX · Rígidos', n:'PS 3mm impressão direta', mq:'Solvente', src:'pdvex', custo:170, pdvex:255 },
+  { id:'ps2cr_corte', g:'PDVEX · Rígidos', n:'PS 2mm cristal impressão retroversa + corte', mq:'UV', src:'pdvex', custo:250, pdvex:450 },
+  { id:'ps2cr_imp', g:'PDVEX · Rígidos', n:'PS 2mm cristal só impressão retroversa (mat. PDVEX)', mq:'UV', src:'pdvex', custo:150, pdvex:270 },
+  { id:'acm_dir', g:'PDVEX · Rígidos', n:'ACM impressão direta', mq:'Solvente', src:'pdvex', custo:250, pdvex:380 },
+  { id:'oxford_reto', g:'PDVEX · Tecidos', n:'Oxford (corte reto)', mq:'Sublimação', src:'pdvex', custo:65, pdvex:100 },
+  { id:'oxford_bolsa', g:'PDVEX · Tecidos', n:'Oxford (bolsa tubetes e corda)', mq:'Sublimação', src:'pdvex', custo:70, pdvex:120 },
+  { id:'microfibra', g:'PDVEX · Tecidos', n:'Microfibra até 160cm', mq:'Sublimação', src:'pdvex', custo:46, pdvex:100 },
+  { id:'tec_bo_f', g:'PDVEX · Tecidos', n:'Tecido blackout (frente)', mq:'UV', src:'pdvex', custo:60, pdvex:120 },
+  { id:'tec_bo_fv', g:'PDVEX · Tecidos', n:'Tecido blackout (frente e verso)', mq:'UV', src:'pdvex', custo:95, pdvex:180 },
+  { id:'tec_fv_preto', g:'PDVEX · Tecidos', n:'Tecido F&V (preto no meio)', mq:'Sublimação', src:'pdvex', custo:145, pdvex:200 },
+  { id:'polyflag', g:'PDVEX · Tecidos', n:'Polyflag 200g', mq:'Sublimação', src:'pdvex', custo:65, pdvex:100 },
+  { id:'helanca', g:'PDVEX · Tecidos', n:'Helanca light', mq:'Sublimação', src:'pdvex', custo:70, pdvex:120 },
+  { id:'voil', g:'PDVEX · Tecidos', n:'Tecido voil 1,40 largura', mq:'Sublimação', src:'pdvex', custo:45, pdvex:100 },
+  { id:'papel_sub', g:'PDVEX · Impressão', n:'Papel sublimação (lambe-lambe)', mq:'UV', src:'pdvex', custo:40, pdvex:80 },
+  { id:'poli_ad', g:'PDVEX · Rígidos', n:'Poliondas adesivado', mq:'Solvente', src:'pdvex', custo:120, pdvex:180 },
+  { id:'poli_fv', g:'PDVEX · Rígidos', n:'Poliondas adesivado frente e verso', mq:'Solvente', src:'pdvex', custo:160, pdvex:240 },
+  { id:'poli_dir', g:'PDVEX · Rígidos', n:'Poliondas impressão direta', mq:'Solvente', src:'pdvex', custo:140, pdvex:210 },
+  { id:'micro_dub', g:'PDVEX · Tecidos', n:'Microfibra dublada (F&V)', mq:'Sublimação', src:'pdvex', custo:80, pdvex:150 },
+  { id:'manta', g:'PDVEX · Impressão', n:'Manta vinílica impressa (L=1,40 m)', mq:'—', src:'pdvex', custo:150, pdvex:230 },
+
+  { id:'m_vfosco', g:'Mubisys · Impressão', n:'Vinil fosco', mq:'Impressão', src:'mub', custo:35 },
+  { id:'m_vfoscouv', g:'Mubisys · Impressão', n:'Vinil fosco + UV', mq:'Impressão', src:'mub', custo:45 },
+  { id:'m_vbo', g:'Mubisys · Impressão', n:'Vinil blackout fosco', mq:'Impressão', src:'mub', custo:39.5 },
+  { id:'m_vbouv', g:'Mubisys · Impressão', n:'Vinil blackout + UV', mq:'Impressão', src:'mub', custo:49.5 },
+  { id:'m_vlam', g:'Mubisys · Impressão', n:'Vinil fosco + laminação', mq:'Impressão', src:'mub', custo:55 },
+  { id:'m_vlampiso', g:'Mubisys · Impressão', n:'Vinil laminação piso', mq:'Impressão', src:'mub', custo:60 },
+  { id:'m_vtransp', g:'Mubisys · Impressão', n:'Vinil transparente', mq:'Impressão', src:'mub', custo:35 },
+  { id:'m_vtranspuv', g:'Mubisys · Impressão', n:'Vinil transparente + UV', mq:'Impressão', src:'mub', custo:55 },
+  { id:'m_vbrancorem', g:'Mubisys · Impressão', n:'Vinil branco fosco removível', mq:'Impressão', src:'mub', custo:37.5 },
+  { id:'m_vperf', g:'Mubisys · Impressão', n:'Vinil perfurado', mq:'Impressão', src:'mub', custo:55 },
+  { id:'m_vperfuv', g:'Mubisys · Impressão', n:'Vinil perfurado UV', mq:'Impressão', src:'mub', custo:60 },
+  { id:'m_lonaf', g:'Mubisys · Impressão', n:'Lona fosca 380gr', mq:'Impressão', src:'mub', custo:35 },
+  { id:'m_lonafuv', g:'Mubisys · Impressão', n:'Lona fosca + UV', mq:'Impressão', src:'mub', custo:45 },
+  { id:'m_lona5', g:'Mubisys · Impressão', n:'Lona 5m sem emenda', mq:'Impressão', src:'mub', custo:55 },
+  { id:'m_lonabl', g:'Mubisys · Impressão', n:'Lona backlight', mq:'Impressão', src:'mub', custo:45 },
+  { id:'m_lonabo', g:'Mubisys · Impressão', n:'Lona B.O.', mq:'Impressão', src:'mub', custo:70 },
+  { id:'m_lonasannet', g:'Mubisys · Impressão', n:'Lona Sannet', mq:'Impressão', src:'mub', custo:55 },
+  { id:'m_recorte', g:'Mubisys · Impressão', n:'Vinil recorte eletrônico', mq:'Recorte', src:'mub', custo:100 },
+  { id:'m_ps1', g:'Mubisys · Rígidos', n:'PS 1mm', mq:'—', src:'mub', custo:120 },
+  { id:'m_ps2', g:'Mubisys · Rígidos', n:'PS 2mm', mq:'—', src:'mub', custo:120 },
+  { id:'m_ps3', g:'Mubisys · Rígidos', n:'PS 3mm', mq:'—', src:'mub', custo:170 },
+  { id:'m_pvc10', g:'Mubisys · Rígidos', n:'PVC expandido 10mm', mq:'—', src:'mub', custo:180 },
+  { id:'m_acm4', g:'Mubisys · Rígidos', n:'ACM 4mm', mq:'—', src:'mub', custo:250 },
+  { id:'m_pf', g:'Mubisys · Impressão', n:'Papel fotográfico', mq:'—', src:'mub', custo:65 },
+  { id:'m_lambe', g:'Mubisys · Impressão', n:'Lambe-lambe', mq:'—', src:'mub', custo:22 },
+  { id:'m_poli3', g:'Mubisys · Rígidos', n:'Poliondas 3mm', mq:'—', src:'mub', custo:140 }
+];
+
+var CUSTOM_KEY = 'sscv_custom';
+function customLoad(){ try { var r = localStorage.getItem(CUSTOM_KEY); if (r){ var a = JSON.parse(r); if (a && a.length) return a; } } catch(e){} return []; }
+function customStore(a){ try { localStorage.setItem(CUSTOM_KEY, JSON.stringify(a)); } catch(e){} }
+function allMats(){ return MAT.concat(customLoad()); }
+function matById(id){ var a = allMats(); for (var i = 0; i < a.length; i++){ if (a[i].id === id) return a[i]; } return a[0]; }
+function precoBase(m){ if (m.src === 'pdvex'){ return baseCol === 'pdvex' ? m.pdvex : m.custo; } return m.custo; }
+
+/* ══════════════════ ESTADO ══════════════════ */
+var baseCol = 'custo';
+var instala = 'sulsign';
+var linhas = [];
+var avulsos = [];
+var fotoData = null;
+var lastCalc = null;
+
+/* ══════════════════ SELECT DE MATERIAL ══════════════════ */
+function fillMatSelect(sel, selId){
+  var a = allMats();
+  var groups = [];
+  var byG = {};
+  for (var i = 0; i < a.length; i++){
+    var g = a[i].g || 'Outros';
+    if (!byG[g]){ byG[g] = []; groups.push(g); }
+    byG[g].push(a[i]);
+  }
+  var html = '';
+  for (var gi = 0; gi < groups.length; gi++){
+    html += '<optgroup label="' + esc(groups[gi]) + '">';
+    var arr = byG[groups[gi]];
+    for (var j = 0; j < arr.length; j++){
+      var lbl = arr[j].n + (arr[j].mq && arr[j].mq !== '—' ? ' · ' + arr[j].mq : '');
+      html += '<option value="' + arr[j].id + '"' + (arr[j].id === selId ? ' selected' : '') + '>' + esc(lbl) + '</option>';
+    }
+    html += '</optgroup>';
+  }
+  sel.innerHTML = html;
+}
+
+/* ══════════════════ RENDER DAS LINHAS ══════════════════ */
+function renderLinhas(){
+  var box = $('linhasBox');
+  var html = '';
+  for (var i = 0; i < linhas.length; i++){
+    var li = linhas[i];
+    html += '<div class="lc" data-lc="' + i + '">';
+    html += '<div class="lc-top">';
+    html += '<div class="field" style="flex:2 1 180px"><label>Descrição</label><input type="text" data-idx="' + i + '" data-f="desc" value="' + esc(li.desc) + '" placeholder="Ex.: Placas externas"></div>';
+    html += '<div class="field" style="flex:2 1 220px"><label>Material</label><select data-mat="' + i + '"></select></div>';
+    html += '<div class="lc-acts"><button type="button" class="mini" data-dup="' + i + '" title="duplicar">⧉</button><button type="button" class="mini" data-del="' + i + '" title="remover">✕</button></div>';
+    html += '</div>';
+    html += '<div class="lc-dims">';
+    html += '<div class="field"><label>Altura (m)</label><input type="text" inputmode="decimal" data-idx="' + i + '" data-f="A" value="' + esc(li.A) + '"></div>';
+    html += '<div class="field"><label>Largura (m)</label><input type="text" inputmode="decimal" data-idx="' + i + '" data-f="L" value="' + esc(li.L) + '"></div>';
+    html += '<div class="field"><label>Qtd</label><input type="text" inputmode="decimal" data-idx="' + i + '" data-f="qtd" value="' + esc(li.qtd) + '"></div>';
+    html += '<div class="field"><label>R$/m² <span data-ovtag="' + i + '"></span></label><input type="text" inputmode="decimal" class="' + (li.ov !== '' ? 'price-ov' : '') + '" data-idx="' + i + '" data-f="ov" data-price="' + i + '" value="' + esc(li.ov) + '"></div>';
+    html += '</div>';
+    html += '<div class="lc-out"><span class="o">m²/un <b data-m2u="' + i + '">—</b></span><span class="o">m² total <b data-m2t="' + i + '">—</b></span><span class="o cst">custo <b data-cst="' + i + '">—</b></span></div>';
+    html += '</div>';
+  }
+  box.innerHTML = html;
+  for (var k = 0; k < linhas.length; k++){
+    var s = box.querySelector('select[data-mat="' + k + '"]');
+    if (s) fillMatSelect(s, linhas[k].mat);
+  }
+  refreshPricePlaceholders();
+}
+
+function refreshPricePlaceholders(){
+  var box = $('linhasBox');
+  for (var i = 0; i < linhas.length; i++){
+    var m = matById(linhas[i].mat);
+    var base = precoBase(m);
+    var inp = box.querySelector('input[data-price="' + i + '"]');
+    if (inp) inp.placeholder = base.toFixed(2);
+    var tag = box.querySelector('[data-ovtag="' + i + '"]');
+    if (tag) tag.innerHTML = (linhas[i].ov !== '') ? '<button type="button" class="mini" data-ovreset="' + i + '" title="voltar ao base" style="padding:0 5px">↺</button>' : '';
+  }
+}
+
+/* ══════════════════ AVULSOS ══════════════════ */
+function renderAvulsos(){
+  var box = $('avulsosBox');
+  if (!avulsos.length){ box.innerHTML = ''; return; }
+  var html = '<table><thead><tr><th>Item avulso (valor fixo)</th><th class="num">R$</th><th></th></tr></thead><tbody>';
+  for (var i = 0; i < avulsos.length; i++){
+    html += '<tr><td><input type="text" data-avf="' + i + '" data-avk="desc" value="' + esc(avulsos[i].desc) + '" style="width:100%;padding:6px;border:1px solid #ccc;border-radius:5px"></td>' +
+            '<td class="num"><input type="text" inputmode="decimal" data-avf="' + i + '" data-avk="val" value="' + esc(avulsos[i].val) + '" style="width:90px;padding:6px;border:1px solid #ccc;border-radius:5px;text-align:right"></td>' +
+            '<td><button type="button" class="mini" data-avdel="' + i + '">✕</button></td></tr>';
+  }
+  html += '</tbody></table>';
+  box.innerHTML = html;
+}
+
+/* ══════════════════ CÁLCULO ══════════════════ */
+function calc(){
+  var box = $('linhasBox');
+  var m2Total = 0, custoTotal = 0;
+  var det = [];
+  for (var i = 0; i < linhas.length; i++){
+    var li = linhas[i];
+    var m = matById(li.mat);
+    var base = precoBase(m);
+    var preco = (li.ov !== '') ? numv(li.ov) : base;
+    var A = numv(li.A), L = numv(li.L), q = numv(li.qtd);
+    var m2u = A * L;
+    var m2t = m2u * q;
+    var cst = m2t * preco;
+    m2Total += m2t; custoTotal += cst;
+    det.push({ desc: li.desc || m.n, mat: m, A: A, L: L, qtd: q, m2u: m2u, m2t: m2t, preco: preco, cst: cst });
+    var e1 = box.querySelector('[data-m2u="' + i + '"]'); if (e1) e1.textContent = m2u.toFixed(3);
+    var e2 = box.querySelector('[data-m2t="' + i + '"]'); if (e2) e2.textContent = m2t.toFixed(3) + ' m²';
+    var e3 = box.querySelector('[data-cst="' + i + '"]'); if (e3) e3.textContent = brl(cst);
+  }
+  var avDet = [];
+  for (var a = 0; a < avulsos.length; a++){
+    var v = numv(avulsos[a].val);
+    custoTotal += v;
+    avDet.push({ desc: avulsos[a].desc || 'Avulso', val: v });
+  }
+
+  /* ── BDI Sul Sign (B2B) — modelo aditivo, idêntico à calc de letra caixa ── */
+  var somaMk = (num('bdiAC') + num('bdiDF') + num('bdiRI') + num('bdiLucro') + num('bdiImp')) / 100;
+  var pvBase = custoTotal * (1 + somaMk);
+  var bv = pvBase * (1 - num('bdiImp') / 100) * num('bdiBV') / 100;
+  var pvFinal = (pvBase + bv) * (1 - num('bdiDesc') / 100);
+  var margem = pvFinal > 0 ? (1 - custoTotal / pvFinal) * 100 : 0;
+  var impostos = pvFinal * num('bdiImp') / 100;
+
+  /* ── camada PDVEX (B2C): custo dela = preço B2B ── */
+  var soma2 = (num('bdi2AC') + num('bdi2DF') + num('bdi2RI') + num('bdi2Lucro') + num('bdi2Imp')) / 100;
+  var pv2Base = pvFinal * (1 + soma2);
+  var bv2 = pv2Base * (1 - num('bdi2Imp') / 100) * num('bdi2BV') / 100;
+  var pvB2C = (pv2Base + bv2) * (1 - num('bdi2Desc') / 100);
+  var margemPdvR = pvB2C - pvFinal;
+  var margemPdvP = pvB2C > 0 ? (margemPdvR / pvB2C) * 100 : 0;
+
+  /* fator para ratear preço unitário nas propostas por linha */
+  var fatorB2B = custoTotal > 0 ? pvFinal / custoTotal : 0;
+  var fatorB2C = custoTotal > 0 ? pvB2C / custoTotal : 0;
+
+  $('kM2').textContent = m2Total.toFixed(2) + ' m²';
+  $('kCusto').textContent = brl(custoTotal);
+  $('kCustoM2').textContent = m2Total > 0 ? brl(custoTotal / m2Total) : '—';
+  $('kVenda').textContent = brl(pvFinal);
+  $('kVendaM2').textContent = m2Total > 0 ? brl(pvFinal / m2Total) : '—';
+  $('kB2C').textContent = brl(pvB2C);
+  $('kMargem').textContent = margem.toFixed(1) + '%';
+  $('kImp').textContent = brl(impostos);
+  $('kMgPdv').textContent = brl(margemPdvR) + ' (' + margemPdvP.toFixed(1) + '%)';
+
+  lastCalc = {
+    det: det, avDet: avDet, m2Total: m2Total, custo: custoTotal,
+    pv: pvFinal, pvB2C: pvB2C, margem: margem, impostos: impostos,
+    bdi: somaMk * 100, bdi2: soma2 * 100, margemPdvR: margemPdvR, margemPdvP: margemPdvP,
+    fatorB2B: fatorB2B, fatorB2C: fatorB2C
+  };
+}
+
+/* ══════════════════ DESCRITIVO ══════════════════ */
+function montarDescritivo(){
+  if (!lastCalc) calc();
+  var c = lastCalc;
+  var partes = [];
+  var mats = {};
+  for (var i = 0; i < c.det.length; i++){
+    var nm = c.det[i].mat.n;
+    mats[nm] = (mats[nm] || 0) + c.det[i].m2t;
+  }
+  var matList = [];
+  for (var k in mats){ if (mats.hasOwnProperty(k)) matList.push(k.toLowerCase() + ' (' + mats[k].toFixed(2) + ' m²)'); }
+  var t = 'Serviço de comunicação visual';
+  if ($('inLocalArte').value) t += ' — ' + $('inLocalArte').value.toLowerCase();
+  t += ', compreendendo ' + c.det.length + ' item(ns) totalizando ' + c.m2Total.toFixed(2) + ' m². ';
+  t += 'Materiais: ' + (matList.length ? matList.join('; ') : '—') + '. ';
+  t += 'Impressão/recorte, acabamento e conferência de cor conforme identidade visual do cliente. ';
+  if (instala === 'sulsign') t += 'Aplicação inclusa (equipe Sul Sign), com preparo e limpeza da superfície.';
+  else if (instala === 'pdvex') t += 'Aplicação por conta da PDVEX; fornecimento posto obra pela Sul Sign.';
+  else t += 'Fornecimento sem aplicação (retirada na Sul Sign).';
+  return t;
+}
+function gerarDescritivo(){ $('descTxt').value = montarDescritivo(); $('descBox').className = ''; }
+function copiarDescritivo(){
+  var ta = $('descTxt'); ta.select(); ta.setSelectionRange(0, 99999);
+  try { document.execCommand('copy'); } catch(e) {}
+  if (navigator.clipboard){ try { navigator.clipboard.writeText(ta.value); } catch(e) {} }
+}
+
+function instRespLabel(){ return instala === 'sulsign' ? 'inclusa (Sul Sign)' : (instala === 'pdvex' ? 'por conta da PDVEX' : 'sem aplicação'); }
+
+/* ══════════════════ CABEÇALHO COMUM DO DOC ══════════════════ */
+function docHeadFields(){
+  var h = '';
+  h += '<p><b>Nº:</b> ' + esc($('inNum').value || '—') + ' &nbsp;·&nbsp; <b>Cliente:</b> ' + esc($('inCliente').value || '—') + ' &nbsp;·&nbsp; <b>Contato:</b> ' + esc($('inContato').value || '—') + '</p>';
+  h += '<p><b>Evento/Projeto:</b> ' + esc($('inEvento').value || '—') + ' &nbsp;·&nbsp; <b>Cidade:</b> ' + esc($('inLocal').value || '—') + '</p>';
+  h += '<p><b>Setor:</b> ' + esc($('inSetor').value || '—') + ' &nbsp;·&nbsp; <b>Local:</b> ' + esc($('inLocalArte').value || '—') + ' &nbsp;·&nbsp; <b>Peça:</b> ' + esc($('inPeca').value || '—') + ' &nbsp;·&nbsp; <b>Código:</b> ' + esc($('inCodigo').value || '—') + '</p>';
+  h += '<p><b>Data:</b> ' + fmtDataBR($('inDataJob').value) + ' &nbsp;·&nbsp; <b>Prazo:</b> ' + fmtDataBR($('inPrazo').value) + ' &nbsp;·&nbsp; <b>Responsável:</b> ' + esc($('inResp').value || '—') + ' &nbsp;·&nbsp; <b>Aplicação:</b> ' + instRespLabel() + '</p>';
+  return h;
+}
+
+/* ══════════════════ RELATÓRIO DE CUSTO (interno) ══════════════════ */
+function gerarRelatorio(){
+  calc();
+  var c = lastCalc;
+  var h = '';
+  h += '<div class="r-tools"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button><button class="btn sec sm" data-fn="printnow">🖨 Imprimir</button><button class="btn sec sm" data-fn="fechareport">✕ Fechar</button></div>';
+  h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">RELATÓRIO DE CUSTO — INTERNO</div></div>';
+  h += '<div class="r-body">';
+  h += docHeadFields();
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:16px 0 8px">Memorial de custo</h3>';
+  h += '<table><thead><tr><th>Item</th><th>Material</th><th class="num">A×L</th><th class="num">Qtd</th><th class="num">m²</th><th class="num">R$/m²</th><th class="num">Custo</th></tr></thead><tbody>';
+  for (var i = 0; i < c.det.length; i++){
+    var d = c.det[i];
+    h += '<tr><td>' + esc(d.desc) + '</td><td>' + esc(d.mat.n) + '</td><td class="num">' + d.A.toFixed(2) + '×' + d.L.toFixed(2) + '</td><td class="num">' + d.qtd + '</td><td class="num">' + d.m2t.toFixed(3) + '</td><td class="num">' + brl(d.preco) + '</td><td class="num">' + brl(d.cst) + '</td></tr>';
+  }
+  for (var a = 0; a < c.avDet.length; a++){
+    h += '<tr><td>' + esc(c.avDet[a].desc) + '</td><td>avulso</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">—</td><td class="num">' + brl(c.avDet[a].val) + '</td></tr>';
+  }
+  h += '<tr class="r-tot"><td colspan="4">TOTAL</td><td class="num">' + c.m2Total.toFixed(2) + '</td><td></td><td class="num">' + brl(c.custo) + '</td></tr>';
+  h += '</tbody></table>';
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:22px 0 10px">Formação de preço (B2B)</h3>';
+  h += '<table><tbody>';
+  h += '<tr><td>Custo total</td><td class="num">' + brl(c.custo) + '</td></tr>';
+  h += '<tr><td>BDI Sul Sign aplicado</td><td class="num">' + c.bdi.toFixed(0) + '%</td></tr>';
+  h += '<tr><td>Impostos embutidos</td><td class="num">' + brl(c.impostos) + '</td></tr>';
+  h += '<tr><td>Margem Sul Sign</td><td class="num">' + c.margem.toFixed(1) + '%</td></tr>';
+  h += '<tr class="r-tot"><td>PREÇO B2B (Sul Sign → PDVEX)</td><td class="num">' + brl(c.pv) + '</td></tr>';
+  h += '</tbody></table>';
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #c9a227;padding-bottom:5px;margin:22px 0 10px">Camada PDVEX → cliente final (B2C)</h3>';
+  h += '<table><tbody>';
+  h += '<tr><td>Custo PDVEX (= preço B2B Sul Sign)</td><td class="num">' + brl(c.pv) + '</td></tr>';
+  h += '<tr><td>BDI PDVEX aplicado</td><td class="num">' + c.bdi2.toFixed(0) + '%</td></tr>';
+  h += '<tr><td>Margem PDVEX</td><td class="num">' + brl(c.margemPdvR) + ' (' + c.margemPdvP.toFixed(1) + '%)</td></tr>';
+  h += '<tr class="r-tot"><td>PREÇO B2C SUGERIDO</td><td class="num">' + brl(c.pvB2C) + '</td></tr>';
+  h += '</tbody></table>';
+  h += '<div class="r-foot">Relatório interno · Sul Sign Group · CNPJ 03.952.317/0001-16 · Base de custo: ' + (baseCol === 'pdvex' ? 'venda PDVEX mai/25' : 'custo abr/25') + '. Valores em reais.</div>';
+  h += '</div>';
+  var rep = $('report');
+  rep.innerHTML = h; rep.className = 'show'; if (rep.scrollIntoView) rep.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ══════════════════ PROPOSTA COMERCIAL ══════════════════ */
+function gerarProposta(){
+  calc();
+  var c = lastCalc;
+  var tipo = $('propTipo') ? $('propTipo').value : 'b2b';
+  var fator = (tipo === 'b2c') ? c.fatorB2C : c.fatorB2B;
+  var totalGeral = (tipo === 'b2c') ? c.pvB2C : c.pv;
+  var h = '';
+  h += '<div class="r-tools"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button><button class="btn sec sm" data-fn="printnow">🖨 Imprimir</button><button class="btn sec sm" data-fn="fechareport">✕ Fechar</button></div>';
+  h += '<div class="r-head"><h1>SUL SIGN GROUP</h1><div class="r-sub">PROPOSTA COMERCIAL</div></div>';
+  h += '<div class="r-body">';
+  h += docHeadFields();
+  if (fotoData) h += '<img src="' + fotoData + '" style="max-width:320px;max-height:220px;border:1px solid #ccc;border-radius:6px;margin:10px 0" alt="referência">';
+  var dtxt = esc($('descTxt').value || montarDescritivo());
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:16px 0 8px">Escopo</h3>';
+  h += '<div class="r-desc" contenteditable="true">' + dtxt + '</div>';
+  h += '<div class="r-desc-hint">✎ Texto editável — ajuste antes de imprimir</div>';
+  h += '<h3 style="font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #c9a227;padding-bottom:5px;margin:22px 0 10px">Investimento</h3>';
+  h += '<table><thead><tr><th>Descrição</th><th class="num">Qtd</th><th class="num">m²</th><th class="num">Valor</th></tr></thead><tbody>';
+  for (var i = 0; i < c.det.length; i++){
+    var d = c.det[i];
+    var val = d.cst * fator;
+    h += '<tr><td>' + esc(d.desc) + ' — ' + esc(d.mat.n) + ' (' + d.A.toFixed(2) + '×' + d.L.toFixed(2) + ' m)</td><td class="num">' + d.qtd + '</td><td class="num">' + d.m2t.toFixed(2) + '</td><td class="num">' + brl(val) + '</td></tr>';
+  }
+  for (var a = 0; a < c.avDet.length; a++){
+    h += '<tr><td>' + esc(c.avDet[a].desc) + '</td><td class="num">—</td><td class="num">—</td><td class="num">' + brl(c.avDet[a].val * fator) + '</td></tr>';
+  }
+  h += '<tr class="r-tot"><td colspan="3">TOTAL</td><td class="num">' + brl(totalGeral) + '</td></tr>';
+  h += '</tbody></table>';
+  if ($('inObs').value) h += '<p style="margin-top:10px"><b>Condições:</b> ' + esc($('inObs').value) + '</p>';
+  h += '<div class="r-foot">Proposta comercial · Sul Sign Group · CNPJ 03.952.317/0001-16 · Valores em reais. Validade e condições de pagamento a combinar.</div>';
+  h += '</div>';
+  h += '<div class="r-tools" style="background:transparent;padding:8px 0"><button class="btn sm" data-fn="docmode">📄 Modo documento</button><button class="btn sm" data-fn="baixarhtml">⬇ Baixar HTML</button></div>';
+  var rep = $('report');
+  rep.innerHTML = h; rep.className = 'show'; if (rep.scrollIntoView) rep.scrollIntoView({ behavior: 'smooth' });
+}
+
+/* ══════════════════ DOC / IMPRESSÃO / DOWNLOAD ══════════════════ */
+function montarDocReport(){
+  var rep = $('report');
+  var clone = rep.cloneNode(true);
+  var tools = clone.querySelectorAll('.r-tools, .r-desc-hint');
+  for (var i = 0; i < tools.length; i++) tools[i].parentNode.removeChild(tools[i]);
+  var srcDesc = rep.querySelector('.r-desc');
+  var dstDesc = clone.querySelector('.r-desc');
+  if (srcDesc && dstDesc){ dstDesc.innerHTML = srcDesc.innerHTML; dstDesc.removeAttribute('contenteditable'); }
+  clone.removeAttribute('id'); clone.className = '';
+  var css =
+    'body{font-family:-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:#fff;color:#000;margin:0;font-size:13px}' +
+    '.rwrap{max-width:900px;margin:0 auto}' +
+    '.r-head{background:#000;color:#fff;padding:18px;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.r-head h1{font-size:18px;margin:0}.r-sub{font-size:10px;letter-spacing:2px;color:#ccc}' +
+    '.r-body{padding:18px}' +
+    'h3{font-size:12px;text-transform:uppercase;letter-spacing:1px;border-bottom:2px solid #000;padding-bottom:5px;margin:22px 0 10px}' +
+    'table{width:100%;border-collapse:collapse;margin-top:10px}' +
+    'th{border-bottom:1px solid #000;text-align:left;font-size:10px;padding:5px 4px}' +
+    'td{border-bottom:1px solid #ddd;padding:5px 4px}.num{text-align:right}' +
+    '.r-tot td{font-weight:700;border-top:2px solid #000}' +
+    '.r-desc{border:1px dashed #c9a227;border-radius:6px;padding:10px 12px;margin:8px 0;line-height:1.6}' +
+    '.r-foot{margin-top:20px;font-size:9.5px;color:#666;border-top:1px solid #ccc;padding-top:8px}';
+  return '<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Sul Sign — Documento</title><style>' + css + '</style></head><body><div class="rwrap">' + clone.innerHTML + '</div></body></html>';
+}
+function baixarHTML(){
+  var nome = 'CV_' + (($('inCliente').value || 'SulSign').replace(/[^\w\d-]+/g, '_').slice(0, 40)) + '.html';
+  var blob = new Blob([montarDocReport()], { type: 'text/html' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a'); a.href = url; a.download = nome; document.body.appendChild(a); a.click();
+  setTimeout(function(){ document.body.removeChild(a); URL.revokeObjectURL(url); }, 500);
+}
+
+/* ══════════════════ HEADER DINÂMICO ══════════════════ */
+function atualizarHdr(){
+  var peca = $('inPeca').value || $('inCliente').value || 'Novo job';
+  var pre = $('inNum').value ? $('inNum').value + ' · ' : '';
+  var dt = $('inDataJob').value ? fmtDataBR($('inDataJob').value) : new Date().toLocaleDateString('pt-BR');
+  $('hdrData').textContent = pre + peca + ' · ' + dt;
+}
+
+/* ══════════════════ BDI PRESETS ══════════════════ */
+var BDI_KEY = 'sscv_bdi_presets';
+var BDI_FIELDS = ['bdiAC','bdiDF','bdiRI','bdiLucro','bdiImp','bdiBV','bdiDesc','bdi2AC','bdi2DF','bdi2RI','bdi2Lucro','bdi2Imp','bdi2BV','bdi2Desc'];
+function bdiDefaults(){
+  return [
+    { nome:'Sul Sign — 57% (AC 8 documentado)', v:{bdiAC:8,bdiDF:2,bdiRI:3,bdiLucro:18,bdiImp:10,bdiBV:0,bdiDesc:0,bdi2AC:5,bdi2DF:0,bdi2RI:0,bdi2Lucro:25,bdi2Imp:10,bdi2BV:0,bdi2Desc:0} },
+    { nome:'Sul Sign — AC 15', v:{bdiAC:15,bdiDF:2,bdiRI:3,bdiLucro:18,bdiImp:10,bdiBV:0,bdiDesc:0,bdi2AC:5,bdi2DF:0,bdi2RI:0,bdi2Lucro:25,bdi2Imp:10,bdi2BV:0,bdi2Desc:0} }
+  ];
+}
+function bdiLoad(){ try { var r = localStorage.getItem(BDI_KEY); if (r){ var a = JSON.parse(r); if (a && a.length) return a; } } catch(e){} return bdiDefaults(); }
+function bdiStore(a){ try { localStorage.setItem(BDI_KEY, JSON.stringify(a)); } catch(e){} }
+function bdiRender(){
+  var sel = $('bdiPreset'); var arr = bdiLoad(); var cur = sel.value;
+  var html = '<option value="">— escolher preset —</option>';
+  for (var i = 0; i < arr.length; i++) html += '<option value="' + i + '">' + esc(arr[i].nome) + '</option>';
+  sel.innerHTML = html; if (cur) sel.value = cur;
+}
+function bdiApply(idx){ var arr = bdiLoad(); var p = arr[idx]; if (!p) return; for (var i = 0; i < BDI_FIELDS.length; i++){ if (p.v[BDI_FIELDS[i]] != null) $(BDI_FIELDS[i]).value = p.v[BDI_FIELDS[i]]; } calc(); }
+function bdiCapture(){ var v = {}; for (var i = 0; i < BDI_FIELDS.length; i++) v[BDI_FIELDS[i]] = num(BDI_FIELDS[i]); return v; }
+function bdiSave(){
+  var nome = prompt('Nome do preset de BDI:', ''); if (!nome) return;
+  var arr = bdiLoad(); var v = bdiCapture(); var found = -1;
+  for (var i = 0; i < arr.length; i++){ if (arr[i].nome === nome){ found = i; break; } }
+  if (found >= 0) arr[found].v = v; else arr.push({ nome: nome, v: v });
+  bdiStore(arr); bdiRender(); $('bdiPreset').value = (found >= 0 ? found : arr.length - 1);
+}
+function bdiDel(){
+  var sel = $('bdiPreset'); if (!sel.value){ alert('Escolha um preset para excluir.'); return; }
+  var arr = bdiLoad(); var idx = parseInt(sel.value, 10);
+  if (!confirm('Excluir o preset "' + arr[idx].nome + '"?')) return;
+  arr.splice(idx, 1); bdiStore(arr); bdiRender(); sel.value = '';
+}
+
+/* ══════════════════ CENTRO DE CUSTO ══════════════════ */
+var CC_KEY = 'sscv_centros';
+var HDR_FIELDS = ['inCliente','inNum','inContato','inEvento','inSetor','inLocalArte','inPeca','inCodigo','inDataJob','inPrazo','inLocal','inResp','inObs'];
+function ccLoad(){ try { var r = localStorage.getItem(CC_KEY); if (r){ var a = JSON.parse(r); if (a && a.length != null) return a; } } catch(e){} return []; }
+function ccStore(a){ try { localStorage.setItem(CC_KEY, JSON.stringify(a)); } catch(e){} }
+function ccRender(){
+  var sel = $('ccSelect'); var arr = ccLoad(); var cur = sel.value;
+  var html = '<option value="">— novo / não salvo —</option>';
+  for (var i = 0; i < arr.length; i++) html += '<option value="' + i + '">' + esc(arr[i].nome || ('Job ' + (i + 1))) + '</option>';
+  sel.innerHTML = html; if (cur) sel.value = cur;
+}
+function ccCapture(){
+  var hdr = {}; for (var i = 0; i < HDR_FIELDS.length; i++) hdr[HDR_FIELDS[i]] = $(HDR_FIELDS[i]).value;
+  return {
+    nome: ($('inNum').value ? $('inNum').value + ' · ' : '') + ($('inPeca').value || $('inCliente').value || 'Job'),
+    hdr: hdr, baseCol: baseCol, instala: instala,
+    linhas: JSON.parse(JSON.stringify(linhas)), avulsos: JSON.parse(JSON.stringify(avulsos)),
+    bdi: bdiCapture()
+  };
+}
+function ccApply(o){
+  for (var i = 0; i < HDR_FIELDS.length; i++){ if (o.hdr && o.hdr[HDR_FIELDS[i]] != null) $(HDR_FIELDS[i]).value = o.hdr[HDR_FIELDS[i]]; }
+  baseCol = o.baseCol || 'custo'; instala = o.instala || 'sulsign';
+  linhas = o.linhas ? JSON.parse(JSON.stringify(o.linhas)) : [];
+  avulsos = o.avulsos ? JSON.parse(JSON.stringify(o.avulsos)) : [];
+  if (o.bdi){ for (var k in o.bdi){ if (o.bdi.hasOwnProperty(k) && $(k)) $(k).value = o.bdi[k]; } }
+  syncToggles(); renderLinhas(); renderAvulsos(); calc(); atualizarHdr();
+}
+function ccSave(asNew){
+  var arr = ccLoad(); var sel = $('ccSelect'); var o = ccCapture();
+  if (!asNew && sel.value !== ''){ arr[parseInt(sel.value, 10)] = o; }
+  else { arr.push(o); sel.value = ''; }
+  ccStore(arr); ccRender();
+  if (asNew || sel.value === '') $('ccSelect').value = arr.length - 1;
+  $('ccStatus').textContent = 'Salvo ' + new Date().toLocaleTimeString('pt-BR');
+}
+function ccOpen(){ var sel = $('ccSelect'); if (sel.value === ''){ alert('Escolha um rascunho.'); return; } var arr = ccLoad(); ccApply(arr[parseInt(sel.value, 10)]); $('ccStatus').textContent = 'Reaberto.'; }
+function ccDup(){ var sel = $('ccSelect'); if (sel.value === ''){ alert('Escolha um rascunho para duplicar.'); return; } var arr = ccLoad(); var o = JSON.parse(JSON.stringify(arr[parseInt(sel.value, 10)])); o.nome = (o.nome || 'Job') + ' (cópia)'; arr.push(o); ccStore(arr); ccRender(); $('ccSelect').value = arr.length - 1; }
+function ccDel(){ var sel = $('ccSelect'); if (sel.value === ''){ alert('Escolha um rascunho para excluir.'); return; } var arr = ccLoad(); if (!confirm('Excluir "' + (arr[parseInt(sel.value, 10)].nome || 'Job') + '"?')) return; arr.splice(parseInt(sel.value, 10), 1); ccStore(arr); ccRender(); $('ccSelect').value = ''; }
+
+/* ══════════════════ TOGGLES ══════════════════ */
+function syncToggles(){
+  var gb = $('grBase').querySelectorAll('button');
+  for (var i = 0; i < gb.length; i++) gb[i].className = (gb[i].getAttribute('data-base') === baseCol) ? 'on' : '';
+  var gi = $('grInstala').querySelectorAll('button');
+  for (var j = 0; j < gi.length; j++) gi[j].className = (gi[j].getAttribute('data-instala') === instala) ? 'on' : '';
+}
+
+/* ══════════════════ CATÁLOGO (tabela ref.) ══════════════════ */
+function renderCatalogo(){
+  var tb = $('tbCatalogo').querySelector('tbody');
+  var html = '';
+  for (var i = 0; i < MAT.length; i++){
+    var m = MAT[i];
+    html += '<tr><td>' + esc(m.n) + '</td><td>' + esc(m.mq) + '</td><td class="num">' + brl(m.custo) + '</td><td class="num">' + (m.src === 'pdvex' ? brl(m.pdvex) : '—') + '</td></tr>';
+  }
+  tb.innerHTML = html;
+}
+
+/* ══════════════════ LINHAS: ADD / DUP / DEL ══════════════════ */
+function addLinha(mat, desc, A, L, qtd){
+  linhas.push({ desc: desc || '', mat: mat || 'jat_sol', A: A || '', L: L || '', qtd: qtd || '1', ov: '' });
+  renderLinhas(); calc();
+}
+function dupLinha(i){ if (!linhas[i]) return; linhas.splice(i + 1, 0, JSON.parse(JSON.stringify(linhas[i]))); renderLinhas(); calc(); }
+function delLinha(i){ linhas.splice(i, 1); renderLinhas(); calc(); }
+
+/* ══════════════════ EVENTOS ══════════════════ */
+document.body.addEventListener('input', function(e){
+  var t = e.target;
+  var a = t.getAttribute('data-action');
+  if (a === 'calc'){ calc(); return; }
+  if (a === 'hdr'){ atualizarHdr(); }
+  if (t.hasAttribute('data-idx')){
+    var idx = parseInt(t.getAttribute('data-idx'), 10);
+    var f = t.getAttribute('data-f');
+    if (linhas[idx]){
+      linhas[idx][f] = t.value;
+      if (f === 'ov'){ t.className = (t.value !== '' ? 'price-ov' : ''); var tag = $('linhasBox').querySelector('[data-ovtag="' + idx + '"]'); if (tag) tag.innerHTML = (t.value !== '') ? '<button type="button" class="mini" data-ovreset="' + idx + '" title="voltar ao base" style="padding:0 5px">↺</button>' : ''; }
+      calc();
+    }
+  }
+  if (t.hasAttribute('data-avf')){
+    var ai = parseInt(t.getAttribute('data-avf'), 10);
+    var ak = t.getAttribute('data-avk');
+    if (avulsos[ai]){ avulsos[ai][ak] = t.value; calc(); }
+  }
+});
+
+document.body.addEventListener('change', function(e){
+  var t = e.target;
+  if (t.hasAttribute('data-mat')){
+    var idx = parseInt(t.getAttribute('data-mat'), 10);
+    if (linhas[idx]){ linhas[idx].mat = t.value; linhas[idx].ov = ''; renderLinhas(); calc(); }
+  }
+});
+
+document.body.addEventListener('click', function(e){
+  var t = e.target;
+  var fn = t.getAttribute('data-fn');
+  if (fn === 'addlinha'){ addLinha(); return; }
+  if (fn === 'addavulso'){ avulsos.push({ desc: '', val: '' }); renderAvulsos(); calc(); return; }
+  if (fn === 'addmat'){
+    var nm = prompt('Nome do material personalizado:'); if (!nm) return;
+    var pm = parseFloat((prompt('Custo (R$/m²):') || '0').replace(',', '.'));
+    var arr = customLoad();
+    arr.push({ id: 'cust_' + Date.now(), g: 'Personalizados', n: nm, mq: '—', src: 'mub', custo: isNaN(pm) ? 0 : pm });
+    customStore(arr); renderLinhas(); calc(); return;
+  }
+  if (fn === 'relatorio'){ gerarRelatorio(); return; }
+  if (fn === 'proposta'){ gerarProposta(); return; }
+  if (fn === 'descritivo'){ gerarDescritivo(); return; }
+  if (fn === 'copiadesc'){ copiarDescritivo(); return; }
+  if (fn === 'docmode'){ document.body.classList.toggle('docmode'); window.scrollTo(0, 0); return; }
+  if (fn === 'baixarhtml'){ baixarHTML(); return; }
+  if (fn === 'printnow'){ window.print(); return; }
+  if (fn === 'fechareport'){ $('report').className = ''; document.body.classList.remove('docmode'); return; }
+  if (t.hasAttribute('data-dup')){ dupLinha(parseInt(t.getAttribute('data-dup'), 10)); return; }
+  if (t.hasAttribute('data-del')){ delLinha(parseInt(t.getAttribute('data-del'), 10)); return; }
+  if (t.hasAttribute('data-ovreset')){ var oi = parseInt(t.getAttribute('data-ovreset'), 10); if (linhas[oi]){ linhas[oi].ov = ''; renderLinhas(); calc(); } return; }
+  if (t.hasAttribute('data-avdel')){ avulsos.splice(parseInt(t.getAttribute('data-avdel'), 10), 1); renderAvulsos(); calc(); return; }
+  if (t.hasAttribute('data-base')){ baseCol = t.getAttribute('data-base'); syncToggles(); refreshPricePlaceholders(); calc(); return; }
+  if (t.hasAttribute('data-instala')){ instala = t.getAttribute('data-instala'); syncToggles(); return; }
+});
+
+$('bdiPreset').addEventListener('change', function(){ if (this.value !== '') bdiApply(parseInt(this.value, 10)); });
+$('btBdiSave').addEventListener('click', bdiSave);
+$('btBdiDel').addEventListener('click', bdiDel);
+$('btCcSave').addEventListener('click', function(){ ccSave(false); });
+$('btCcSaveNew').addEventListener('click', function(){ ccSave(true); });
+$('btCcOpen').addEventListener('click', ccOpen);
+$('btCcDup').addEventListener('click', ccDup);
+$('btCcDel').addEventListener('click', ccDel);
+$('inFoto').addEventListener('change', function(){
+  var f = this.files[0]; if (!f) return;
+  var rd = new FileReader();
+  rd.onload = function(ev){ fotoData = ev.target.result; $('fotoPrev').src = fotoData; $('fotoPrev').className = ''; };
+  rd.readAsDataURL(f);
+});
+
+/* ══════════════════ SEED WIPI + BOOT ══════════════════ */
+(function seed(){
+  $('inCliente').value = 'WIPI — comunicação visual';
+  $('inPeca').value = 'Adesivo jateado';
+  $('inLocalArte').value = 'Loja / sinalização';
+  $('inNum').value = 'SS-2026_07-##';
+  linhas = [
+    { desc:'Porta de entrada',        mat:'jat_sol', A:'1,15', L:'1,00', qtd:'1', ov:'' },
+    { desc:'Placas externas (grande)',mat:'jat_sol', A:'1,05', L:'1,50', qtd:'5', ov:'' },
+    { desc:'Placas externas (peq.)',  mat:'jat_sol', A:'1,05', L:'0,50', qtd:'1', ov:'' },
+    { desc:'Placas internas (faixa)', mat:'jat_sol', A:'0,15', L:'1,50', qtd:'8', ov:'' },
+    { desc:'Placas internas (grande)',mat:'jat_sol', A:'1,05', L:'1,50', qtd:'8', ov:'' },
+    { desc:'Portas internas (faixa)', mat:'jat_sol', A:'0,15', L:'0,90', qtd:'4', ov:'' },
+    { desc:'Portas internas (grande)',mat:'jat_sol', A:'1,15', L:'1,00', qtd:'4', ov:'' },
+    { desc:'Porta sala de descanso',  mat:'jat_sol', A:'2,40', L:'0,85', qtd:'1', ov:'' },
+    { desc:'Logo WIPI (recorte)',     mat:'jat_rec', A:'0,70', L:'1,10', qtd:'2', ov:'' }
+  ];
+})();
+
+if (!$('inDataJob').value) $('inDataJob').value = new Date().toISOString().slice(0, 10);
+syncToggles();
+renderLinhas();
+renderAvulsos();
+renderCatalogo();
+bdiRender();
+atualizarHdr();
+calc();
+</script>
+</body>
+</html>
