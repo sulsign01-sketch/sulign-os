@@ -391,6 +391,7 @@ body.fmt-pais .tarja-status .fx{font-size:40px;}
   <button data-action="carregar">📂 Carregar</button>
   <button data-action="baixar">⬇ HTML</button>
   <button data-action="gerar-lg">🚚 Gerar LG</button>
+  <button data-action="diagnostico" title="Comparar esta tela com o banco">🩺</button>
   <button data-action="tarja-modo" id="btn-tarja">🏷 Tarjas</button>
   <button data-action="lista-status">📋 Status</button>
   <button data-action="mudar-formato" id="btn-formato">▭ Paisagem</button>
@@ -1568,6 +1569,7 @@ document.addEventListener('click', function(ev){
   else if(ac==='lista-status'){ abrirListaStatus(); }
   else if(ac==='status-html'){ baixarArquivo(nomeArqStatus('html'), docStatusHTML(), 'text/html;charset=utf-8'); msg('Documento de status baixado.'); }
   else if(ac==='status-csv'){ baixarArquivo(nomeArqStatus('csv'), docStatusCSV(), 'text/csv;charset=utf-8'); msg('CSV de status baixado.'); }
+  else if(ac==='diagnostico'){ diagnostico(); }
   else if(ac==='salvar'){ salvar(); }
   else if(ac==='carregar'){ carregarLista(); }
   else if(ac==='baixar'){ baixarHTML(); }
@@ -1646,12 +1648,22 @@ document.getElementById('input-img').addEventListener('change', function(){
 
 /* ═══ SUPABASE ═══ */
 function req(metodo, caminho, corpo){
-  return fetch(SUPA_URL+'/rest/v1/'+caminho, {
+  /* GET recebe carimbo de tempo + no-store: sem isso o Safari (e o CDN)
+     devolvem a resposta anterior em cache — grava novo, lê velho. */
+  var url = SUPA_URL+'/rest/v1/'+caminho;
+  var hdr = {
+    'apikey': SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,
+    'Content-Type':'application/json', 'Prefer':'return=representation'
+  };
+  if(metodo==='GET'){
+    url += (url.indexOf('?')>-1 ? '&' : '?') + '_ts=' + Date.now();
+    hdr['Cache-Control'] = 'no-cache, no-store, max-age=0';
+    hdr['Pragma'] = 'no-cache';
+  }
+  return fetch(url, {
     method: metodo,
-    headers: {
-      'apikey': SUPA_KEY, 'Authorization':'Bearer '+SUPA_KEY,
-      'Content-Type':'application/json', 'Prefer':'return=representation'
-    },
+    cache: 'no-store',
+    headers: hdr,
     body: corpo ? JSON.stringify(corpo) : undefined
   }).then(function(r){
     if(!r.ok) return r.text().then(function(t){ throw new Error(r.status+': '+t); });
@@ -1659,38 +1671,144 @@ function req(metodo, caminho, corpo){
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════════
+   INTEGRIDADE DO SALVAMENTO
+   _fp é gravado DENTRO de dados: permite conferir o que entrou no banco
+   lendo só 'dados->_fp' (resposta de bytes, não o book inteiro).
+   _carregadoEm guarda o atualizado_em da versão que esta aba abriu —
+   serve de trava contra duas abas gravando por cima uma da outra.
+   ═══════════════════════════════════════════════════════════════════ */
+var _carregadoEm = null;
+
+function contaImgs(){
+  var n=0, i, c, campos=['arte','ref','desenho'];
+  for(i=0;i<S.itens.length;i++){
+    for(c=0;c<campos.length;c++) n += imgsDe(S.itens[i], campos[c]).length;
+  }
+  n += (S.renders||[]).length + (S.planta?1:0) + (S.logo?1:0) + (S.logoCab?1:0);
+  return n;
+}
+function impressaoDigital(){
+  return { n:S.itens.length, imgs:contaImgs(), rev:S.revisao||'', ts:new Date().toISOString() };
+}
+function mb(bytes){ return (bytes/1048576).toFixed(1)+' MB'; }
+function qdo(iso){
+  if(!iso) return '—';
+  var d = new Date(iso);
+  if(isNaN(d)) return String(iso).slice(0,16).replace('T',' ');
+  return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+' '+
+         ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+
 function salvar(){
   if(!S.numero || S.numero==='SS-2026_00-00'){
     var n = prompt('Número do documento (ex.: SS-2026_06-19):', S.numero);
     if(!n) return; S.numero = n; render();
   }
-  msg('Salvando…');
-  req('GET','books_artes?numero=eq.'+encodeURIComponent(S.numero)+'&select=id')
+  S._fp = impressaoDigital();
+  var corpo = { numero:S.numero, titulo:S.titulo, tipo:S.tipo, dados:S, atualizado_em:new Date().toISOString() };
+  var bytes = JSON.stringify(corpo).length;
+  var fpEnv = S._fp;
+
+  if(bytes > 40*1048576){
+    if(!confirm('Este book tem '+mb(bytes)+' — acima do limite seguro da API.\n'+
+                'A gravação pode ser recusada pelo servidor. Salvar mesmo assim?')) { msg(''); return; }
+  }
+  msg('Salvando '+fpEnv.n+' peças ('+mb(bytes)+')…');
+
+  req('GET','books_artes?numero=eq.'+encodeURIComponent(S.numero)+'&select=id,atualizado_em,dados->_fp')
   .then(function(rows){
-    var corpo = { numero:S.numero, titulo:S.titulo, tipo:S.tipo, dados:S, atualizado_em:new Date().toISOString() };
     if(rows && rows.length){
+      var srv = rows[0].atualizado_em, srvFp = rows[0]._fp;
+      /* alguém (ou outra aba) gravou depois que esta aba carregou? */
+      if(_carregadoEm && srv && srv > _carregadoEm){
+        if(!confirm('ATENÇÃO — versão mais nova no banco.\n\n'+
+          'No banco: '+qdo(srv)+(srvFp?' · '+srvFp.n+' peças'+(srvFp.rev?' · '+srvFp.rev:''):'')+'\n'+
+          'Esta tela: '+fpEnv.n+' peças'+(fpEnv.rev?' · '+fpEnv.rev:'')+' (aberta de '+qdo(_carregadoEm)+')\n\n'+
+          'Continuar apaga a versão do banco. Prosseguir?')){ msg('Salvamento cancelado.'); return null; }
+      }
       return req('PATCH','books_artes?numero=eq.'+encodeURIComponent(S.numero), corpo);
     }
     return req('POST','books_artes', corpo);
   })
-  .then(function(){ msg('✔ Salvo: '+S.numero); })
+  .then(function(r){
+    if(r===null) return null;
+    msg('Conferindo no banco…');
+    /* lê de volta só a impressão digital — confirma o que realmente gravou */
+    return req('GET','books_artes?numero=eq.'+encodeURIComponent(S.numero)+'&select=atualizado_em,dados->_fp');
+  })
+  .then(function(rows){
+    if(rows===null) return;
+    if(!rows || !rows.length){ msg('⚠ Gravou mas não encontrei a linha ao reler. Confira antes de fechar.'); return; }
+    var fp = rows[0]._fp;
+    _carregadoEm = rows[0].atualizado_em;
+    if(!fp || fp.ts !== fpEnv.ts || fp.n !== fpEnv.n){
+      msg('⚠ NÃO CONFIRMADO — o banco devolveu '+(fp? fp.n+' peças de '+qdo(fp.ts) : 'conteúdo antigo')+
+          ', esperado '+fpEnv.n+'. NÃO feche a aba: baixe o ⬇ HTML agora.');
+      alert('O banco não confirmou a gravação.\n\nEsperado: '+fpEnv.n+' peças\n'+
+            'Devolvido: '+(fp? fp.n+' peças ('+qdo(fp.ts)+')' : 'sem impressão digital (versão antiga)')+
+            '\n\nBaixe o ⬇ HTML antes de fechar — ele é backup completo.');
+      return;
+    }
+    msg('✔ Salvo e conferido: '+S.numero+' · '+fp.n+' peças · '+fp.imgs+' imagens · '+mb(bytes));
+  })
   .catch(function(e){
-    if(String(e).indexOf('relation')>-1 || String(e).indexOf('404')>-1 || String(e).indexOf('42P01')>-1){
+    var t = String(e);
+    if(t.indexOf('relation')>-1 || t.indexOf('404')>-1 || t.indexOf('42P01')>-1){
       msg('⚠ Tabela books_artes não existe — rode o SQL do cabeçalho deste arquivo no Supabase.');
-    } else msg('⚠ Erro ao salvar: '+e.message);
+    } else if(t.indexOf('413')>-1 || t.indexOf('too large')>-1 || t.indexOf('Payload')>-1){
+      msg('⚠ Recusado por tamanho ('+mb(bytes)+'). Baixe o ⬇ HTML como backup e me avise.');
+    } else msg('⚠ Erro ao salvar: '+e.message+' — baixe o ⬇ HTML como backup.');
   });
+}
+
+/* ═══ DIAGNÓSTICO: o que está nesta tela × o que está no banco ═══ */
+function diagnostico(){
+  var fpMem = impressaoDigital();
+  var bytesMem = JSON.stringify({numero:S.numero,titulo:S.titulo,tipo:S.tipo,dados:S}).length;
+  msg('Consultando o banco…');
+  req('GET','books_artes?select=numero,titulo,atualizado_em,deletado_em,dados->_fp,dados->revisao&order=atualizado_em.desc&limit=50')
+  .then(function(rows){
+    msg('');
+    var h = '<button class="fechar" data-action="fechar-modal">✕</button><h3>🩺 Diagnóstico</h3>';
+    h += '<div style="background:var(--verde-claro);border-radius:6px;padding:10px;font-size:12px;margin-bottom:12px">'+
+         '<b>Nesta tela</b><br>'+esc(S.numero||'—')+' · '+esc(S.revisao||'')+'<br>'+
+         fpMem.n+' peças · '+fpMem.imgs+' imagens · '+mb(bytesMem)+'<br>'+
+         '<small style="color:#5A635E">Versão aberta: '+(_carregadoEm?qdo(_carregadoEm):'não veio do banco (semente local)')+'</small></div>';
+    h += '<div style="font-size:10px;letter-spacing:.6px;color:#8A938E;margin-bottom:5px">NO BANCO — 50 MAIS RECENTES</div>';
+    h += '<table class="st-tab"><tr><th>NÚMERO</th><th>PEÇAS</th><th>GRAVADO</th></tr>';
+    for(var i=0;i<rows.length;i++){
+      var r=rows[i], fp=r._fp, meu=(r.numero===S.numero);
+      h += '<tr'+(meu?' style="background:var(--verde-claro)"':'')+'>'+
+           '<td><b>'+esc(r.numero)+'</b>'+(r.revisao?' · '+esc(r.revisao):'')+
+           (r.deletado_em?' <span style="color:#C0182B">excluído</span>':'')+
+           '<br><small style="color:#8A938E">'+esc((r.titulo||'').substring(0,40))+'</small></td>'+
+           '<td>'+(fp? fp.n+'<br><small style="color:#8A938E">'+fp.imgs+' img</small>' : '<small style="color:#8A938E">antes<br>da trava</small>')+'</td>'+
+           '<td>'+qdo(r.atualizado_em)+'</td></tr>';
+    }
+    h += '</table>';
+    h += '<div style="font-size:10.5px;color:#8A938E;margin-top:10px;line-height:1.5">'+
+         'Se a linha em destaque mostrar menos peças do que esta tela, o banco está com a versão antiga — '+
+         'salve de novo por aqui. Se mostrar o mesmo número, o problema era leitura em cache e já está corrigido.</div>';
+    abrirModal(h);
+  })
+  .catch(function(e){ msg('⚠ '+e.message); });
 }
 
 function carregarLista(){
   msg('Buscando…');
-  req('GET','books_artes?deletado_em=is.null&select=numero,titulo,tipo,atualizado_em&order=atualizado_em.desc&limit=50')
+  req('GET','books_artes?deletado_em=is.null&select=numero,titulo,tipo,atualizado_em,dados->_fp,dados->revisao&order=atualizado_em.desc&limit=50')
   .then(function(rows){
     msg('');
     if(!rows || !rows.length){ abrirModal('<h3>Carregar book</h3><div style="font-size:12px;color:#8A938E">Nenhum book salvo ainda.</div>'); return; }
     var h='<button class="fechar" data-action="fechar-modal">✕</button><h3>Carregar book</h3>';
     for(var i=0;i<rows.length;i++){
-      h+='<div class="op" data-carrega="'+esc(rows[i].numero)+'"><b>'+esc(rows[i].numero)+'</b> — '+esc(rows[i].titulo||'')+
-         '<small>'+(TIPOS[rows[i].tipo]?TIPOS[rows[i].tipo].book:rows[i].tipo)+' · '+String(rows[i].atualizado_em||'').slice(0,10)+'</small></div>';
+      var fp=rows[i]._fp;
+      h+='<div class="op" data-carrega="'+esc(rows[i].numero)+'"><b>'+esc(rows[i].numero)+'</b>'+
+         (rows[i].revisao?' · '+esc(rows[i].revisao):'')+' — '+esc(rows[i].titulo||'')+
+         '<small>'+(TIPOS[rows[i].tipo]?TIPOS[rows[i].tipo].book:rows[i].tipo)+
+         (fp? ' · '+fp.n+' peças · '+fp.imgs+' imagens' : '')+
+         ' · '+qdo(rows[i].atualizado_em)+'</small></div>';
     }
     abrirModal(h);
   })
@@ -1702,8 +1820,15 @@ document.getElementById('modal-caixa').addEventListener('click', function(ev){
   if(op){
     var numero = op.getAttribute('data-carrega');
     fecharModal(); msg('Carregando '+numero+'…');
-    req('GET','books_artes?numero=eq.'+encodeURIComponent(numero)+'&select=dados')
-    .then(function(rows){ if(rows&&rows.length){ S=rows[0].dados; render(); msg('✔ Carregado'); } })
+    req('GET','books_artes?numero=eq.'+encodeURIComponent(numero)+
+        '&deletado_em=is.null&select=dados,atualizado_em&order=atualizado_em.desc&limit=1')
+    .then(function(rows){
+      if(!rows || !rows.length){ msg('⚠ Nada encontrado para '+numero+'.'); return; }
+      S = rows[0].dados;
+      _carregadoEm = rows[0].atualizado_em;
+      render();
+      msg('✔ Carregado: '+numero+' · '+S.itens.length+' peças · gravado em '+qdo(_carregadoEm));
+    })
     .catch(function(e){ msg('⚠ '+e.message); });
   }
   var opOrc = ev.target.closest('[data-importa-orc]');
