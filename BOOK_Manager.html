@@ -1656,7 +1656,9 @@ function req(metodo, caminho, corpo){
     'Content-Type':'application/json', 'Prefer':'return=representation'
   };
   if(metodo==='GET'){
-    url += (url.indexOf('?')>-1 ? '&' : '?') + '_ts=' + Date.now();
+    /* NÃO acrescentar parâmetro de cache-busting na URL: o PostgREST lê
+       qualquer chave desconhecida como filtro de coluna e responde PGRST100.
+       cache:'no-store' + estes cabeçalhos já furam o cache do Safari. */
     hdr['Cache-Control'] = 'no-cache, no-store, max-age=0';
     hdr['Pragma'] = 'no-cache';
   }
