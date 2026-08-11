@@ -20,6 +20,11 @@
   ];
   var MAX_BYTES=9*1024*1024; /* ~9MB por arquivo (base64 no banco, mesmo limite da ficha de OS) */
 
+  /* board de tarefas por job — listas padrão sugeridas na 1ª abertura (editável depois) */
+  var LISTAS_PADRAO=['Documentos','Pré-Produção','Impressão','Fabricação','Instalação','Evento / Desmontagem','Logística'];
+  var CORES_LABEL=[['','—'],['red','Vermelho'],['yellow','Amarelo'],['purple','Roxo'],['green','Verde'],['blue','Azul']];
+  var COR_HEX={red:'#eb5a46',yellow:'#f2d600',purple:'#c377e0',green:'#61bd4f',blue:'#0079bf'};
+
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function isTreino(x){ return (x||'').indexOf('TREINO')>=0; }
   function meEmail(){ try{ return (JSON.parse(localStorage.getItem('sulsign_session')||'{}').email)||''; }catch(e){ return ''; } }
@@ -55,14 +60,24 @@
       SS20.sb('eventos?select=*&deletado_em=is.null'),
       SS20.sb('orcamentos?select=numero,cliente,projeto,bdi,grupos&order=numero.desc'),
       SS20.sb('lancamentos?select=orcamento_numero,valor,tipo_lancamento&tipo_lancamento=eq.saida&deletado_em=is.null'),
-      SS20.sb('anexos?select=*&entidade=eq.evento&deletado_em=is.null&order=criado_em.asc')
+      SS20.sb('anexos?select=*&entidade=eq.evento&deletado_em=is.null&order=criado_em.asc'),
+      SS20.sb('evento_listas?select=*&deletado_em=is.null&order=ordem.asc'),
+      SS20.sb('evento_tarefas?select=*&deletado_em=is.null&order=ordem.asc'),
+      SS20.sb('evento_tarefa_itens?select=*&deletado_em=is.null&order=ordem.asc')
     ]).then(function(r){
       var data={
         evs:r[0].filter(function(e){ return !isTreino(e.nome_evento)&&!isTreino(e.job_numero); }),
-        orcs:r[1], lanc:r[2], anx:r[3]
+        orcs:r[1], lanc:r[2], anx:r[3], listas:r[4], tarefas:r[5], itens:r[6]
       };
       SS20.cache.eventos=data; return data;
     });
+  }
+
+  function progressoEvento(d,eventoId){
+    var ts=d.tarefas.filter(function(t){ return t.evento_id===eventoId; });
+    if(!ts.length) return null;
+    var feitas=ts.filter(function(t){ return t.concluido; }).length;
+    return {feitas:feitas, total:ts.length};
   }
 
   function custoDoJob(d,numero){
@@ -74,7 +89,7 @@
     fetchAll().then(function(d){ draw(c,d); }).catch(function(e){
       if(String(e.message).indexOf('404')>=0 || String(e.message).indexOf('PGRST')>=0 || String(e.message).indexOf('column')>=0){
         c.innerHTML='<div class="placeholder-view"><h2>Eventos</h2>'
-          +'<p>Faltam colunas novas nas tabelas <b>eventos</b> e/ou <b>anexos</b>.</p>'
+          +'<p>Faltam colunas/tabelas novas (<b>eventos</b>, <b>anexos</b>, <b>evento_listas</b>, <b>evento_tarefas</b>, <b>evento_tarefa_itens</b>).</p>'
           +'<p>Rode o <b>eventos_schema.sql</b> no SQL Editor do Supabase e recarregue.</p></div>';
         return;
       }
@@ -146,8 +161,11 @@
 
     if(ev.obs) h+='<div style="font-size:11px;color:var(--mut);margin-top:6px;white-space:pre-wrap">'+esc(ev.obs)+'</div>';
 
+    var prog=progressoEvento(d,ev.id);
+
     h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:9px">';
     if(!ev.confirmado) h+='<button type="button" class="ev-conf" data-id="'+ev.id+'" style="background:var(--ok-soft);border:1px solid var(--ok);color:var(--ok);font-size:10.5px;padding:3px 9px;border-radius:7px;cursor:pointer">✓ Confirmar</button>';
+    h+='<button type="button" class="ev-tarefas" data-id="'+ev.id+'" style="background:var(--accent-soft);border:1px solid var(--accent);color:var(--accent);font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:7px;cursor:pointer">📋 '+(prog?(prog.feitas+'/'+prog.total):'tarefas')+'</button>';
     h+='<button type="button" class="ev-anx-tg" data-id="'+ev.id+'" style="background:var(--paper);border:1px solid var(--line);font-size:10.5px;padding:3px 9px;border-radius:7px;cursor:pointer">📎 '+(anx.length||'')+' '+(st.aberto===ev.id?'▲':'anexos')+'</button>';
     h+='<button type="button" class="ev-ed" data-id="'+ev.id+'" style="background:var(--paper);border:1px solid var(--line);font-size:10.5px;padding:3px 9px;border-radius:7px;cursor:pointer">✎</button>';
     h+='<button type="button" class="ev-del" data-id="'+ev.id+'" style="background:none;border:1px solid var(--line);color:var(--danger);font-size:10.5px;padding:3px 9px;border-radius:7px;cursor:pointer">🗑</button>';
@@ -186,6 +204,7 @@
     function err(e){ alert('Erro: '+e.message); }
 
     q(c,'.ev-conf',function(el){ SS20.sbw('eventos?id=eq.'+el.getAttribute('data-id'),'PATCH',{confirmado:true,atualizado_em:new Date().toISOString()}).then(refresh).catch(err); });
+    q(c,'.ev-tarefas',function(el){ abrirTarefas(c,el.getAttribute('data-id')); });
     q(c,'.ev-ed',function(el){ var id=el.getAttribute('data-id'); var ev=null; d.evs.forEach(function(x){if(x.id===id)ev=x;}); form(c,d,ev); });
     q(c,'.ev-del',function(el){ if(!confirm('Excluir este evento?'))return; SS20.sbw('eventos?id=eq.'+el.getAttribute('data-id'),'PATCH',{deletado_em:new Date().toISOString()}).then(refresh).catch(err); });
     q(c,'.ev-anx-tg',function(el){ var id=el.getAttribute('data-id'); st.aberto=(st.aberto===id?null:id); draw(c,d); });
@@ -287,6 +306,182 @@
       p.then(function(){ f.innerHTML=''; return fetchAll(true); }).then(function(d2){ draw(c,d2); })
       .catch(function(e){ msg.textContent='Erro ao salvar: '+e.message; msg.style.color='var(--danger)'; });
     });
+  }
+
+  /* ═══════════════ BOARD DE TAREFAS POR JOB (modal, tipo Trello) ═══════════════ */
+
+  function abrirTarefas(c,eventoId){
+    fetchAll(true).then(function(d){
+      var ev=null; d.evs.forEach(function(x){ if(x.id===eventoId) ev=x; });
+      if(!ev){ alert('Evento não encontrado (pode ter sido excluído).'); return; }
+      var listas=d.listas.filter(function(l){ return l.evento_id===eventoId; });
+      if(!listas.length){
+        var proms=LISTAS_PADRAO.map(function(nome,i){ return SS20.sbw('evento_listas','POST',{evento_id:eventoId,nome:nome,ordem:i}); });
+        Promise.all(proms).then(function(){ abrirTarefas(c,eventoId); }).catch(function(e){ alert('Erro ao criar listas padrão: '+e.message); });
+        return;
+      }
+      listas.sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+      desenharModalTarefas(c,d,ev,listas);
+    }).catch(function(e){ alert('Erro ao abrir tarefas: '+e.message); });
+  }
+
+  function refreshModal(c,eventoId){
+    fetchAll(true).then(function(d2){
+      draw(c,d2);
+      var ev2=null; d2.evs.forEach(function(x){ if(x.id===eventoId) ev2=x; });
+      if(!ev2) return;
+      var listas2=d2.listas.filter(function(l){ return l.evento_id===eventoId; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+      if(listas2.length) desenharModalTarefas(c,d2,ev2,listas2);
+    });
+  }
+
+  function cardTarefa(d,t){
+    var itens=d.itens.filter(function(i){ return i.tarefa_id===t.id; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+    var feitos=itens.filter(function(i){ return i.feito; }).length;
+    var cor=COR_HEX[t.cor]||'';
+    var atrasada = t.prazo && !t.concluido && t.prazo<hojeStr();
+    var h='<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:7px;'+(t.concluido?'opacity:.55':'')+'">';
+    if(cor) h+='<div style="height:5px;border-radius:3px;background:'+cor+';margin-bottom:6px"></div>';
+    h+='<div style="font-size:12.5px;font-weight:600;'+(t.concluido?'text-decoration:line-through':'')+'">'+esc(t.titulo)+'</div>';
+    h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px;font-size:10.5px;color:var(--mut)">';
+    if(t.prazo) h+='<span style="'+(atrasada?'color:var(--danger);font-weight:700':'')+'">🕐 '+dstrFull(t.prazo)+'</span>';
+    if(itens.length) h+='<span>☑ '+feitos+'/'+itens.length+'</span>';
+    h+='</div>';
+    h+='<div style="display:flex;gap:5px;margin-top:7px">';
+    h+='<button type="button" class="tf-tg" data-id="'+t.id+'" style="background:'+(t.concluido?'var(--ok-soft)':'var(--paper)')+';border:1px solid var(--line);font-size:10px;padding:2px 7px;border-radius:6px;cursor:pointer">'+(t.concluido?'✓':'○')+'</button>';
+    h+='<button type="button" class="tf-ed" data-id="'+t.id+'" style="background:var(--paper);border:1px solid var(--line);font-size:10px;padding:2px 7px;border-radius:6px;cursor:pointer">'+(st.tarefaAberta===t.id?'▲':'abrir')+'</button>';
+    h+='<button type="button" class="tf-del" data-id="'+t.id+'" style="background:none;border:1px solid var(--line);color:var(--danger);font-size:10px;padding:2px 7px;border-radius:6px;cursor:pointer">🗑</button>';
+    h+='</div>';
+    if(st.tarefaAberta===t.id){
+      h+='<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">';
+      h+='<textarea class="tf-desc" data-id="'+t.id+'" rows="2" placeholder="Descrição" style="width:100%;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-family:inherit;margin-bottom:6px;box-sizing:border-box">'+esc(t.descricao||'')+'</textarea>';
+      h+='<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">';
+      h+='<input type="date" class="tf-prazo" data-id="'+t.id+'" value="'+(t.prazo||'')+'" style="font-size:11px;padding:5px 6px;border:1px solid var(--line);border-radius:6px">';
+      h+='<select class="tf-cor" data-id="'+t.id+'" style="font-size:11px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel)">';
+      CORES_LABEL.forEach(function(cl){ h+='<option value="'+cl[0]+'"'+(t.cor===cl[0]?' selected':'')+'>'+cl[1]+'</option>'; });
+      h+='</select>';
+      h+='<button type="button" class="tf-save" data-id="'+t.id+'" style="background:var(--accent);color:#fff;border:none;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer">salvar</button>';
+      h+='</div>';
+      itens.forEach(function(i){
+        h+='<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;margin-bottom:4px">'
+          +'<input type="checkbox" class="ck-tg" data-id="'+i.id+'" '+(i.feito?'checked':'')+'>'
+          +'<span style="flex:1;'+(i.feito?'text-decoration:line-through;color:var(--mut)':'')+'">'+esc(i.texto)+'</span>'
+          +'<button type="button" class="ck-del" data-id="'+i.id+'" style="background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer">✕</button></div>';
+      });
+      h+='<div style="display:flex;gap:5px;margin-top:5px">'
+        +'<input type="text" class="ck-in" data-id="'+t.id+'" placeholder="item do checklist" style="flex:1;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-family:inherit">'
+        +'<button type="button" class="ck-add" data-id="'+t.id+'" style="background:var(--paper);border:1px solid var(--line);font-size:11px;padding:5px 9px;border-radius:6px;cursor:pointer">+ item</button></div>';
+      h+='</div>';
+    }
+    h+='</div>';
+    return h;
+  }
+
+  function colunaLista(d,evento,lista){
+    var tarefas=d.tarefas.filter(function(t){ return t.lista_id===lista.id; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+    var h='<div style="flex:0 0 252px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px">';
+    h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+    h+='<div style="font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;flex:1">'+esc(lista.nome)+' <span style="color:var(--ink)">'+tarefas.length+'</span></div>';
+    h+='<button type="button" class="ls-del" data-id="'+lista.id+'" style="background:none;border:none;color:var(--mut);font-size:11px;cursor:pointer">🗑</button>';
+    h+='</div>';
+    tarefas.forEach(function(t){ h+=cardTarefa(d,t); });
+    h+='<div style="display:flex;gap:5px;margin-top:4px">'
+      +'<input type="text" class="tf-in" data-lista="'+lista.id+'" placeholder="+ tarefa" style="flex:1;font-size:11.5px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-family:inherit">'
+      +'<button type="button" class="tf-add" data-lista="'+lista.id+'" data-evento="'+evento.id+'" style="background:var(--accent);color:#fff;border:none;font-size:11px;padding:6px 10px;border-radius:6px;cursor:pointer">+</button></div>';
+    h+='</div>';
+    return h;
+  }
+
+  function desenharModalTarefas(c,d,evento,listas){
+    var old=document.getElementById('ev-tarefas-modal'); if(old && old.parentNode) old.parentNode.removeChild(old);
+    var ov=document.createElement('div');
+    ov.id='ev-tarefas-modal';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto';
+
+    var titulo=evento.nome_evento||'Evento';
+    var h='<div style="background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:1200px;width:100%;margin:auto;padding:18px;box-shadow:0 20px 60px -20px rgba(0,0,0,.6)">';
+    h+='<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">';
+    h+='<h3 style="font-family:var(--font-d);font-size:17px;flex:1">📋 '+esc(titulo)+'</h3>';
+    h+='<button type="button" id="tf-fechar" style="background:none;border:none;font-size:22px;color:var(--mut);cursor:pointer;line-height:1">×</button>';
+    h+='</div>';
+    h+='<div id="tf-board" style="display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px">';
+    listas.forEach(function(l){ h+=colunaLista(d,evento,l); });
+    h+='<div style="flex:0 0 220px">';
+    h+='<input type="text" id="ls-novanome" placeholder="nome da lista" style="width:100%;font-size:12px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-family:inherit;margin-bottom:6px;box-sizing:border-box">';
+    h+='<button type="button" id="ls-add" style="width:100%;background:var(--paper);border:1px solid var(--line);font-size:12px;padding:8px;border-radius:8px;cursor:pointer">+ lista</button>';
+    h+='</div>';
+    h+='</div></div>';
+    ov.innerHTML=h;
+    document.body.appendChild(ov);
+
+    bindModalTarefas(c,d,evento,ov);
+  }
+
+  function bindModalTarefas(c,d,evento,ov){
+    function fechar(){ if(ov.parentNode) ov.parentNode.removeChild(ov); st.tarefaAberta=null; }
+    function err(e){ alert('Erro: '+e.message); }
+    document.getElementById('tf-fechar').addEventListener('click',fechar);
+    ov.addEventListener('click',function(e){ if(e.target===ov) fechar(); });
+
+    document.getElementById('ls-add').addEventListener('click',function(){
+      var inp=document.getElementById('ls-novanome'); var nome=inp.value.trim(); if(!nome)return;
+      var maxOrd=-1; d.listas.forEach(function(l){ if(l.evento_id===evento.id && l.ordem>maxOrd) maxOrd=l.ordem; });
+      SS20.sbw('evento_listas','POST',{evento_id:evento.id,nome:nome,ordem:maxOrd+1}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+
+    q(ov,'.ls-del',function(el){
+      if(!confirm('Excluir esta lista e todas as tarefas dela?'))return;
+      var listaId=el.getAttribute('data-id');
+      var tarefasDaLista=d.tarefas.filter(function(t){ return t.lista_id===listaId; });
+      var proms=tarefasDaLista.map(function(t){ return SS20.sbw('evento_tarefas?id=eq.'+t.id,'PATCH',{deletado_em:new Date().toISOString()}); });
+      proms.push(SS20.sbw('evento_listas?id=eq.'+listaId,'PATCH',{deletado_em:new Date().toISOString()}));
+      Promise.all(proms).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+
+    q(ov,'.tf-add',function(el){
+      var listaId=el.getAttribute('data-lista'); var evId=el.getAttribute('data-evento');
+      var inp=ov.querySelector('.tf-in[data-lista="'+listaId+'"]'); var tit=inp.value.trim(); if(!tit)return;
+      var maxOrd=-1; d.tarefas.forEach(function(t){ if(t.lista_id===listaId && t.ordem>maxOrd) maxOrd=t.ordem; });
+      SS20.sbw('evento_tarefas','POST',{lista_id:listaId,evento_id:evId,titulo:tit,ordem:maxOrd+1,concluido:false}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+
+    q(ov,'.tf-tg',function(el){
+      var id=el.getAttribute('data-id'); var t=null; d.tarefas.forEach(function(x){ if(x.id===id) t=x; }); if(!t)return;
+      SS20.sbw('evento_tarefas?id=eq.'+id,'PATCH',{concluido:!t.concluido,atualizado_em:new Date().toISOString()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+    q(ov,'.tf-ed',function(el){
+      var id=el.getAttribute('data-id'); st.tarefaAberta=(st.tarefaAberta===id?null:id);
+      var listasAgora=d.listas.filter(function(l){ return l.evento_id===evento.id; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
+      desenharModalTarefas(c,d,evento,listasAgora);
+    });
+    q(ov,'.tf-del',function(el){
+      if(!confirm('Excluir esta tarefa?'))return;
+      SS20.sbw('evento_tarefas?id=eq.'+el.getAttribute('data-id'),'PATCH',{deletado_em:new Date().toISOString()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+    q(ov,'.tf-save',function(el){
+      var id=el.getAttribute('data-id');
+      var desc=ov.querySelector('.tf-desc[data-id="'+id+'"]').value.trim();
+      var prazo=ov.querySelector('.tf-prazo[data-id="'+id+'"]').value||null;
+      var cor=ov.querySelector('.tf-cor[data-id="'+id+'"]').value||null;
+      SS20.sbw('evento_tarefas?id=eq.'+id,'PATCH',{descricao:desc||null,prazo:prazo,cor:cor,atualizado_em:new Date().toISOString()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+    q(ov,'.ck-add',function(el){
+      var tid=el.getAttribute('data-id');
+      var inp=ov.querySelector('.ck-in[data-id="'+tid+'"]'); var txt=inp.value.trim(); if(!txt)return;
+      var maxOrd=-1; d.itens.forEach(function(i){ if(i.tarefa_id===tid && i.ordem>maxOrd) maxOrd=i.ordem; });
+      SS20.sbw('evento_tarefa_itens','POST',{tarefa_id:tid,texto:txt,ordem:maxOrd+1,feito:false}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+    q(ov,'.ck-del',function(el){
+      SS20.sbw('evento_tarefa_itens?id=eq.'+el.getAttribute('data-id'),'PATCH',{deletado_em:new Date().toISOString()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+
+    var cks=ov.querySelectorAll('.ck-tg');
+    for(var j=0;j<cks.length;j++){
+      cks[j].addEventListener('change',function(){
+        var id=this.getAttribute('data-id'); var checked=this.checked;
+        SS20.sbw('evento_tarefa_itens?id=eq.'+id,'PATCH',{feito:checked}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+      });
+    }
   }
 
   SS20.modules.eventos={render:render};
