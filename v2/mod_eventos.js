@@ -8,7 +8,7 @@
    Requer colunas novas em eventos e anexos — ver eventos_schema.sql.
    ═══════════════════════════════════════════════════════════════ */
 (function(){
-  var st={ aberto:null };
+  var st={ aberto:null, visao:'lista' };
 
   var FASES=[
     ['prospeccao','Prospecção','🔍'],
@@ -86,7 +86,7 @@
   }
 
   function render(c){
-    fetchAll().then(function(d){ draw(c,d); }).catch(function(e){
+    fetchAll(true).then(function(d){ draw(c,d); }).catch(function(e){
       if(String(e.message).indexOf('404')>=0 || String(e.message).indexOf('PGRST')>=0 || String(e.message).indexOf('column')>=0){
         c.innerHTML='<div class="placeholder-view"><h2>Eventos</h2>'
           +'<p>Faltam colunas/tabelas novas (<b>eventos</b>, <b>anexos</b>, <b>evento_listas</b>, <b>evento_tarefas</b>, <b>evento_tarefa_itens</b>).</p>'
@@ -97,12 +97,20 @@
     });
   }
 
+  function fasePill(fk){
+    var f=null; FASES.forEach(function(x){ if(x[0]===fk) f=x; });
+    if(!f) return '';
+    var cor = (fk==='montagem'||fk==='desmontagem') ? 'var(--warn)' : (fk==='evento' ? 'var(--accent)' : (fk==='concluido' ? 'var(--ok)' : 'var(--mut)'));
+    return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--paper);border:1px solid '+cor+';color:'+cor+'">'+f[2]+' '+f[1]+'</span>';
+  }
+
   function draw(c,d){
     var hoje=hojeStr();
     var cols={}; FASES.forEach(function(f){ cols[f[0]]=[]; });
     d.evs.forEach(function(ev){ var fk=fase(ev,hoje); (cols[fk]||cols.prospeccao).push(ev); });
     var chave=function(ev){ return ev.data_montagem||ev.data_evento_ini||'9999-99-99'; };
     FASES.forEach(function(f){ cols[f[0]].sort(function(a,b){ var ca=chave(a),cb=chave(b); return ca<cb?-1:(ca>cb?1:0); }); });
+    var todosOrdenados=d.evs.slice().sort(function(a,b){ var ca=chave(a),cb=chave(b); return ca<cb?-1:(ca>cb?1:0); });
 
     var nConf=d.evs.filter(function(e){return e.confirmado;}).length;
     var emCampo=cols.montagem.length+cols.evento.length+cols.desmontagem.length;
@@ -111,23 +119,38 @@
     h+='<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:4px">';
     h+='<h2 style="font-family:var(--font-d);font-size:19px">Eventos</h2>';
     h+='<span style="flex:1"></span>';
+    h+='<div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">';
+    h+='<button type="button" id="ev-visao-lista" style="border:none;padding:7px 12px;font-size:11.5px;font-weight:600;cursor:pointer;background:'+(st.visao==='lista'?'var(--accent);color:#fff':'var(--panel);color:var(--mut)')+'">📃 Lista</button>';
+    h+='<button type="button" id="ev-visao-colunas" style="border:none;padding:7px 12px;font-size:11.5px;font-weight:600;cursor:pointer;background:'+(st.visao==='colunas'?'var(--accent);color:#fff':'var(--panel);color:var(--mut)')+'">🗂 Colunas</button>';
+    h+='</div>';
     h+='<button type="button" id="ev-novo" style="background:var(--accent);color:#fff;border:none;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer">⊕ Novo evento</button>';
     h+='</div>';
     h+='<p style="color:var(--mut);font-size:12.5px;margin-bottom:14px">'+d.evs.length+' evento'+(d.evs.length===1?'':'s')+' · '+nConf+' confirmado'+(nConf===1?'':'s')+' · '+emCampo+' em campo agora</p>';
     h+='<div id="ev-form"></div>';
-    h+='<div id="ev-board" style="display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:10px">';
-    FASES.forEach(function(f){
-      var its=cols[f[0]];
-      h+='<div style="flex:0 0 272px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:120px">';
-      h+='<div style="font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;white-space:nowrap">'+f[2]+' '+f[1]+' <span style="color:var(--ink)">'+its.length+'</span></div>';
-      its.forEach(function(ev){ h+=cardEvento(d,ev,hoje); });
-      if(!its.length) h+='<div style="font-size:11.5px;color:var(--mut);padding:8px 2px">—</div>';
+
+    if(st.visao==='colunas'){
+      h+='<div id="ev-board" style="display:flex;gap:10px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:10px">';
+      FASES.forEach(function(f){
+        var its=cols[f[0]];
+        h+='<div style="flex:0 0 272px;background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:10px;min-height:120px">';
+        h+='<div style="font-size:11px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;white-space:nowrap">'+f[2]+' '+f[1]+' <span style="color:var(--ink)">'+its.length+'</span></div>';
+        its.forEach(function(ev){ h+=cardEvento(d,ev,hoje,false); });
+        if(!its.length) h+='<div style="font-size:11.5px;color:var(--mut);padding:8px 2px">—</div>';
+        h+='</div>';
+      });
       h+='</div>';
-    });
-    h+='</div></div>';
+    } else {
+      h+='<div id="ev-board" style="max-width:640px">';
+      todosOrdenados.forEach(function(ev){ h+=cardEvento(d,ev,hoje,true); });
+      if(!todosOrdenados.length) h+='<div style="font-size:11.5px;color:var(--mut);padding:8px 2px">—</div>';
+      h+='</div>';
+    }
+    h+='</div>';
     c.innerHTML=h;
 
     document.getElementById('ev-novo').addEventListener('click',function(){ form(c,d,null); });
+    document.getElementById('ev-visao-lista').addEventListener('click',function(){ st.visao='lista'; draw(c,d); });
+    document.getElementById('ev-visao-colunas').addEventListener('click',function(){ st.visao='colunas'; draw(c,d); });
     bind(c,d);
   }
 
@@ -137,14 +160,17 @@
     return '<div style="font-size:11.5px;'+(ativo?('font-weight:700;color:'+cor):'color:var(--mut)')+'">'+icon+' '+label+' '+per+(hora?' · '+esc(hora):'')+'</div>';
   }
 
-  function cardEvento(d,ev,hoje){
+  function cardEvento(d,ev,hoje,mostrarPill){
     var fk=fase(ev,hoje);
     var anx=d.anx.filter(function(a){ return a.entidade==='evento' && a.entidade_id===ev.id; });
     var orc=null; if(ev.job_numero){ d.orcs.forEach(function(o){ if(o.numero===ev.job_numero) orc=o; }); }
     var titulo=ev.nome_evento || (orc?(orc.cliente||orc.projeto||ev.job_numero):'(sem nome)');
 
     var h='<div style="background:var(--panel);border:1px solid var(--line);border-left:3px solid '+(ev.fase_manual?'var(--warn)':'var(--accent)')+';border-radius:var(--radius);padding:12px 13px;margin-bottom:9px">';
+    h+='<div style="display:flex;align-items:flex-start;gap:8px;justify-content:space-between">';
     h+='<div style="font-weight:800;font-family:var(--font-d);font-size:13.5px;margin-bottom:3px">'+esc(titulo)+'</div>';
+    if(mostrarPill) h+=fasePill(fk);
+    h+='</div>';
     if(ev.local_nome) h+='<div style="font-size:11px;color:var(--mut);margin-bottom:6px">📍 '+esc(ev.local_nome)+'</div>';
 
     h+=linhaFase('🔨','M',ev.data_montagem,ev.data_montagem_fim,ev.hora_montagem,'var(--warn)',fk==='montagem');
