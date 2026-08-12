@@ -499,7 +499,7 @@ SS20.go=function(view){
   }
   c.innerHTML='<div class="loading-view">Carregando módulo…</div>';
   var s=document.createElement('script');
-  s.src='mod_'+view+'.js';
+  s.src='mod_'+view+'.js?v='+Date.now();
   s.onload=function(){
     if(SS20.modules[view]){
       SS20.loaded[view]=true;
