@@ -21,7 +21,7 @@
   var MAX_BYTES=9*1024*1024; /* ~9MB por arquivo (base64 no banco, mesmo limite da ficha de OS) */
 
   /* board de tarefas por job — listas padrão sugeridas na 1ª abertura (editável depois) */
-  var LISTAS_PADRAO=['Documentos','Pré-Produção','Impressão','Fabricação','Instalação','Evento / Desmontagem','Logística'];
+  var LISTAS_PADRAO=['Documentos','Detalhamentos','Comunicação Visual'];
   var CORES_LABEL=[['','—'],['red','Vermelho'],['yellow','Amarelo'],['purple','Roxo'],['green','Verde'],['blue','Azul']];
   var COR_HEX={red:'#eb5a46',yellow:'#f2d600',purple:'#c377e0',green:'#61bd4f',blue:'#0079bf'};
 
@@ -60,7 +60,7 @@
       SS20.sb('eventos?select=*&deletado_em=is.null'),
       SS20.sb('orcamentos?select=numero,cliente,projeto,bdi,grupos&order=numero.desc'),
       SS20.sb('lancamentos?select=orcamento_numero,valor,tipo_lancamento&tipo_lancamento=eq.saida&deletado_em=is.null'),
-      SS20.sb('anexos?select=*&entidade=eq.evento&deletado_em=is.null&order=criado_em.asc'),
+      SS20.sb('anexos?select=*&entidade=in.(evento,evento_tarefa)&deletado_em=is.null&order=criado_em.asc'),
       SS20.sb('evento_listas?select=*&deletado_em=is.null&order=ordem.asc'),
       SS20.sb('evento_tarefas?select=*&deletado_em=is.null&order=ordem.asc'),
       SS20.sb('evento_tarefa_itens?select=*&deletado_em=is.null&order=ordem.asc')
@@ -139,7 +139,7 @@
 
   function cardEvento(d,ev,hoje){
     var fk=fase(ev,hoje);
-    var anx=d.anx.filter(function(a){ return a.entidade_id===ev.id; });
+    var anx=d.anx.filter(function(a){ return a.entidade==='evento' && a.entidade_id===ev.id; });
     var orc=null; if(ev.job_numero){ d.orcs.forEach(function(o){ if(o.numero===ev.job_numero) orc=o; }); }
     var titulo=ev.nome_evento || (orc?(orc.cliente||orc.projeto||ev.job_numero):'(sem nome)');
 
@@ -338,6 +338,7 @@
   function cardTarefa(d,t){
     var itens=d.itens.filter(function(i){ return i.tarefa_id===t.id; }).sort(function(a,b){ return (a.ordem||0)-(b.ordem||0); });
     var feitos=itens.filter(function(i){ return i.feito; }).length;
+    var anxT=d.anx.filter(function(a){ return a.entidade==='evento_tarefa' && a.entidade_id===t.id; });
     var cor=COR_HEX[t.cor]||'';
     var atrasada = t.prazo && !t.concluido && t.prazo<hojeStr();
     var h='<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:9px 10px;margin-bottom:7px;'+(t.concluido?'opacity:.55':'')+'">';
@@ -346,6 +347,7 @@
     h+='<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:5px;font-size:10.5px;color:var(--mut)">';
     if(t.prazo) h+='<span style="'+(atrasada?'color:var(--danger);font-weight:700':'')+'">🕐 '+dstrFull(t.prazo)+'</span>';
     if(itens.length) h+='<span>☑ '+feitos+'/'+itens.length+'</span>';
+    if(anxT.length) h+='<span>📎 '+anxT.length+'</span>';
     h+='</div>';
     h+='<div style="display:flex;gap:5px;margin-top:7px">';
     h+='<button type="button" class="tf-tg" data-id="'+t.id+'" style="background:'+(t.concluido?'var(--ok-soft)':'var(--paper)')+';border:1px solid var(--line);font-size:10px;padding:2px 7px;border-radius:6px;cursor:pointer">'+(t.concluido?'✓':'○')+'</button>';
@@ -355,22 +357,35 @@
     if(st.tarefaAberta===t.id){
       h+='<div style="margin-top:8px;border-top:1px solid var(--line);padding-top:8px">';
       h+='<textarea class="tf-desc" data-id="'+t.id+'" rows="2" placeholder="Descrição" style="width:100%;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-family:inherit;margin-bottom:6px;box-sizing:border-box">'+esc(t.descricao||'')+'</textarea>';
-      h+='<div style="display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap">';
+      h+='<div style="display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap">';
       h+='<input type="date" class="tf-prazo" data-id="'+t.id+'" value="'+(t.prazo||'')+'" style="font-size:11px;padding:5px 6px;border:1px solid var(--line);border-radius:6px">';
       h+='<select class="tf-cor" data-id="'+t.id+'" style="font-size:11px;padding:5px 6px;border:1px solid var(--line);border-radius:6px;background:var(--panel)">';
       CORES_LABEL.forEach(function(cl){ h+='<option value="'+cl[0]+'"'+(t.cor===cl[0]?' selected':'')+'>'+cl[1]+'</option>'; });
       h+='</select>';
       h+='<button type="button" class="tf-save" data-id="'+t.id+'" style="background:var(--accent);color:#fff;border:none;font-size:11px;padding:5px 10px;border-radius:6px;cursor:pointer">salvar</button>';
       h+='</div>';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:4px">Checklist</div>';
       itens.forEach(function(i){
         h+='<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;margin-bottom:4px">'
           +'<input type="checkbox" class="ck-tg" data-id="'+i.id+'" '+(i.feito?'checked':'')+'>'
           +'<span style="flex:1;'+(i.feito?'text-decoration:line-through;color:var(--mut)':'')+'">'+esc(i.texto)+'</span>'
           +'<button type="button" class="ck-del" data-id="'+i.id+'" style="background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer">✕</button></div>';
       });
-      h+='<div style="display:flex;gap:5px;margin-top:5px">'
+      h+='<div style="display:flex;gap:5px;margin-top:5px;margin-bottom:10px">'
         +'<input type="text" class="ck-in" data-id="'+t.id+'" placeholder="item do checklist" style="flex:1;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-family:inherit">'
         +'<button type="button" class="ck-add" data-id="'+t.id+'" style="background:var(--paper);border:1px solid var(--line);font-size:11px;padding:5px 9px;border-radius:6px;cursor:pointer">+ item</button></div>';
+      h+='<div style="font-size:10px;font-weight:700;color:var(--mut);text-transform:uppercase;margin-bottom:4px;border-top:1px solid var(--line);padding-top:8px">Anexos</div>';
+      anxT.forEach(function(a){
+        var href=a.formato==='upload'?dataUrl(a):a.dados;
+        h+='<div style="display:flex;align-items:center;gap:6px;font-size:11px;margin-bottom:5px">'
+          +'<a href="'+esc(href)+'" target="_blank" download="'+esc(a.nome_arquivo||'')+'" style="color:var(--blue);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(a.formato==='upload'?'📎':'🔗')+' '+esc(a.nome_arquivo)+'</a>'
+          +'<button type="button" class="tk-anx-del" data-id="'+a.id+'" style="background:none;border:none;color:var(--danger);font-size:11px;cursor:pointer">✕</button></div>';
+      });
+      h+='<label style="display:inline-block;font-size:10.5px;font-weight:600;color:var(--accent);cursor:pointer;padding:3px 0">+ arquivo (até 9MB)'
+        +'<input type="file" class="tk-upfile" data-id="'+t.id+'" style="display:none"></label>';
+      h+='<div style="display:flex;gap:5px;margin-top:5px">'
+        +'<input type="text" class="tk-linkin" data-id="'+t.id+'" placeholder="nome | link do Drive" style="flex:1;font-size:11px;padding:5px 7px;border:1px solid var(--line);border-radius:6px;font-family:inherit">'
+        +'<button type="button" class="tk-linkadd" data-id="'+t.id+'" style="background:var(--paper);border:1px solid var(--line);font-size:11px;padding:5px 9px;border-radius:6px;cursor:pointer">+ link</button></div>';
       h+='</div>';
     }
     h+='</div>';
@@ -474,6 +489,31 @@
     q(ov,'.ck-del',function(el){
       SS20.sbw('evento_tarefa_itens?id=eq.'+el.getAttribute('data-id'),'PATCH',{deletado_em:new Date().toISOString()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
     });
+
+    q(ov,'.tk-anx-del',function(el){
+      SS20.sbw('anexos?id=eq.'+el.getAttribute('data-id'),'PATCH',{deletado_em:new Date().toISOString()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+    q(ov,'.tk-linkadd',function(el){
+      var tid=el.getAttribute('data-id');
+      var inp=ov.querySelector('.tk-linkin[data-id="'+tid+'"]'); var txt=inp.value.trim(); if(!txt)return;
+      var parts=txt.split('|'); var nome=(parts[0]||'link').trim(); var url=(parts[1]||parts[0]||'').trim();
+      SS20.sbw('anexos','POST',{entidade:'evento_tarefa',entidade_id:tid,nome_arquivo:nome,formato:'link',dados:url,criado_por:meEmail()}).then(function(){ refreshModal(c,evento.id); }).catch(err);
+    });
+
+    var upsT=ov.querySelectorAll('.tk-upfile');
+    for(var k=0;k<upsT.length;k++){
+      upsT[k].addEventListener('change',function(){
+        var tid=this.getAttribute('data-id'); var file=this.files&&this.files[0]; if(!file)return;
+        if(file.size>MAX_BYTES){ alert('Arquivo muito grande ('+kb(file.size)+'). Limite 9MB.'); return; }
+        var rd=new FileReader();
+        rd.onload=function(){
+          var body={entidade:'evento_tarefa',entidade_id:tid,nome_arquivo:file.name,formato:'upload',mime:file.type||'application/octet-stream',tamanho:file.size,dados:String(rd.result),criado_por:meEmail()};
+          SS20.sbw('anexos','POST',body).then(function(){ refreshModal(c,evento.id); }).catch(err);
+        };
+        rd.onerror=function(){ alert('Não consegui ler o arquivo.'); };
+        rd.readAsDataURL(file);
+      });
+    }
 
     var cks=ov.querySelectorAll('.ck-tg');
     for(var j=0;j<cks.length;j++){
