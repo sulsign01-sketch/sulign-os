@@ -65,8 +65,13 @@
       SS20.sb('evento_tarefas?select=*&deletado_em=is.null&order=ordem.asc'),
       SS20.sb('evento_tarefa_itens?select=*&deletado_em=is.null&order=ordem.asc')
     ]).then(function(r){
+      /* eventos.id costuma ser numérico no banco; todo data-id no HTML e toda
+         comparação no resto do módulo trata id como string — sem normalizar
+         aqui, x.id===stringDoDataId nunca bate (bug do "evento não encontrado"). */
+      var evs=r[0].map(function(e){ e.id=String(e.id); return e; })
+        .filter(function(e){ return !isTreino(e.nome_evento)&&!isTreino(e.job_numero); });
       var data={
-        evs:r[0].filter(function(e){ return !isTreino(e.nome_evento)&&!isTreino(e.job_numero); }),
+        evs:evs,
         orcs:r[1], lanc:r[2], anx:r[3], listas:r[4], tarefas:r[5], itens:r[6]
       };
       SS20.cache.eventos=data; return data;
@@ -104,6 +109,10 @@
     return '<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:var(--paper);border:1px solid '+cor+';color:'+cor+'">'+f[2]+' '+f[1]+'</span>';
   }
 
+  var MESES=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  function mesChave(d0){ if(!d0) return '9999-99'; var p=String(d0).split('T')[0].split('-'); return p[0]+'-'+p[1]; }
+  function mesLabel(mk){ if(mk==='9999-99') return 'Sem data definida'; var p=mk.split('-'); return MESES[parseInt(p[1],10)-1]+' '+p[0]; }
+
   function draw(c,d){
     var hoje=hojeStr();
     var cols={}; FASES.forEach(function(f){ cols[f[0]]=[]; });
@@ -121,6 +130,7 @@
     h+='<span style="flex:1"></span>';
     h+='<div style="display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden">';
     h+='<button type="button" id="ev-visao-lista" style="border:none;padding:7px 12px;font-size:11.5px;font-weight:600;cursor:pointer;background:'+(st.visao==='lista'?'var(--accent);color:#fff':'var(--panel);color:var(--mut)')+'">📃 Lista</button>';
+    h+='<button type="button" id="ev-visao-agenda" style="border:none;padding:7px 12px;font-size:11.5px;font-weight:600;cursor:pointer;background:'+(st.visao==='agenda'?'var(--accent);color:#fff':'var(--panel);color:var(--mut)')+'">🗓 Agenda</button>';
     h+='<button type="button" id="ev-visao-colunas" style="border:none;padding:7px 12px;font-size:11.5px;font-weight:600;cursor:pointer;background:'+(st.visao==='colunas'?'var(--accent);color:#fff':'var(--panel);color:var(--mut)')+'">🗂 Colunas</button>';
     h+='</div>';
     h+='<button type="button" id="ev-novo" style="background:var(--accent);color:#fff;border:none;font-size:12.5px;font-weight:600;padding:8px 14px;border-radius:8px;cursor:pointer">⊕ Novo evento</button>';
@@ -139,6 +149,20 @@
         h+='</div>';
       });
       h+='</div>';
+    } else if(st.visao==='agenda'){
+      var porMes={}; var ordemMes=[];
+      todosOrdenados.forEach(function(ev){
+        var mk=mesChave(ev.data_montagem||ev.data_evento_ini||null);
+        if(!porMes[mk]){ porMes[mk]=[]; ordemMes.push(mk); }
+        porMes[mk].push(ev);
+      });
+      h+='<div id="ev-board" style="max-width:640px">';
+      ordemMes.forEach(function(mk){
+        h+='<div style="font-size:11.5px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.6px;margin:18px 0 8px;padding-bottom:6px;border-bottom:2px solid var(--accent)">'+mesLabel(mk)+'</div>';
+        porMes[mk].forEach(function(ev){ h+=cardEvento(d,ev,hoje,true); });
+      });
+      if(!todosOrdenados.length) h+='<div style="font-size:11.5px;color:var(--mut);padding:8px 2px">—</div>';
+      h+='</div>';
     } else {
       h+='<div id="ev-board" style="max-width:640px">';
       todosOrdenados.forEach(function(ev){ h+=cardEvento(d,ev,hoje,true); });
@@ -150,6 +174,7 @@
 
     document.getElementById('ev-novo').addEventListener('click',function(){ form(c,d,null); });
     document.getElementById('ev-visao-lista').addEventListener('click',function(){ st.visao='lista'; draw(c,d); });
+    document.getElementById('ev-visao-agenda').addEventListener('click',function(){ st.visao='agenda'; draw(c,d); });
     document.getElementById('ev-visao-colunas').addEventListener('click',function(){ st.visao='colunas'; draw(c,d); });
     bind(c,d);
   }
