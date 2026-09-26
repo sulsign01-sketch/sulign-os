@@ -306,7 +306,7 @@
   .bc-sync-btn{padding:4px 10px;font-size:10px;font-weight:600;background:var(--green);color:var(--white);border:none;border-radius:2px;cursor:pointer;margin-top:8px;}
   .bc-sync-btn:hover{background:var(--gl);}
 
-  .memo-only{}.prop-only{display:none;}.desc-only{display:none;}.bloc-only{display:none;}.base-only{display:none;}.margem-only{display:none;}
+  .memo-only{}.prop-only{display:none;}.desc-only{display:none;}.bloc-only{display:none;}.base-only{display:none;}.margem-only{display:none;}.manual-only{display:none;}
 body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
   body.prop .memo-only{display:none;}body.prop .prop-only{display:block;}
   body.desc .memo-only{display:none;}body.desc .desc-only{display:block;}
@@ -314,6 +314,32 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
   body.base .memo-only{display:none;}body.base .base-only{display:block;}
   body.pecas .memo-only{display:none;}body.pecas .pecas-only{display:block;}
   body.estr .memo-only{display:none;}body.estr .estr-only{display:block;}
+  body.manual .memo-only{display:none;}body.manual .manual-only{display:block;}
+
+  /* MANUAL DE INSTALAÇÃO (TRELIÇA) */
+  .trelica-card{border:1px solid var(--g200);border-radius:3px;margin-bottom:16px;overflow:hidden;page-break-inside:avoid;}
+  .trelica-card-hdr{background:var(--black);padding:10px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+  .trelica-card-nome{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--ga);}
+  .trelica-card-body{padding:14px 16px;}
+  .trelica-ctrl{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;border-bottom:1px solid var(--g200);padding-bottom:12px;}
+  .trelica-fl{display:flex;flex-direction:column;gap:3px;}
+  .trelica-fl label{font-size:9px;letter-spacing:1px;color:var(--g400);text-transform:uppercase;}
+  .trelica-fl input,.trelica-fl select{font-family:'DM Mono',monospace;font-size:13px;padding:6px 8px;border:1px solid var(--g200);border-radius:2px;width:90px;}
+  .trelica-resumo{display:flex;gap:18px;flex-wrap:wrap;font-size:10px;letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;color:var(--g400);}
+  .trelica-resumo b{display:block;font-size:14px;color:var(--black);text-transform:none;letter-spacing:0;font-family:'DM Mono',monospace;margin-top:2px;}
+  .trelica-romaneio{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}
+  .trelica-romaneio th{text-align:left;font-size:9px;letter-spacing:1px;color:var(--g400);border-bottom:1.5px solid var(--black);padding:5px 6px;text-transform:uppercase;}
+  .trelica-romaneio td{padding:5px 6px;border-bottom:1px solid var(--g200);}
+  .trelica-romaneio tfoot td{border-top:1.5px solid var(--black);font-weight:600;}
+  .trelica-sw{display:inline-block;width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.2);vertical-align:middle;margin-right:6px;}
+  .trelica-eixo{border:1px solid var(--g200);border-radius:3px;padding:9px;margin:8px 0;background:#fafafa;}
+  .trelica-eixo .peca-btn{border:1px solid rgba(0,0,0,.22);border-radius:3px;padding:6px 9px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;}
+  .trelica-aviso{padding:8px 10px;border-radius:2px;font-size:11px;margin-bottom:8px;background:#fdecea;border:1px solid #e8b0aa;color:var(--red);}
+  .trelica-map-wrap{text-align:center;margin-top:10px;}
+  @media print{
+    .manual-only .sync-btn,.manual-only .trelica-eixo{display:none!important;}
+    .trelica-card{border:1px solid #999;}
+  }
   .desc-nota{background:var(--g100);border-left:3px solid var(--ga);padding:9px 14px;margin-bottom:14px;font-size:11px;color:var(--g600);border-radius:2px;}
 
   /* PROPOSTA/BLOCADO */
@@ -795,6 +821,7 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
         <button class="mbtn" onclick="setModo(&#39;blocado&#39;,event)">Blocado</button>
         <button class="mbtn" onclick="setModo(&#39;estr&#39;,event)">✦ Estratificado</button>
         <button class="mbtn" onclick="setModo(&#39;margem&#39;,event)" style="background:#0d2b1a;color:#52b788;">📊 Margem</button>
+        <button class="mbtn" onclick="setModo(&#39;manual&#39;,event)">🪛 Manual Instalação</button>
       </div>
       <div id="memorial-extra-btns" style="display:flex;gap:4px;border-left:1px solid var(--g200);padding-left:8px;">
         <button class="tbtn" onclick="setModo(&#39;pecas&#39;,event)" style="font-size:10px;padding:5px 10px;">🧩 Peças</button>
@@ -1204,6 +1231,21 @@ body.margem .memo-only{display:none;}body.margem .margem-only{display:block;}
       <div class="rr"><span class="rl">Custo direto total</span><span class="rv" id="estr-r-custo">—</span></div>
       <div class="rr"><span class="rl">Imposto NF total</span><span class="rv" style="color:#ff8a80;" id="estr-r-imp">—</span></div>
       <div class="rr tot"><span class="rl">Total Geral</span><span class="rv" style="color:var(--ga);font-size:18px;" id="estr-r-total">—</span></div>
+    </div>
+  </div>
+
+  <div class="manual-only">
+    <div class="sec">
+      <div class="sec-title" style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+        <span>🪛 Manual de Instalação — Treliça</span>
+        <div style="display:flex;gap:8px;">
+          <button class="sync-btn" onclick="renderManual()">↺ Atualizar</button>
+          <button class="sync-btn" onclick="copiarRomaneioManual()">📋 Copiar romaneio</button>
+        </div>
+      </div>
+      <div id="manual-aviso" style="font-size:11px;color:var(--g600);margin-bottom:14px;line-height:1.6;"></div>
+      <div id="manual-container"></div>
+      <div id="manual-total"></div>
     </div>
   </div>
 
@@ -2563,6 +2605,7 @@ function coletarEstado(){
       setores:tbl.setorChks?Object.keys(tbl.setorChks).filter(function(k){return tbl.setorChks[k].checked;}):( tbl.setorEl?[tbl.setorEl.value].filter(Boolean):[]),
       setor:tbl.setorChks?Object.keys(tbl.setorChks).filter(function(k){return tbl.setorChks[k].checked;}).join(','):(tbl.setorEl?tbl.setorEl.value:''),
       opcional:tbl.opcional||false,
+      trelicaCfg:tbl.trelicaCfg||null,
       linhas:tbl.rows.map(function(row){
         return {
           desc:row.descEl.value,
@@ -2770,6 +2813,7 @@ async function carregarOrcamento(id){
     cont.innerHTML='';tables=[];tableCounter=0;
     if(orc.grupos)orc.grupos.forEach(function(g){
       var tbl=makeTable(g.nome,[],g.dim,g.pecaId||null,null);
+      tbl.trelicaCfg=g.trelicaCfg||null;
       // Restaurar setores (suporte a formato novo array e antigo string)
       var setoresArr=g.setores||(g.setor?g.setor.split(',').filter(Boolean):[]);
       if(tbl.setorChks){setoresArr.forEach(function(s){if(tbl.setorChks[s]){tbl.setorChks[s].checked=true;tbl.setorChks[s].closest('.setor-chk-lbl').classList.add('checked');}});}
@@ -3740,6 +3784,488 @@ function sincronizarEscopo(){
   });
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   MANUAL DE INSTALAÇÃO — TRELIÇA
+   Mesmo motor de decomposição + mapa SVG do trelica_mapa.html,
+   aplicado direto aos grupos do Memorial que contêm uma linha de
+   treliça (detecção por texto na descrição). Fica salvo com o
+   orçamento via tbl.trelicaCfg (ver coletarEstado / restaurar).
+   ═══════════════════════════════════════════════════════════════ */
+var PDVEXTrelica = (function(){
+  var CUBO = 30;
+  var PECAS = [
+    {t:30,tipo:'cubo', hex:'#1A1A1A',nome:'PRETO'},
+    {t:40, tipo:'barra',hex:'#E6194B',nome:'VERMELHO'},
+    {t:50, tipo:'barra',hex:'#F58231',nome:'LARANJA'},
+    {t:60, tipo:'barra',hex:'#FFD100',nome:'AMARELO'},
+    {t:70, tipo:'barra',hex:'#BFEF45',nome:'LIMAO'},
+    {t:80, tipo:'barra',hex:'#3CB44B',nome:'VERDE'},
+    {t:90, tipo:'barra',hex:'#469990',nome:'VERDE-AGUA'},
+    {t:100,tipo:'barra',hex:'#42D4F4',nome:'CIANO'},
+    {t:120,tipo:'barra',hex:'#4363D8',nome:'AZUL'},
+    {t:140,tipo:'barra',hex:'#000075',nome:'MARINHO'},
+    {t:150,tipo:'barra',hex:'#911EB4',nome:'ROXO'},
+    {t:160,tipo:'barra',hex:'#C020C0',nome:'VIOLETA'},
+    {t:170,tipo:'barra',hex:'#F032E6',nome:'MAGENTA'},
+    {t:180,tipo:'barra',hex:'#FF69B4',nome:'ROSA'},
+    {t:190,tipo:'barra',hex:'#9A6324',nome:'MARROM'},
+    {t:200,tipo:'barra',hex:'#808000',nome:'OLIVA'},
+    {t:230,tipo:'barra',hex:'#A9A9A9',nome:'CINZA'},
+    {t:240,tipo:'barra',hex:'#FF7F50',nome:'CORAL'},
+    {t:300,tipo:'barra',hex:'#800000',nome:'VINHO'}
+  ];
+
+  function porTamanho(t){
+    for(var i=0;i<PECAS.length;i++) if(PECAS[i].t===t) return PECAS[i];
+    return {t:t,tipo:'barra',hex:'#666',nome:'?'+t};
+  }
+  function barras(){ var r=[]; for(var i=0;i<PECAS.length;i++) if(PECAS[i].tipo==='barra') r.push(PECAS[i].t); return r; }
+
+  function fecharVao(vao){
+    if(vao===0) return [];
+    if(vao<0)   return null;
+    var B = barras(), INF = 1e9;
+    var dp = [0], esc = [-1];
+    for(var v=1; v<=vao; v++){
+      dp[v]=INF; esc[v]=-1;
+      for(var k=0;k<B.length;k++){
+        var c=B[k];
+        if(v-c>=0 && dp[v-c]+1<dp[v]){ dp[v]=dp[v-c]+1; esc[v]=c; }
+      }
+    }
+    if(dp[vao]>=INF) return null;
+    var lista=[], r=vao;
+    while(r>0){ lista.push(esc[r]); r-=esc[r]; }
+    lista.sort(function(a,b){return b-a;});
+    return lista;
+  }
+
+  function decomporVao(vao){
+    var l = fecharVao(vao);
+    if(l) return {ok:true, barras:l};
+    var motivo = vao<0
+      ? 'estrutura menor que os dois cubos (mín. 60cm por lado)'
+      : 'vão de '+vao+'cm não fecha com as peças do estoque';
+    return {ok:false, motivo:motivo, sugestoes:vaosProximos(vao)};
+  }
+
+  function vaosProximos(vao){
+    var achaveis=[], d;
+    for(d=1; d<=120; d++){ if(vao-d>=0 && fecharVao(vao-d)){ achaveis.push(vao-d); break; } }
+    for(d=1; d<=120; d++){ if(fecharVao(vao+d)){ achaveis.push(vao+d); break; } }
+    return achaveis;
+  }
+
+  function somaArr(a){ var s=0; for(var i=0;i<a.length;i++) s+=a[i]; return s; }
+
+  function decompor(W, H, nDiv, mH, mV){
+    nDiv = (nDiv===2||nDiv===3||nDiv===4) ? nDiv : 1;
+    var nRef = nDiv>1 ? nDiv-1 : 0;
+    var vaoH = W - 2*CUBO;
+    var vaoV = H - 2*CUBO;
+    var dH = decomporVao(vaoH);
+    var dV = decomporVao(vaoV);
+    var avisos=[];
+
+    var manH = Array.isArray(mH);
+    var manV = Array.isArray(mV);
+    var arestaH = manH ? mH.slice() : (dH.ok ? dH.barras : null);
+    var arestaV = manV ? mV.slice() : (dV.ok ? dV.barras : null);
+    var somaH = arestaH ? somaArr(arestaH) : 0;
+    var somaV = arestaV ? somaArr(arestaV) : 0;
+    var okH = manH ? (somaH===vaoH) : dH.ok;
+    var okV = manV ? (somaV===vaoV) : dV.ok;
+
+    if(manH && !okH){
+      var difH = vaoH - somaH;
+      avisos.push('Peças horizontais (manual): somam '+somaH+'cm, vão é '+vaoH+'cm — '+(difH>0?'faltam '+difH+'cm':'sobram '+(-difH)+'cm')+'.');
+    }
+    if(manV && !okV){
+      var difV = vaoV - somaV;
+      avisos.push('Peças verticais (manual): somam '+somaV+'cm, vão é '+vaoV+'cm — '+(difV>0?'faltam '+difV+'cm':'sobram '+(-difV)+'cm')+'.');
+    }
+    if(!manH && !dH.ok) avisos.push('Largura: '+dH.motivo+(dH.sugestoes&&dH.sugestoes.length?' — larguras ok próximas: '+dH.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):'')+' Você pode montar a composição manualmente abaixo.');
+    if(!manV && !dV.ok) avisos.push('Altura: '+dV.motivo+(dV.sugestoes&&dV.sugestoes.length?' — alturas ok próximas: '+dV.sugestoes.map(function(v){return (v+60)+'cm';}).join(' ou '):'')+' Você pode montar a composição manualmente abaixo.');
+
+    if(nRef>0 && !arestaV) avisos.push('Reforço: depende do vão vertical, que não fecha — ajuste a altura ou monte a vertical manualmente.');
+
+    var tally={};
+    tally[CUBO]=4;
+    function add(arr,mult){ for(var i=0;i<arr.length;i++){ tally[arr[i]]=(tally[arr[i]]||0)+mult; } }
+    if(arestaH) add(arestaH,2);
+    if(arestaV) add(arestaV,2);
+    if(arestaV && nRef>0) add(arestaV,nRef);
+
+    var pecas=[];
+    Object.keys(tally).map(Number).sort(function(a,b){return a-b;}).forEach(function(t){
+      var p=porTamanho(t);
+      pecas.push({tamanho:t, tipo:p.tipo, hex:p.hex, nome:p.nome, qtd:tally[t]});
+    });
+
+    return {
+      W:W, H:H, vaoH:vaoH, vaoV:vaoV,
+      arestaH: arestaH,
+      arestaV: arestaV,
+      okH:okH, okV:okV,
+      manH:manH, manV:manV, somaH:somaH, somaV:somaV,
+      autoH:(dH.ok?dH.barras:null), autoV:(dV.ok?dV.barras:null),
+      nDiv:nDiv, nRef:(arestaV?nRef:0),
+      pecas:pecas, avisos:avisos,
+      totalPecas: pecas.reduce(function(a,p){return a+p.qtd;},0)
+    };
+  }
+
+  function textoSobre(hex){
+    var h=hex.replace('#',''); if(h.length===3){h=h[0]+h[0]+h[1]+h[1]+h[2]+h[2];}
+    var r=parseInt(h.substr(0,2),16),g=parseInt(h.substr(2,2),16),b=parseInt(h.substr(4,2),16);
+    var lum=(0.299*r+0.587*g+0.114*b);
+    return lum>150?'#111':'#fff';
+  }
+
+  function mapaSVG(d){
+    var W=d.W, H=d.H;
+    var maxW=660, maxH=380;
+    var s=Math.min(maxW/W, maxH/H); if(s>3)s=3; if(s<0.35)s=0.35;
+    var mge=58, mgt=30, mgd=26, mgb=44;
+    var pw=W*s, ph=H*s, c=CUBO*s;
+    var x0=mge, y0=mgt;
+    var totalW=pw+mge+mgd, totalH=ph+mgt+mgb;
+    var svg='<svg width="100%" viewBox="0 0 '+totalW+' '+totalH+'" xmlns="http://www.w3.org/2000/svg" style="max-width:'+Math.min(totalW,660)+'px">';
+
+    svg+='<rect x="'+(x0+c)+'" y="'+(y0+c)+'" width="'+(pw-2*c)+'" height="'+(ph-2*c)+'" fill="#F5F8F6" stroke="#E0E5E2"/>';
+
+    function barra(x,y,w,h,tam,horizontal){
+      var p=porTamanho(tam), tc=textoSobre(p.hex);
+      var g='<g>';
+      g+='<rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" fill="'+p.hex+'" stroke="#222" stroke-width="0.8"/>';
+      g+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+w)+'" y2="'+(y+h)+'" stroke="'+tc+'" stroke-width="0.5" opacity="0.28"/>';
+      g+='<line x1="'+(x+w)+'" y1="'+y+'" x2="'+x+'" y2="'+(y+h)+'" stroke="'+tc+'" stroke-width="0.5" opacity="0.28"/>';
+      var cx=x+w/2, cy=y+h/2;
+      var fs=Math.max(8, Math.min(13, (horizontal?w:h)*0.32));
+      if(fs>7){
+        g+='<text x="'+cx+'" y="'+cy+'" font-family="Arial" font-size="'+fs+'" font-weight="bold" fill="'+tc+'" text-anchor="middle" dominant-baseline="central"'+(horizontal?'':' transform="rotate(-90 '+cx+' '+cy+')"')+'>'+tam+'</text>';
+      }
+      return g+'</g>';
+    }
+    function cubo(x,y){
+      var p=porTamanho(CUBO), tc=textoSobre(p.hex);
+      return '<g><rect x="'+x+'" y="'+y+'" width="'+c+'" height="'+c+'" fill="'+p.hex+'" stroke="#000" stroke-width="1"/>'+
+        (c>16?'<text x="'+(x+c/2)+'" y="'+(y+c/2)+'" font-family="Arial" font-size="'+Math.max(7,c*0.34)+'" fill="'+tc+'" text-anchor="middle" dominant-baseline="central">30</text>':'')+'</g>';
+    }
+
+    if(d.arestaH){
+      var xs=x0+c;
+      for(var i=0;i<d.arestaH.length;i++){ var w=d.arestaH[i]*s;
+        svg+=barra(xs,y0,w,c,d.arestaH[i],true);
+        svg+=barra(xs,y0+ph-c,w,c,d.arestaH[i],true);
+        xs+=w;
+      }
+      if(d.manH && d.somaH<d.vaoH){
+        var gw=(d.vaoH-d.somaH)*s;
+        svg+='<rect x="'+xs+'" y="'+y0+'" width="'+gw+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+        svg+='<rect x="'+xs+'" y="'+(y0+ph-c)+'" width="'+gw+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      }
+    } else {
+      svg+='<rect x="'+(x0+c)+'" y="'+y0+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      svg+='<rect x="'+(x0+c)+'" y="'+(y0+ph-c)+'" width="'+(pw-2*c)+'" height="'+c+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+    }
+    if(d.arestaV){
+      var ys=y0+c;
+      for(var j=0;j<d.arestaV.length;j++){ var hh=d.arestaV[j]*s;
+        svg+=barra(x0,ys,c,hh,d.arestaV[j],false);
+        svg+=barra(x0+pw-c,ys,c,hh,d.arestaV[j],false);
+        ys+=hh;
+      }
+      if(d.manV && d.somaV<d.vaoV){
+        var gv=(d.vaoV-d.somaV)*s;
+        svg+='<rect x="'+x0+'" y="'+ys+'" width="'+c+'" height="'+gv+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+        svg+='<rect x="'+(x0+pw-c)+'" y="'+ys+'" width="'+c+'" height="'+gv+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      }
+    } else {
+      svg+='<rect x="'+x0+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+      svg+='<rect x="'+(x0+pw-c)+'" y="'+(y0+c)+'" width="'+c+'" height="'+(ph-2*c)+'" fill="#FDECEA" stroke="#C0392B" stroke-dasharray="4 3"/>';
+    }
+
+    if(d.arestaV && d.nRef>0){
+      for(var rk=1; rk<d.nDiv; rk++){
+        var xc = x0 + c + (pw-2*c)*(rk/d.nDiv);
+        var xr = xc - c/2;
+        var ys2 = y0+c;
+        for(var vj=0; vj<d.arestaV.length; vj++){
+          var hh2 = d.arestaV[vj]*s;
+          svg+=barra(xr, ys2, c, hh2, d.arestaV[vj], false);
+          ys2+=hh2;
+        }
+      }
+    }
+
+    svg+=cubo(x0,y0)+cubo(x0+pw-c,y0)+cubo(x0,y0+ph-c)+cubo(x0+pw-c,y0+ph-c);
+
+    var cy=y0+ph+18;
+    svg+='<line x1="'+x0+'" y1="'+cy+'" x2="'+(x0+pw)+'" y2="'+cy+'" stroke="#3A4540"/>';
+    svg+='<text x="'+(x0+pw/2)+'" y="'+(cy+14)+'" font-family="Courier New" font-size="11" fill="#3A4540" text-anchor="middle">'+W+' cm</text>';
+    var cx2=x0-16;
+    svg+='<line x1="'+cx2+'" y1="'+y0+'" x2="'+cx2+'" y2="'+(y0+ph)+'" stroke="#3A4540"/>';
+    svg+='<text x="'+(cx2-6)+'" y="'+(y0+ph/2)+'" font-family="Courier New" font-size="11" fill="#3A4540" text-anchor="middle" transform="rotate(-90 '+(cx2-6)+' '+(y0+ph/2)+')">'+H+' cm</text>';
+
+    svg+='</svg>';
+    return svg;
+  }
+
+  return { CUBO:CUBO, PECAS:PECAS, decompor:decompor, mapaSVG:mapaSVG, porTamanho:porTamanho, textoSobre:textoSobre };
+})();
+
+function trelicaGrupos(){
+  return tables.filter(function(t){
+    return !t.opcional && t.rows.some(function(r){ return /treli[cç]a/i.test(r.descEl.value||''); });
+  });
+}
+
+function trelicaParseDim(t){
+  if(t.pecaId && (t.dimL||t.dimA)) return {L:t.dimL||0, A:t.dimA||0};
+  var raw=(t.dimEl&&t.dimEl.value)||'';
+  var m=raw.replace(',','.').match(/(\d+(?:\.\d+)?)\s*[×xX]\s*(\d+(?:\.\d+)?)/);
+  if(m) return {L:Math.round(parseFloat(m[1])), A:Math.round(parseFloat(m[2]))};
+  return {L:0,A:0};
+}
+
+function trelicaCfg(t){
+  if(!t.trelicaCfg){
+    var d=trelicaParseDim(t);
+    t.trelicaCfg={L:d.L?String(d.L):'',A:d.A?String(d.A):'',sng:'0',qtd:'1',ref:'0',mH:null,mV:null};
+  }
+  return t.trelicaCfg;
+}
+
+var _manualDecomps={};
+
+function mnum(v){ var n=parseFloat(String(v).replace(',','.')); return isNaN(n)?0:n; }
+function mesc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function manualEditorEixo(tid, d, eixo){
+  var horiz = (eixo==='H');
+  var lista = horiz ? d.arestaH : d.arestaV;
+  var vao   = horiz ? d.vaoH    : d.vaoV;
+  var manual= horiz ? d.manH    : d.manV;
+  var soma  = lista ? lista.reduce(function(a,b){return a+b;},0) : 0;
+  var dif   = vao - soma;
+  var h='<div class="trelica-eixo">';
+  h+='<div style="display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:7px">';
+  h+='<b style="font-size:10px;letter-spacing:1px;color:var(--g600);text-transform:uppercase;">'+(horiz?'Horizontal':'Vertical'+(d.nRef>0?' + Reforços':''))+'</b>';
+  h+='<span style="font-size:9px;padding:2px 7px;border-radius:9px;background:'+(manual?'#FFF3D6;color:#8A6A12':'#E8F0EB;color:var(--green)')+'">'+(manual?'MANUAL':'AUTO')+'</span>';
+  if(lista && lista.length){
+    h+= dif===0
+      ? '<span style="font-size:11px;color:var(--green);font-weight:bold">'+soma+' / '+vao+' cm ✓</span>'
+      : '<span style="font-size:11px;color:var(--red);font-weight:bold">'+soma+' / '+vao+' cm · '+(dif>0?'faltam '+dif:'sobram '+(-dif))+' cm</span>';
+  } else {
+    h+='<span style="font-size:11px;color:var(--red)">vão de '+vao+'cm sem composição — adicione peças</span>';
+  }
+  h+='</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">';
+  if(lista && lista.length){
+    for(var i=0;i<lista.length;i++){
+      var p=PDVEXTrelica.porTamanho(lista[i]);
+      var tc=PDVEXTrelica.textoSobre(p.hex);
+      h+='<span style="display:inline-flex;align-items:center;gap:6px;background:'+p.hex+';color:'+tc+';font-weight:bold;font-size:13px;padding:5px 5px 5px 9px;border-radius:5px;border:1px solid rgba(0,0,0,.25)">'
+        +lista[i]
+        +'<button type="button" data-action="mt-pc-rem" data-tbl="'+tid+'" data-eixo="'+eixo+'" data-idx="'+i+'" style="border:none;background:rgba(0,0,0,.28);color:'+tc+';border-radius:4px;width:24px;height:24px;line-height:1;cursor:pointer;font-size:13px;padding:0;">✕</button>'
+        +'</span>';
+    }
+  } else {
+    h+='<span style="font-size:11px;color:var(--g400);padding:4px 0">Nenhuma peça — clique abaixo para montar.</span>';
+  }
+  h+='</div>';
+  h+='<div style="margin-top:8px"><div style="font-size:9px;letter-spacing:.5px;color:var(--g400);margin-bottom:5px;text-transform:uppercase;">Clique para adicionar</div>';
+  h+='<div style="display:flex;flex-wrap:wrap;gap:5px">';
+  for(var k=0;k<PDVEXTrelica.PECAS.length;k++){
+    var pc=PDVEXTrelica.PECAS[k];
+    if(pc.tipo!=='barra') continue;
+    var ptc=PDVEXTrelica.textoSobre(pc.hex);
+    h+='<button type="button" class="peca-btn" data-action="mt-pc-add" data-tbl="'+tid+'" data-eixo="'+eixo+'" data-val="'+pc.t+'" style="background:'+pc.hex+';color:'+ptc+';">'+pc.t+'</button>';
+  }
+  h+='</div>';
+  if(manual) h+='<button type="button" data-action="mt-pc-auto" data-tbl="'+tid+'" data-eixo="'+eixo+'" style="margin-top:8px;border:1px solid var(--g200);background:var(--white);color:var(--g600);border-radius:3px;padding:6px 10px;cursor:pointer;font-family:inherit;font-size:11px;">↺ Voltar ao automático</button>';
+  h+='</div>';
+  if(!horiz && d.nRef>0) h+='<div style="font-size:9px;color:var(--g400);margin-top:6px">Os '+d.nRef+' reforço(s) interno(s) usam esta mesma composição.</div>';
+  h+='</div>';
+  return h;
+}
+
+function renderManualTrelica(t){
+  var tid=t.id, cfg=trelicaCfg(t);
+  var out=document.getElementById('manual-out-'+tid);
+  if(!out) return;
+  var W=Math.round(mnum(cfg.L)), H=Math.round(mnum(cfg.A)), sng=mnum(cfg.sng), qtd=Math.max(1,Math.round(mnum(cfg.qtd))||1);
+  if(W<=0||H<=0){
+    out.innerHTML='<div class="trelica-aviso" style="background:var(--g100);border-color:var(--g200);color:var(--g600);">Informe largura e altura da estrutura (a medida do grupo não pôde ser lida automaticamente do campo "'+mesc(t.dimEl?t.dimEl.value:'')+'").</div>';
+    _manualDecomps[tid]=null;
+    return;
+  }
+  var nDiv=parseInt(cfg.ref,10); if(!(nDiv===2||nDiv===3||nDiv===4)) nDiv=1;
+  var d=PDVEXTrelica.decompor(W,H,nDiv,cfg.mH,cfg.mV);
+  d.qtd=qtd;
+  _manualDecomps[tid]=d;
+  var artL=W+2*sng, artA=H+2*sng;
+  var html='';
+  d.avisos.forEach(function(a){ html+='<div class="trelica-aviso">⚠ '+a+'</div>'; });
+  html+='<div class="trelica-resumo">'+
+    '<div><span>Estrutura</span><b>'+W+' × '+H+' cm</b></div>'+
+    (sng>0?'<div><span>Arte (c/ sangria)</span><b>'+artL+' × '+artA+' cm</b></div>':'')+
+    '<div><span>Quantidade</span><b>×'+qtd+'</b></div>'+
+    '<div><span>Peças/unid.</span><b>'+d.totalPecas+'</b></div>'+
+    (d.nRef>0?'<div><span>Reforços</span><b>'+d.nRef+' × '+d.vaoV+'cm</b></div>':'')+
+  '</div>';
+  html+='<table class="trelica-romaneio"><thead><tr><th>Peça</th><th>Cor/Etiqueta</th><th style="text-align:center">Qtd</th><th style="text-align:right">Total linear</th></tr></thead><tbody>';
+  d.pecas.forEach(function(p){
+    html+='<tr><td><b>'+(p.tipo==='cubo'?'CUBO 30×30':p.tamanho+' cm')+'</b></td>'+
+      '<td><span class="trelica-sw" style="background:'+p.hex+'"></span>'+p.nome+'</td>'+
+      '<td style="text-align:center;font-weight:bold">'+p.qtd+'</td>'+
+      '<td style="text-align:right;color:var(--g600)">'+(p.tamanho*p.qtd/100).toFixed(2).replace('.',',')+' m</td></tr>';
+  });
+  html+='</tbody></table>';
+  html+=manualEditorEixo(tid, d, 'H');
+  html+=manualEditorEixo(tid, d, 'V');
+  html+='<div class="trelica-map-wrap">'+PDVEXTrelica.mapaSVG(d)+'</div>';
+  out.innerHTML=html;
+}
+
+function manualConsolidar(){
+  var tally={}, totTrel=0;
+  Object.keys(_manualDecomps).forEach(function(k){
+    var d=_manualDecomps[k]; if(!d) return;
+    totTrel+=d.qtd;
+    d.pecas.forEach(function(p){ tally[p.tamanho]=(tally[p.tamanho]||0)+p.qtd*d.qtd; });
+  });
+  var lista=[];
+  Object.keys(tally).map(Number).sort(function(a,b){return a-b;}).forEach(function(t){
+    var p=PDVEXTrelica.porTamanho(t);
+    lista.push({tamanho:t, tipo:p.tipo, hex:p.hex, nome:p.nome, qtd:tally[t]});
+  });
+  return {lista:lista, totTrel:totTrel};
+}
+
+function renderManualTotal(){
+  var out=document.getElementById('manual-total');
+  if(!out) return;
+  var c=manualConsolidar();
+  if(!c.lista.length){ out.innerHTML=''; return; }
+  var totPecas=0, totLin=0;
+  var html='<div class="sec-title" style="margin-top:8px;">Total do orçamento · '+c.totTrel+' treliça(s)</div>';
+  html+='<table class="trelica-romaneio"><thead><tr><th>Peça</th><th>Cor/Etiqueta</th><th style="text-align:center">Qtd total</th><th style="text-align:right">Total linear</th></tr></thead><tbody>';
+  c.lista.forEach(function(p){
+    totPecas+=p.qtd; totLin+=p.tamanho*p.qtd/100;
+    html+='<tr><td><b>'+(p.tipo==='cubo'?'CUBO 30×30':p.tamanho+' cm')+'</b></td>'+
+      '<td><span class="trelica-sw" style="background:'+p.hex+'"></span>'+p.nome+'</td>'+
+      '<td style="text-align:center;font-weight:bold">'+p.qtd+'</td>'+
+      '<td style="text-align:right;color:var(--g600)">'+(p.tamanho*p.qtd/100).toFixed(2).replace('.',',')+' m</td></tr>';
+  });
+  html+='</tbody><tfoot><tr><td colspan="2">TOTAL GERAL</td><td style="text-align:center">'+totPecas+'</td><td style="text-align:right">'+totLin.toFixed(2).replace('.',',')+' m</td></tr></tfoot></table>';
+  out.innerHTML=html;
+}
+
+function renderManual(){
+  var grupos=trelicaGrupos();
+  var cont=document.getElementById('manual-container');
+  var aviso=document.getElementById('manual-aviso');
+  if(!cont||!aviso) return;
+  _manualDecomps={};
+  if(!grupos.length){
+    cont.innerHTML='';
+    aviso.innerHTML='Nenhum grupo do Memorial tem uma linha de "Treliça" ainda. Adicione a peça de treliça (ex.: Locação Treliça PDVEX) em um grupo, com a medida L×A preenchida, para o manual aparecer aqui.';
+    var totEl=document.getElementById('manual-total');if(totEl)totEl.innerHTML='';
+    return;
+  }
+  aviso.innerHTML='Gerado a partir dos grupos do Memorial que têm uma linha de treliça. Ajuste largura, altura, sangria, reforço e composição das arestas se precisar — fica salvo junto com o orçamento.';
+  var html='';
+  grupos.forEach(function(t){
+    var cfg=trelicaCfg(t);
+    html+='<div class="trelica-card">';
+    html+='<div class="trelica-card-hdr"><span class="trelica-card-nome">'+mesc(t.nameEl.value)+'</span>';
+    html+='<span style="font-family:\'DM Mono\',monospace;font-size:11px;color:var(--white);">Grupo '+(t.numSpan?mesc(t.numSpan.textContent):'')+'</span></div>';
+    html+='<div class="trelica-card-body">';
+    html+='<div class="trelica-ctrl">';
+    html+='<div class="trelica-fl"><label>Largura (cm)</label><input type="text" inputmode="decimal" data-action="mt-L" data-tbl="'+t.id+'" value="'+mesc(cfg.L)+'"></div>';
+    html+='<div class="trelica-fl"><label>Altura (cm)</label><input type="text" inputmode="decimal" data-action="mt-A" data-tbl="'+t.id+'" value="'+mesc(cfg.A)+'"></div>';
+    html+='<div class="trelica-fl"><label>Sangria/lado</label><input type="text" inputmode="decimal" data-action="mt-sng" data-tbl="'+t.id+'" value="'+mesc(cfg.sng)+'" style="width:70px;"></div>';
+    html+='<div class="trelica-fl"><label>Quantidade</label><input type="text" inputmode="decimal" data-action="mt-qtd" data-tbl="'+t.id+'" value="'+mesc(cfg.qtd)+'" style="width:70px;"></div>';
+    html+='<div class="trelica-fl"><label>Reforço (eixo)</label><select data-action="mt-ref" data-tbl="'+t.id+'">'
+      +'<option value="0"'+(cfg.ref==='0'?' selected':'')+'>Sem reforço</option>'
+      +'<option value="2"'+(cfg.ref==='2'?' selected':'')+'>2× — 1 reforço</option>'
+      +'<option value="3"'+(cfg.ref==='3'?' selected':'')+'>3× — 2 reforços</option>'
+      +'<option value="4"'+(cfg.ref==='4'?' selected':'')+'>4× — 3 reforços</option>'
+      +'</select></div>';
+    html+='</div>';
+    html+='<div id="manual-out-'+t.id+'"></div>';
+    html+='</div></div>';
+  });
+  cont.innerHTML=html;
+  grupos.forEach(function(t){ renderManualTrelica(t); });
+  renderManualTotal();
+}
+
+function manualAchaTbl(tid){ for(var i=0;i<tables.length;i++) if(String(tables[i].id)===String(tid)) return tables[i]; return null; }
+function manualListaManual(t,eixo){
+  var key=eixo==='H'?'mH':'mV';
+  var cfg=trelicaCfg(t);
+  if(Array.isArray(cfg[key])) return cfg[key];
+  var d=_manualDecomps[t.id];
+  var base=d?(eixo==='H'?d.arestaH:d.arestaV):null;
+  cfg[key]=base?base.slice():[];
+  return cfg[key];
+}
+
+function copiarRomaneioManual(){
+  var c=manualConsolidar();
+  if(!c.lista.length){ alert('Nenhuma treliça no orçamento ainda.'); return; }
+  var numEl=document.querySelector('.doc-num-el');
+  var t='ROMANEIO CONSOLIDADO — '+(numEl?numEl.textContent:'')+'\n---\n';
+  var tot=0;
+  c.lista.forEach(function(p){ tot+=p.qtd; t+=(p.tipo==='cubo'?'CUBO 30':p.tamanho+'cm')+'  ['+p.nome+']  x'+p.qtd+'\n'; });
+  t+='TOTAL: '+tot+' peças';
+  navigator.clipboard.writeText(t).then(function(){ alert('Romaneio consolidado copiado.'); });
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+  var cont=document.getElementById('manual-container');
+  if(!cont) return;
+  cont.addEventListener('input', function(e){
+    var a=e.target.getAttribute('data-action'); if(!a) return;
+    var tid=e.target.getAttribute('data-tbl'); var t=manualAchaTbl(tid); if(!t) return;
+    var cfg=trelicaCfg(t);
+    if(a==='mt-L') cfg.L=e.target.value;
+    else if(a==='mt-A') cfg.A=e.target.value;
+    else if(a==='mt-sng') cfg.sng=e.target.value;
+    else if(a==='mt-qtd') cfg.qtd=e.target.value;
+    else return;
+    renderManualTrelica(t); renderManualTotal();
+  });
+  cont.addEventListener('change', function(e){
+    var a=e.target.getAttribute('data-action'); if(a!=='mt-ref') return;
+    var tid=e.target.getAttribute('data-tbl'); var t=manualAchaTbl(tid); if(!t) return;
+    trelicaCfg(t).ref=e.target.value;
+    renderManualTrelica(t); renderManualTotal();
+  });
+  cont.addEventListener('click', function(e){
+    var el=e.target.closest?e.target.closest('[data-action="mt-pc-rem"],[data-action="mt-pc-auto"],[data-action="mt-pc-add"]'):null;
+    if(!el) return;
+    var a=el.getAttribute('data-action');
+    var tid=el.getAttribute('data-tbl'); var t=manualAchaTbl(tid); if(!t) return;
+    var eixo=el.getAttribute('data-eixo');
+    var cfg=trelicaCfg(t);
+    var key=eixo==='H'?'mH':'mV';
+    if(a==='mt-pc-auto'){ cfg[key]=null; }
+    else if(a==='mt-pc-add'){
+      var val=parseInt(el.getAttribute('data-val'),10);
+      if(val) manualListaManual(t,eixo).push(val);
+    } else {
+      var lst=manualListaManual(t,eixo);
+      var idx=parseInt(el.getAttribute('data-idx'),10);
+      lst.splice(idx,1);
+    }
+    renderManualTrelica(t); renderManualTotal();
+  });
+});
+
 function setModo(m,e){
   document.querySelectorAll('.mbtn').forEach(function(b){b.classList.remove('active');b.classList.remove('alt-active');});
   e.target.classList.add((m==='descritivo'||m==='blocado')?'alt-active':(m==='base'?'alt-active':'active'));
@@ -3756,6 +4282,7 @@ function setModo(m,e){
   else if(m==='pecas'){document.body.classList.add('pecas');if(dt)dt.textContent='BASE DE PECAS';carregarPecas();}
   else if(m==='estr'){document.body.classList.add('estr');if(dt)dt.textContent='ORÇAMENTO ESTRATIFICADO';renderEstr();}
   else if(m==='margem'){document.body.classList.add('margem');if(dt)dt.textContent='ANÁLISE DE MARGEM';carregarAnaliseMargem();}
+  else if(m==='manual'){document.body.classList.add('manual');if(dt)dt.textContent='MANUAL DE INSTALAÇÃO — TRELIÇA';renderManual();}
   else{if(dt)dt.textContent='MEMORIAL DE CUSTO';}
   // Painel de faturamento e cronograma: só no memorial
   var fp=document.getElementById('fat-panel');
