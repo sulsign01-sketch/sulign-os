@@ -73,6 +73,14 @@ details>summary{cursor:pointer;font-weight:600;font-size:12px;padding:8px 0;colo
 .bar b{font-size:19px;color:#fff;font-family:'DM Mono',monospace;font-weight:500}
 .bar .btn{background:var(--green)}
 .bar .btn.g{background:#2a2a2a;color:#fff}
+.lay{border:1px dashed var(--ga);border-radius:3px;padding:10px;margin-top:10px;background:#fafdfb}
+.lay .pv{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
+.lay .pv img{max-width:100%;max-height:170px;border:1px solid var(--g200);background:#fff;object-fit:contain}
+.lay input[type=file]{display:none}
+.lay .meta{font-size:11px;color:var(--g600);line-height:1.6}
+.cd-lay{margin-top:6px;page-break-inside:avoid}
+.cd-lay div{font-size:11px;font-weight:600;margin:8px 0 4px}
+.cd-lay img{max-width:100%;max-height:300px;object-fit:contain;border:1px solid var(--g200)}
 #clienteDoc{display:none;padding:18px 16px 24px}
 .cd-t{font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--green);font-weight:600}
 .cd-n{font-size:20px;font-weight:600;margin:2px 0 12px}
@@ -169,7 +177,7 @@ var TRP=[
 function mkPeca(){
  var pos=[],i;
  for(i=0;i<POS.length;i++){pos.push({k:POS[i].k,on:false,qtd:POS[i].qtd,custo:POS[i].custo});}
- return {nome:'',obs:'',qtd:1,mat:'PETG',fil:'ref_petg',modo:'consumo',peso:0,tempo:0,L:0,A:0,P:0,pos:pos};
+ return {layout:null,nome:'',obs:'',qtd:1,mat:'PETG',fil:'ref_petg',modo:'consumo',peso:0,tempo:0,L:0,A:0,P:0,pos:pos};
 }
 function defaults(){
  return {
@@ -291,12 +299,83 @@ function stepJob(){
  return h;
 }
 
+function layoutHTML(i){
+ var p=S.pecas[i],L=p.layout,h='<div class="lay"><div class="lbl" style="margin:0">Layout da peça (SVG, PNG ou JPG)</div>';
+ if(L&&L.data){
+  h+='<div class="pv"><img src="'+L.data+'" alt="layout">'+
+   '<div class="meta"><b>'+esc(L.nome)+'</b>'+(L.w?'<br>Medida no arquivo: '+fmtn(L.w,0)+' × '+fmtn(L.h,0)+' mm'+(L.un?' <span style="color:#999">('+esc(L.un)+')</span>':''):'')+
+   (L.aviso?'<br><span class="alert">'+esc(L.aviso)+'</span>':'')+'</div></div>'+
+   '<div class="tg chips" style="margin:8px 0 0">'+
+   B('Mostrar no PDF do cliente',L.mostrar!==false,'data-a="layMostrar" data-i="'+i+'"')+
+   (L.w&&p.modo==='consumo'?B('Usar medida como Largura × Altura',false,'data-a="layDim" data-i="'+i+'"',fmtn(L.w,0)+' × '+fmtn(L.h,0)+' mm'):'')+
+   '</div><div class="row"><label class="btn g" style="margin:0;cursor:pointer;color:#111">Trocar arquivo<input type="file" accept=".svg,image/svg+xml,image/png,image/jpeg" data-layout="'+i+'"></label>'+
+   '<button class="btn r" data-a="layDel" data-i="'+i+'">Remover</button></div>';
+ }else{
+  h+='<div class="row"><label class="btn" style="margin:0;cursor:pointer">⬆ Subir layout<input type="file" accept=".svg,image/svg+xml,image/png,image/jpeg" data-layout="'+i+'"></label></div>'+
+   '<div class="note">Aparece na prévia e no PDF do cliente. Em SVG, a medida do arquivo é lida para você conferir.</div>';
+ }
+ return h+'<div class="alert" id="layerr_'+i+'"></div></div>';
+}
+function svgMedidas(txt){
+ var out={w:0,h:0,un:'',aviso:''};
+ try{
+  var d=new DOMParser().parseFromString(txt,'image/svg+xml'),s=d.documentElement;
+  if(!s||s.nodeName.toLowerCase()!=='svg'||d.getElementsByTagName('parsererror').length){return null;}
+  var f={mm:1,cm:10,in:25.4,pt:25.4/72,pc:25.4/6,px:25.4/96,'':25.4/96};
+  function lerDim(v){
+   if(!v)return null;
+   var m=String(v).trim().match(/^([0-9]*\.?[0-9]+)\s*(mm|cm|in|pt|pc|px)?$/i);
+   if(!m)return null;
+   return {n:parseFloat(m[1]),u:(m[2]||'').toLowerCase()};
+  }
+  var W=lerDim(s.getAttribute('width')),H=lerDim(s.getAttribute('height'));
+  if(W&&H){
+   out.w=W.n*f[W.u];out.h=H.n*f[H.u];out.un=W.u||'px';
+   if(!W.u){out.aviso='Arquivo sem unidade: assumi px (96 dpi). Confira a medida.';}
+  }else{
+   var vb=(s.getAttribute('viewBox')||'').trim().split(/[\s,]+/);
+   if(vb.length===4&&parseFloat(vb[2])>0){out.w=parseFloat(vb[2])*f.px;out.h=parseFloat(vb[3])*f.px;out.un='viewBox';out.aviso='Sem medida real no arquivo: estimei pelo viewBox. Confira.';}
+  }
+ }catch(e){return null;}
+ return out;
+}
+function lerLayout(i,file){
+ var err=document.getElementById('layerr_'+i);
+ function erro(m){if(err){err.textContent=m;}}
+ if(!file)return;
+ if(file.size>6*1024*1024){erro('Arquivo acima de 6 MB. Exporte o SVG simplificado ou reduza a imagem.');return;}
+ var ehSvg=/svg/i.test(file.type)||/\.svg$/i.test(file.name);
+ var fr=new FileReader();
+ fr.onerror=function(){erro('Não consegui ler o arquivo.');};
+ if(ehSvg){
+  fr.onload=function(){
+   var txt=String(fr.result),med=svgMedidas(txt);
+   if(!med){erro('Esse arquivo não parece um SVG válido.');return;}
+   var data='data:image/svg+xml;base64,'+btoa(unescape(encodeURIComponent(txt)));
+   S.pecas[i].layout={nome:file.name,data:data,w:med.w,h:med.h,un:med.un,aviso:med.aviso,mostrar:true,tam:file.size};
+   salvarLayout();render();
+  };
+  fr.readAsText(file);
+ }else{
+  fr.onload=function(){
+   S.pecas[i].layout={nome:file.name,data:String(fr.result),w:0,h:0,un:'',aviso:'',mostrar:true,tam:file.size};
+   salvarLayout();render();
+  };
+  fr.readAsDataURL(file);
+ }
+}
+function salvarLayout(){
+ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){
+  setTimeout(function(){var n=document.querySelectorAll('[id^=layerr_]'),k;for(k=0;k<n.length;k++){n[k].textContent='Layout grande: vale nesta sessão e no PDF, mas pode não ficar salvo no aparelho.';}},50);
+ }
+}
 function pecaHTML(i){
  var p=S.pecas[i],h,j,f;
  h='<div class="card peca"><h2>Peça '+(i+1)+'</h2><div class="grid">'+
   F('Descrição',T('pecas.'+i+'.nome',p.nome,'placeholder="Logo SEARA letra caixa"'))+
   F('Quantidade',I('pecas.'+i+'.qtd',p.qtd))+
   F('Observação',T('pecas.'+i+'.obs',p.obs))+'</div>';
+ h+=layoutHTML(i);
  h+='<div class="lbl">Como calcular esta peça</div><div class="tg">'+
   B('Por consumo (g e horas)',p.modo==='consumo','data-a="modo" data-i="'+i+'" data-v="consumo"')+
   B('Só descritiva (custo vem dos materiais comprados)',p.modo==='desc','data-a="modo" data-i="'+i+'" data-v="desc"')+'</div>';
@@ -424,7 +503,8 @@ function stepPreco(){
  return h;
 }
 
-function render(){
+function render(topo){
+ var y0=0;try{y0=window.pageYOffset||0;}catch(e){}
  var i,h='';
  for(i=0;i<STEPS.length;i++){h+='<button class="'+((i+1)===S.step?'on':'')+'" data-a="step" data-v="'+(i+1)+'">'+STEPS[i]+'</button>';}
  document.getElementById('steps').innerHTML=h;
@@ -434,7 +514,7 @@ function render(){
   (S.step>1?'<button class="btn g" data-a="step" data-v="'+(S.step-1)+'">‹ Voltar</button>':'')+
   (S.step<5?'<button class="btn" data-a="step" data-v="'+(S.step+1)+'">Avançar ›</button>':'')+'<button class="btn y" data-a="printCliente" title="PDF para o cliente">🖨 PDF</button></div>';
  recalc();
- try{window.scrollTo(0,0);}catch(e){}
+ try{window.scrollTo(0,topo?0:y0);}catch(e){}
 }
 function setT(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
 
@@ -492,7 +572,11 @@ function clienteHTML(r){
   var p=S.pecas[i];
   h+='<tr><td>'+(i+1)+'</td><td>'+esc(p.nome||'Peça')+'</td><td>'+esc(especPeca(p))+'</td><td class="n">'+fmtn(num(p.qtd),num(p.qtd)%1?2:0)+'</td></tr>';
  }
- h+='</table><div class="cd-s">Investimento</div><div class="cd-inv"><span>Valor total</span><b>'+fmt(ts.total)+'</b></div>';
+ h+='</table>';
+ var lays='';
+ for(i=0;i<S.pecas.length;i++){var Ly=S.pecas[i].layout;if(Ly&&Ly.data&&Ly.mostrar!==false){lays+='<div class="cd-lay"><div>'+esc(S.pecas[i].nome||'Peça '+(i+1))+'</div><img src="'+Ly.data+'" alt="layout"></div>';}}
+ if(lays){h+='<div class="cd-s">Layout</div>'+lays;}
+ h+='<div class="cd-s">Investimento</div><div class="cd-inv"><span>Valor total</span><b>'+fmt(ts.total)+'</b></div>';
  if(S.job.condicoes){h+='<div class="cd-s">Condições comerciais</div><div style="font-size:12px">'+esc(S.job.condicoes)+'</div>';}
  h+='<div class="cd-f">Sul Sign Group · CNPJ 03.952.317/0001-16 · sulsign01@gmail.com</div>';
  return h;
@@ -544,6 +628,14 @@ function setPath(path,v){
  for(i=0;i<parts.length-1;i++){o=o[parts[i]];if(o==null)return;}
  o[parts[parts.length-1]]=v;
 }
+document.addEventListener('change',function(e){
+ var fe=e.target;
+ if(fe&&fe.type==='file'&&fe.dataset&&fe.dataset.layout!=null){
+  var fl=fe.files&&fe.files[0];
+  lerLayout(num(fe.dataset.layout),fl);
+  try{fe.value='';}catch(x){}
+ }
+});
 document.addEventListener('input',function(e){
  var el=e.target;
  if(!el.dataset||!el.dataset.p)return;
@@ -592,6 +684,9 @@ document.addEventListener('click',function(e){
  else if(a==='add_transp'){x=TRP[num(v)];S.transp.push({desc:x.desc,qtd:1,un:x.un,custo:x.custo});}
  else if(a==='del_transp'){S.transp.splice(i,1);}
  else if(a==='addFil'){S.fils.push({id:uid(),mat:'PETG',marca:'Nova marca',cor:'Cor',rkg:90,fonte:'informado'});}
+ else if(a==='layMostrar'){var Lm=S.pecas[i].layout;if(Lm){Lm.mostrar=(Lm.mostrar===false);}}
+ else if(a==='layDel'){S.pecas[i].layout=null;}
+ else if(a==='layDim'){var Ld=S.pecas[i].layout;if(Ld&&Ld.w){S.pecas[i].L=Math.round(Ld.w);S.pecas[i].A=Math.round(Ld.h);}}
  else if(a==='delFil'){if(S.fils.length>1){S.fils.splice(i,1);}}
  else if(a==='tab'){S.sel=v;}
  else if(a==='tipo'){S.tabs[i].tipo=v;}
@@ -602,7 +697,7 @@ document.addEventListener('click',function(e){
  else if(a==='printCliente'){imprimir('cliente');return;}
  else if(a==='seara'){loadSeara();}
  else if(a==='reset'){if(confirm('Zerar todo o job e voltar ao catálogo padrão?')){S=defaults();}else{return;}}
- save();render();
+ save();render(a==='step'||a==='seara'||a==='reset');
 });
 
 window.SS3D={get:function(){return S;},calc:calc,seara:loadSeara,calcTab:calcTab,cliente:function(){return clienteHTML(calc());}};
