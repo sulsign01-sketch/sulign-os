@@ -483,7 +483,9 @@
     Promise.all([
       SS20.sb('os_arquivos?select=*&os_id=eq.'+f.id+'&deletado_em=is.null&order=created_at.asc').catch(function(){ return []; }),
       SS20.sb('lancamentos?select=valor,tipo_lancamento,categoria,descricao,data,conciliado&orcamento_numero=eq.'+encodeURIComponent(jobKey)+'&deletado_em=is.null&order=data.desc').catch(function(){ return []; }),
-      SS20.sb('router_medicoes?select=id,titulo,ml,tempo_maquina_min,tempo_total_min,chapas,valor_router,tempo_real_min,created_at&os_id=eq.'+f.id+'&deletado_em=is.null&order=created_at.desc&limit=5').catch(function(){ return []; })
+      SS20.sb('router_medicoes?select=id,titulo,ml,tempo_maquina_min,tempo_total_min,chapas,valor_router,tempo_real_min,created_at,materiais,custo_material&os_id=eq.'+f.id+'&deletado_em=is.null&order=created_at.desc&limit=5')
+        .catch(function(){ return SS20.sb('router_medicoes?select=id,titulo,ml,tempo_maquina_min,tempo_total_min,chapas,valor_router,tempo_real_min,created_at&os_id=eq.'+f.id+'&deletado_em=is.null&order=created_at.desc&limit=5'); })
+        .catch(function(){ return []; })
     ]).then(function(r){
       desenharFicha(c,d,f,ov,fechar,r[0]||[],r[1]||[],r[2]||[]);
     }).catch(function(e){
@@ -590,6 +592,7 @@
         +'<div><div style="font-size:10px;color:var(--mut)">total na OS</div><div style="font-size:13px;font-weight:700">'+rtrHm(m0.tempo_total_min)+'</div></div>'
         +'<div><div style="font-size:10px;color:var(--mut)">chapas</div><div style="font-size:13px;font-weight:700">'+(m0.chapas||0)+'</div></div>'
         +'<span style="flex:1"></span><button type="button" data-fi="rtrHist" style="background:none;border:1px solid var(--line);color:var(--ink);font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px;cursor:pointer">abrir</button></div>';
+      if(m0.materiais&&m0.materiais.length) h+='<div style="font-size:11.5px;margin-top:6px">'+m0.materiais.map(function(x){ return esc(x.nome)+' <b>×'+x.chapas+'</b>'; }).join(' · ')+(m0.custo_material!=null?' · material <b>'+fmt(+m0.custo_material||0)+'</b>':'')+'</div>';
       h+='<div style="font-size:11px;color:var(--mut);margin-top:4px">'+esc(m0.titulo||'')+' · '+dstr(m0.created_at)+(meds.length>1?' · +'+(meds.length-1)+' medição(ões)':'')+'</div>';
       h+='</div>';
     }
@@ -766,7 +769,8 @@
     if(f.instrucoes){ html+='<div class="sec">Instruções</div><div>'+esc(f.instrucoes)+'</div>'; }
     if(ref){ html+='<div class="sec">Referência</div><img class="ref" src="'+esc(dataUrl(ref))+'">'; }
     if(listaArq.length){ html+='<div class="sec">Arquivos</div><table>'; listaArq.forEach(function(a){ html+='<tr><td>'+esc(TLBL[a.tipo]||a.tipo)+'</td><td>'+esc(a.nome||'')+'</td><td>'+kb(a.tamanho)+'</td></tr>'; }); html+='</table>'; }
-    if(meds&&meds.length){ var mm=meds[0]; html+='<div class="sec">Router</div><div><b>'+rtrNum(mm.ml,1)+' m.l.</b> · máquina '+rtrHm(mm.tempo_maquina_min)+' · total na OS '+rtrHm(mm.tempo_total_min)+' · '+(mm.chapas||0)+' chapa(s)</div>'; }
+    if(meds&&meds.length){ var mm=meds[0]; html+='<div class="sec">Router</div><div><b>'+rtrNum(mm.ml,1)+' m.l.</b> · máquina '+rtrHm(mm.tempo_maquina_min)+' · total na OS '+rtrHm(mm.tempo_total_min)+' · '+(mm.chapas||0)+' chapa(s)</div>';
+      if(mm.materiais&&mm.materiais.length) html+='<div>Chapas: '+mm.materiais.map(function(x){ return esc(x.nome)+' ×'+x.chapas; }).join(' · ')+'</div>'; }
     html+='<div class="sec">Custo real do job</div><div>Lançado: <b>'+fmt(custoTotal)+'</b>'+(venda!=null?(' · Venda: '+fmt(venda)):'')+'</div>';
     html+='<div class="mut" style="margin-top:24px;font-size:10px">Sul Sign Group · gerado em '+dstr(hojeISO())+'</div>';
     html+='<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);}</scr'+'ipt>';

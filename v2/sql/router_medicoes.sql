@@ -1,7 +1,7 @@
 -- ═══════════════════════════════════════════════════════════════
 -- SULSIGN OS 2.0 — TEMPO DE ROUTER (mod_rtr.js)
 -- Rodar no SQL Editor do Supabase (obeamqkcuytctfczhook). Idempotente.
--- router_medicoes: cada medição (m.l., tempo, chapas) vinculada à OS.
+-- router_medicoes: cada medição (m.l., tempo, chapas por material) vinculada à OS.
 -- router_config:   parâmetros compartilhados (presets de material,
 --                  máquina e cobrança), uma linha por chave.
 -- Padrão do projeto: RLS só para authenticated, soft-delete em
@@ -17,8 +17,10 @@ create table if not exists router_medicoes (
   ml                numeric,                     -- metros lineares de corte (cobráveis)
   tempo_maquina_min numeric,                     -- corte + mergulho + vazio + trocas
   tempo_total_min   numeric,                     -- máquina + setup de chapa + programação
-  chapas            integer,
+  chapas            integer,                     -- chapas no total (soma dos materiais)
   area_pecas_m2     numeric,
+  materiais         jsonb default '[]'::jsonb,   -- [{id, nome, chapa:[L,A], chapas, chapas_auto, manual, aprov, pecas, area_liq_m2, area_env_m2, preco, custo, reuso}]
+  custo_material    numeric,                     -- soma do custo das chapas (modo em params.cob.modoMat)
   valor_ml          numeric,                     -- R$/m.l. usado no cálculo
   valor_router      numeric,                     -- ml × valor_ml
   params            jsonb,                       -- snapshot de máquina/cobrança/presets usados
@@ -29,6 +31,10 @@ create table if not exists router_medicoes (
   updated_at        timestamptz default now(),
   deletado_em       timestamptz
 );
+-- se a tabela já tinha sido criada pela versão anterior (sem consumo de chapas)
+alter table router_medicoes add column if not exists materiais      jsonb default '[]'::jsonb;
+alter table router_medicoes add column if not exists custo_material numeric;
+
 create index if not exists idx_rtr_med_os  on router_medicoes(os_id);
 create index if not exists idx_rtr_med_job on router_medicoes(job);
 create index if not exists idx_rtr_med_del on router_medicoes(deletado_em);

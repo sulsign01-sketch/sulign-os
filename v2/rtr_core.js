@@ -179,7 +179,7 @@
   /* aplica fator de escala (arquivo em cm/pol/m ou correção de largura) */
   RTR.escalar=function(doc,k){
     if(!(k>0)||k===1) return doc;
-    doc.contornos.forEach(function(ct){ for(var i=0;i<ct.p.length;i++) ct.p[i]*=k; ct.c=ct.c; finishC(ct); });
+    doc.contornos.forEach(function(ct){ for(var i=0;i<ct.p.length;i++) ct.p[i]*=k; delete ct._mr; finishC(ct); });
     if(doc.segs){ for(var j=0;j<doc.segs.length;j++) doc.segs[j]*=k; }
     var av=doc.avisos.filter(function(a){ return a.indexOf('Medidas fora do comum')<0; }); doc.avisos=av;
     return fecharDoc(doc);
@@ -954,59 +954,125 @@
     return Promise.reject(new Error('Formato não reconhecido. Use crv3d, EPS, DXF, SVG, PDF ou G-code (.tap/.nc).'));
   };
 
-  /* ═════════════ presets de material e máquina ═════════════ */
-  /* valores de partida — MDF 15 com fresa 6 mm, F3000, rampa 1000 e Z seguro 10 mm vêm
-     dos .tap reais da Sul Sign (out/2026); os demais são estimativas para calibrar */
+  /* ═════════════ catálogo: material × operação ═════════════ */
+  /* Cada preset de CORTE é um material (chapa + preço). Vinco, rebaixo e
+     gravação não consomem chapa (ficam na peça do mesmo arquivo).
+     Preços (R$/chapa) e chapas das tabelas da Sul Sign/PDVEX — out/2026:
+     MDF e compensado: planilha Flaviense "CUSTOS - MARCENARIA" (atual. 22/10/2026)
+     PVC expandido: tabela do Carlos 20/10/2026, sem película
+     Acrílico: tabela do Carlos (chapa 2×1 m); cristal 3 mm da lista do ORC
+     PS: lista de chapas do ORC (Drive) · ACM 3 mm: R$ 300 citado pelo Carlos 22/10
+     Policarbonato: planilha "CUSTOS - POLICARBONATO" abr/2026
+     Parâmetros de corte: MDF 15 vem dos .tap reais (fresa 6, F3000, rampa 1000);
+     os outros são ponto de partida para calibrar. */
+  var F_MDF='Flaviense, planilha atualizada 22/10/2026', F_PVC='tabela do Carlos 20/10/2026 (sem película)', F_ACR='tabela do Carlos (chapa 2×1 m)',
+      F_ORC='lista de chapas do ORC (Drive)', F_POLI='planilha CUSTOS POLICARBONATO abr/2026';
+  function PC(id,nome,fam,d,prof,passo,av,mg,ch,preco,fonte){
+    return {id:id,nome:nome,op:'corte',fam:fam,d:d,prof:prof,passo:passo,avanco:av,mergulho:mg,fator:1.25,chapa:ch,preco:preco,fonte:fonte};
+  }
+  var MDF=[2750,1850], CMP=[2200,1600], PVC=[2440,1220], A21=[2000,1000];
   RTR.PRESETS=[
-    {id:'mdf15', nome:'MDF 15 mm · corte',          op:'corte', d:6,     prof:16,  passo:5.4, avanco:3000, mergulho:1000, chapa:[2750,1850], fator:1.25},
-    {id:'mdf18', nome:'MDF 18 mm · corte',          op:'corte', d:6,     prof:19,  passo:5.4, avanco:3000, mergulho:1000, chapa:[2750,1850], fator:1.25},
-    {id:'mdf9',  nome:'MDF 9 mm · corte',           op:'corte', d:6,     prof:10,  passo:5.4, avanco:3000, mergulho:1000, chapa:[2750,1850], fator:1.25},
-    {id:'mdf6',  nome:'MDF 6 mm · corte',           op:'corte', d:6,     prof:7,   passo:7,   avanco:3000, mergulho:1000, chapa:[2750,1850], fator:1.25},
-    {id:'mdf3',  nome:'MDF 3 mm · corte (gabarito)',op:'corte', d:3.175, prof:4,   passo:4,   avanco:3000, mergulho:1000, chapa:[2750,1850], fator:1.25},
-    {id:'comp',  nome:'Compensado 15/18 · corte',   op:'corte', d:6,     prof:19,  passo:5.4, avanco:2600, mergulho:1000, chapa:[2200,1600], fator:1.25},
-    {id:'pvc10', nome:'PVC expandido 10 mm · corte',op:'corte', d:6,     prof:11,  passo:5.5, avanco:3000, mergulho:1000, chapa:[2440,1220], fator:1.25},
-    {id:'pvc15', nome:'PVC expandido 15 mm · corte',op:'corte', d:6,     prof:16,  passo:5.4, avanco:3000, mergulho:1000, chapa:[2440,1220], fator:1.25},
-    {id:'pvc20', nome:'PVC expandido 20 mm · corte',op:'corte', d:6,     prof:21,  passo:5.4, avanco:3000, mergulho:1000, chapa:[2440,1220], fator:1.25},
-    {id:'pvc5',  nome:'PVC 2–5 mm · corte',         op:'corte', d:3.175, prof:5.5, passo:5.5, avanco:3000, mergulho:1000, chapa:[2440,1220], fator:1.25},
-    {id:'acm4',  nome:'ACM 3–4 mm · corte',         op:'corte', d:4,     prof:4.5, passo:4.5, avanco:3000, mergulho:1000, chapa:[5000,1220], fator:1.25},
-    {id:'acmv',  nome:'ACM 4 mm · vinco V 90°',     op:'vinco', d:0,     prof:3.2, passo:3.2, avanco:3000, mergulho:1000, chapa:[5000,1220], fator:1.25},
-    {id:'acr3',  nome:'Acrílico 2–3 mm · corte',    op:'corte', d:3.175, prof:3.5, passo:3.5, avanco:2000, mergulho:600,  chapa:[2000,1000], fator:1.25},
-    {id:'acr6',  nome:'Acrílico 4–6 mm · corte',    op:'corte', d:3.175, prof:6.5, passo:3.3, avanco:2000, mergulho:600,  chapa:[2000,1000], fator:1.25},
-    {id:'poli',  nome:'Policarbonato · corte',      op:'corte', d:3.175, prof:4,   passo:4,   avanco:2500, mergulho:800,  chapa:[2050,1220], fator:1.25},
-    {id:'ps2',   nome:'PS 1–2 mm · corte',          op:'corte', d:3.175, prof:2.5, passo:2.5, avanco:3000, mergulho:1000, chapa:[2000,1000], fator:1.25},
-    {id:'reb',   nome:'Rebaixo / pocket 5 mm',      op:'rebaixo',d:6,    prof:5,   passo:5,   avanco:3000, mergulho:1000, step:40, chapa:[2750,1850], fator:1.25},
-    {id:'grav',  nome:'Gravação / marcação 1 mm',   op:'grav',  d:0,     prof:1,   passo:1,   avanco:3000, mergulho:1000, chapa:[2750,1850], fator:1.25},
-    {id:'ign',   nome:'— não cortar (ignorar) —',   op:'ignorar'}
+    PC('mdf3',   'MDF cru 3 mm',              'MDF',3.175,4,  4,  3000,1000,MDF,73, F_MDF),
+    PC('mdf6',   'MDF cru 6 mm',              'MDF',6,    7,  7,  3000,1000,MDF,145,F_MDF),
+    PC('mdf9',   'MDF cru 9 mm',              'MDF',6,    10, 5.4,3000,1000,MDF,179,F_MDF),
+    PC('mdf12',  'MDF cru 12 mm',             'MDF',6,    13, 5.4,3000,1000,MDF,219,F_MDF),
+    PC('mdf15',  'MDF cru 15 mm',             'MDF',6,    16, 5.4,3000,1000,MDF,259,F_MDF),
+    PC('mdf18',  'MDF cru 18 mm',             'MDF',6,    19, 5.4,3000,1000,MDF,313,F_MDF),
+    PC('mdftx15','MDF branco TX 2F 15 mm',    'MDF',6,    16, 5.4,3000,1000,MDF,229,F_MDF),
+    PC('mdfu15', 'MDF ultra branco 2F 15 mm', 'MDF',6,    16, 5.4,3000,1000,MDF,302,F_MDF),
+    PC('mdfn15', 'MDF naval cru 15 mm',       'MDF',6,    16, 5.4,3000,1000,MDF,279,F_MDF),
+    PC('mdffx3', 'MDF flexível 3 mm',         'MDF',3.175,4,  4,  3000,1000,[2500,1220],157,F_MDF),
+    PC('comp6',  'Compensado pinus 6 mm',     'Compensado',6,7, 7,  2600,1000,CMP,49, F_MDF),
+    PC('comp',   'Compensado pinus 15 mm',    'Compensado',6,16,5.4,2600,1000,CMP,187,F_MDF),
+    PC('comp18', 'Compensado pinus 18 mm',    'Compensado',6,19,5.4,2600,1000,CMP,230,F_MDF),
+    PC('compn15','Compensado naval 15 mm',    'Compensado',6,16,5.4,2600,1000,CMP,289,F_MDF),
+    PC('pvc2',   'PVC expandido 2 mm',        'PVC',3.175,2.5,2.5,3000,1000,PVC,72, F_PVC),
+    PC('pvc3',   'PVC expandido 3 mm',        'PVC',3.175,3.5,3.5,3000,1000,PVC,90, F_PVC),
+    PC('pvc5',   'PVC expandido 5 mm',        'PVC',3.175,5.5,5.5,3000,1000,PVC,135,F_PVC),
+    PC('pvc10',  'PVC expandido 10 mm',       'PVC',6,    11, 5.5,3000,1000,PVC,216,F_PVC),
+    PC('pvc15',  'PVC expandido 15 mm',       'PVC',6,    16, 5.4,3000,1000,PVC,330,F_PVC),
+    PC('pvc20',  'PVC expandido 20 mm',       'PVC',6,    21, 5.4,3000,1000,PVC,444,F_PVC),
+    PC('pvcp10', 'PVC preto 10 mm',           'PVC',6,    11, 5.5,3000,1000,PVC,275,F_PVC),
+    PC('pvcp20', 'PVC preto 20 mm',           'PVC',6,    21, 5.4,3000,1000,PVC,545,F_PVC),
+    PC('acr2',   'Acrílico branco 2 mm',      'Acrílico',3.175,2.5,2.5,2000,600,A21,262.5, F_ACR),
+    PC('acr3',   'Acrílico branco 3 mm',      'Acrílico',3.175,3.5,3.5,2000,600,A21,376.25,F_ACR),
+    PC('acr4',   'Acrílico branco 4 mm',      'Acrílico',3.175,4.5,4.5,2000,600,A21,497,   F_ACR),
+    PC('acr5',   'Acrílico branco 5 mm',      'Acrílico',3.175,5.5,2.8,2000,600,A21,780,   F_ACR),
+    PC('acr6',   'Acrílico branco 6 mm',      'Acrílico',3.175,6.5,3.3,2000,600,A21,670,   F_ACR),
+    PC('acrc2',  'Acrílico cristal 2 mm',     'Acrílico',3.175,2.5,2.5,2000,600,A21,240,   F_ACR),
+    PC('acrc3',  'Acrílico cristal 3 mm',     'Acrílico',3.175,3.5,3.5,2000,600,A21,300,   F_ORC),
+    PC('acrc4',  'Acrílico cristal 4 mm',     'Acrílico',3.175,4.5,4.5,2000,600,A21,461,   F_ACR),
+    PC('acrc5',  'Acrílico cristal 5 mm',     'Acrílico',3.175,5.5,2.8,2000,600,A21,625,   F_ACR),
+    PC('acrc6',  'Acrílico cristal 6 mm',     'Acrílico',3.175,6.5,3.3,2000,600,A21,612,   F_ACR),
+    PC('acre',   'Acrílico espelhado',        'Acrílico',3.175,3.5,3.5,2000,600,A21,350,   'regra do Carlos: R$ 350 a chapa'),
+    PC('acm3',   'ACM 3 mm',                  'ACM',4,3.5,3.5,3000,1000,[5000,1220],300,'citado pelo Carlos 22/10 (Terzian R$ 340 na lista do ORC)'),
+    PC('acm4',   'ACM 4 mm',                  'ACM',4,4.5,4.5,3000,1000,[5000,1220],0,  'sem preço no histórico'),
+    PC('ps1',    'PS 1 mm',                   'PS',3.175,1.5,1.5,3000,1000,A21,        42.5,F_ORC),
+    PC('ps2',    'PS 2 mm',                   'PS',3.175,2.5,2.5,3000,1000,[3000,1000],127, F_ORC),
+    PC('ps3',    'PS 3 mm',                   'PS',3.175,3.5,3.5,3000,1000,[2000,1300],188, F_ORC),
+    PC('psc2',   'PS cristal 2 mm',           'PS',3.175,2.5,2.5,3000,1000,A21,        118, F_ORC),
+    PC('psc3',   'PS cristal 3 mm',           'PS',3.175,3.5,3.5,3000,1000,A21,        175, F_ORC),
+    PC('poli',   'Policarbonato compacto 3 mm','Policarbonato',3.175,3.5,3.5,2500,800,[3000,2050],791.98, F_POLI),
+    PC('poli4',  'Policarbonato compacto 4 mm','Policarbonato',3.175,4.5,4.5,2500,800,[3000,2050],1196.74,F_POLI),
+    PC('polia4', 'Policarbonato alveolar 4 mm','Policarbonato',3.175,4.5,4.5,3000,1000,[6000,2100],386.5, F_POLI),
+    PC('polia6', 'Policarbonato alveolar 6 mm','Policarbonato',3.175,6.5,6.5,3000,1000,[6000,2100],570.45,F_POLI),
+    {id:'acmv', nome:'ACM · vinco V 90°',        op:'vinco',   fam:'Vinco e usinagem', d:0, prof:3.2, passo:3.2, avanco:3000, mergulho:1000, fator:1.25},
+    {id:'reb',  nome:'Rebaixo / pocket 5 mm',    op:'rebaixo', fam:'Vinco e usinagem', d:6, prof:5,   passo:5,   avanco:3000, mergulho:1000, step:40, fator:1.25},
+    {id:'grav', nome:'Gravação / marcação 1 mm', op:'grav',    fam:'Vinco e usinagem', d:0, prof:1,   passo:1,   avanco:3000, mergulho:1000, fator:1.25},
+    {id:'ign',  nome:'— não cortar (ignorar) —', op:'ignorar', fam:'Ignorar'}
   ];
-  RTR.MAQ={rapidoXY:10000, rapidoZ:3000, zSeguro:10, trocaMin:3, setupMin:10, progMin:30, fatorGcode:1.15};
-  RTR.COB={valorML:8, maqML:3, horaOp:35, horaProg:60};
+  RTR.FAMILIAS=['MDF','Compensado','PVC','Acrílico','ACM','PS','Policarbonato','Outros','Vinco e usinagem','Ignorar'];
+  RTR.CORFAM={'MDF':'#B7791F','Compensado':'#8D6E63','PVC':'#2563EB','Acrílico':'#0E9AA7','ACM':'#6B7280','PS':'#7C3AED','Policarbonato':'#059669','Outros':'#FF5A1F'};
+  RTR.MAQ={rapidoXY:10000, rapidoZ:3000, zSeguro:10, trocaMin:3, setupMin:10, progMin:30, fatorGcode:1.15, margem:10, folga:4};
+  RTR.COB={valorML:8, maqML:3, horaOp:35, horaProg:60, modoMat:'inteira'};
 
   /* palpite de preset pelo nome do arquivo e da camada */
+  function up(s){ return String(s||'').toUpperCase().replace(/_/g,' ').replace(/[ÁÀÃÂ]/g,'A').replace(/[ÉÊ]/g,'E').replace(/Í/g,'I').replace(/[ÓÕÔ]/g,'O').replace(/Ú/g,'U').replace(/Ç/g,'C'); }
+  function espDe(s,w){
+    var m=new RegExp(w+'(?:\\W{1,3}[A-Z]{2,12}){0,2}\\W{0,3}(\\d{1,2}(?:[.,]\\d)?)\\s*MM').exec(s)||new RegExp(w+'\\W{0,2}(\\d{1,2})(?![\\d.,A-Z])').exec(s)||/(?:^|[^\d.,X])(\d{1,2}(?:[.,]\d)?)\s*MM/.exec(s);
+    return m?parseFloat(m[1].replace(',','.')):0;
+  }
+  function perto(n,tab,def){
+    if(!n) return tab[def];
+    var best=null, bd=Infinity; Object.keys(tab).forEach(function(k){ var dd=Math.abs(+k-n); if(dd<bd){ bd=dd; best=tab[k]; } }); return best;
+  }
+  function matDe(s){
+    if(!s) return null;
+    var n;
+    if(/\bACM\b/.test(s)){ n=espDe(s,'ACM'); return (n>=3.6||(!n&&/VINCO|\b3D\b/.test(s)))?'acm4':'acm3'; }
+    if(/ACRILICO/.test(s)){
+      n=espDe(s,'ACRILICO');
+      if(/ESPELH/.test(s)) return 'acre';
+      if(/CRISTAL|TRANSPAR/.test(s)) return perto(n,{2:'acrc2',3:'acrc3',4:'acrc4',5:'acrc5',6:'acrc6'},3);
+      return perto(n,{2:'acr2',3:'acr3',4:'acr4',5:'acr5',6:'acr6'},3);
+    }
+    if(/POLICARBONATO/.test(s)){ n=espDe(s,'POLICARBONATO'); if(/ALVEOLAR/.test(s)) return n>=5?'polia6':'polia4'; return n>=3.6?'poli4':'poli'; }
+    if(/\bPVC\b/.test(s)){
+      n=espDe(s,'PVC');
+      if(/PRETO/.test(s)&&(n>=15)) return 'pvcp20';
+      if(/PRETO/.test(s)&&(!n||(n>=8&&n<15))) return 'pvcp10';
+      return perto(n,{2:'pvc2',3:'pvc3',5:'pvc5',10:'pvc10',15:'pvc15',20:'pvc20'},10);
+    }
+    if(/\bPS\b/.test(s)){ n=espDe(s,'PS'); if(/CRISTAL/.test(s)) return n>=2.6?'psc3':'psc2'; return perto(n,{1:'ps1',2:'ps2',3:'ps3'},2); }
+    if(/COMPENSADO/.test(s)){ n=espDe(s,'COMPENSADO'); if(/NAVAL/.test(s)) return 'compn15'; return perto(n,{6:'comp6',15:'comp',18:'comp18'},15); }
+    if(/\bMDF/.test(s)){
+      n=espDe(s,'MDF');
+      if(/FLEX/.test(s)) return 'mdffx3';
+      if(/ULTRA/.test(s)&&/BRANCO/.test(s)) return 'mdfu15';
+      if(/NAVAL/.test(s)) return 'mdfn15';
+      if(/BRANCO|\bTX\b/.test(s)&&(!n||n===15)) return 'mdftx15';
+      return perto(n,{3:'mdf3',6:'mdf6',9:'mdf9',12:'mdf12',15:'mdf15',18:'mdf18'},15);
+    }
+    if(/GABARITO/.test(s)) return 'mdf3';
+    return null;
+  }
   RTR.palpite=function(arquivo, camada){
-    var c=String(camada||'').toUpperCase(), a=String(arquivo||'').toUpperCase().replace(/_/g,' ');
-    if(/DEFPOINTS|COTA|CHAMADA|TEXTO|INSTRU|LEGENDA|CARIMBO|VIEWPORT|REFER|MOLDURA|^GR_/.test(c)) return 'ign';
+    var c=up(camada), a=up(arquivo);
+    if(/DEFPOINTS|COTA|CHAMADA|TEXTO|INSTRU|LEGENDA|CARIMBO|VIEWPORT|REFER|MOLDURA|^GR /.test(c)) return 'ign';
     if(/VINCO|DOBRA|V-?GROOVE|V ?90/.test(c)) return 'acmv';
     if(/REBAIX|POCKET|CANALETA/.test(c)) return 'reb';
     if(/GRAV|MARCA/.test(c)) return 'grav';
-    var s=c+' '+a;
-    if(/VINCO/.test(s)&&/ACM/.test(s)) return 'acmv';
-    if(/ACM/.test(s)) return 'acm4';
-    if(/MDF\s*-?\s*1?8\s*MM|MDF\s*18/.test(s)) return 'mdf18';
-    if(/MDF\s*-?\s*15|MDF15/.test(s)) return 'mdf15';
-    if(/MDF\s*-?\s*9\b|MDF\s*9\s*MM/.test(s)) return 'mdf9';
-    if(/MDF\s*-?\s*6\b|MDF\s*6\s*MM/.test(s)) return 'mdf6';
-    if(/MDF\s*-?\s*3\b|MDF\s*3\s*MM|GABARITO/.test(s)) return 'mdf3';
-    if(/COMPENSADO/.test(s)) return 'comp';
-    if(/PVC\s*-?\s*20/.test(s)) return 'pvc20';
-    if(/PVC\s*-?\s*15/.test(s)) return 'pvc15';
-    if(/PVC\s*-?\s*10/.test(s)) return 'pvc10';
-    if(/PVC/.test(s)) return 'pvc5';
-    if(/ACR[IÍ]LICO\s*-?\s*[456]\s*MM/.test(s)) return 'acr6';
-    if(/ACR[IÍ]LICO/.test(s)) return 'acr3';
-    if(/POLICARBONATO/.test(s)) return 'poli';
-    if(/\bPS\b/.test(s)) return 'ps2';
-    if(/MDF/.test(s)) return 'mdf15';
-    return null;
+    return matDe(c)||matDe(a);
   };
 
   /* ═════════════ cálculo ═════════════ */
@@ -1060,21 +1126,282 @@
   }
   RTR._rota=rota;
 
-  /* docs: [{id, doc, qtd, ops:{camada: presetId}, chapas:n|null}]
-     cfg: {presets:{id:preset}, maq:{...}, cob:{...}} */
-  RTR.calcular=function(itens, cfg){
-    var P=cfg.presets, M=cfg.maq, B=cfg.cob, R={camadas:[], arquivos:[], tot:null};
-    var T={ml:0, mlCobrado:0, contornos:0, corte:0, mergulho:0, rapido:0, troca:0, maquina:0, setup:0, prog:0, total:0, chapas:0, areaPecas:0, gcode:0};
+  /* ═════════════ encaixe nas chapas (consumo por material) ═════════════ */
+  /* casco convexo (monotone chain) de uma lista plana [x,y,x,y…] */
+  function hull(p){
+    var n=p.length/2, pts=new Array(n), i;
+    for(i=0;i<n;i++) pts[i]=[p[2*i],p[2*i+1]];
+    pts.sort(function(a,b){ return a[0]-b[0]||a[1]-b[1]; });
+    function cr(o,a,b){ return (a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); }
+    var lo=[], hi=[];
+    for(i=0;i<n;i++){ while(lo.length>=2&&cr(lo[lo.length-2],lo[lo.length-1],pts[i])<=0) lo.pop(); lo.push(pts[i]); }
+    for(i=n-1;i>=0;i--){ while(hi.length>=2&&cr(hi[hi.length-2],hi[hi.length-1],pts[i])<=0) hi.pop(); hi.push(pts[i]); }
+    hi.pop(); lo.pop();
+    return lo.concat(hi);
+  }
+  /* retângulo envolvente girado em ang: x'=x·cos+y·sin ; y'=−x·sin+y·cos */
+  function rectAt(h,ang){
+    var co=Math.cos(ang), si=Math.sin(ang), x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
+    for(var i=0;i<h.length;i++){ var x=h[i][0]*co+h[i][1]*si, y=-h[i][0]*si+h[i][1]*co; if(x<x0)x0=x; if(x>x1)x1=x; if(y<y0)y0=y; if(y>y1)y1=y; }
+    return {ang:ang,w:x1-x0,h:y1-y0,minx:x0,miny:y0,area:(x1-x0)*(y1-y0)};
+  }
+  /* menor retângulo que contém a peça (calipers rotativos); fica reto se a diferença for < 1% */
+  function minRect(h){
+    if(!h.length) return {ang:0,w:0,h:0,minx:0,miny:0,area:0};
+    var aa=rectAt(h,0), best=aa;
+    for(var i=0;i<h.length;i++){
+      var a=h[i], b=h[(i+1)%h.length], dx=b[0]-a[0], dy=b[1]-a[1];
+      if(dx*dx+dy*dy<1e-12) continue;
+      var r=rectAt(h,Math.atan2(dy,dx));
+      if(r.area<best.area-1e-9||(best.area<1e-9&&r.w+r.h<best.w+best.h-1e-9)) best=r;
+    }
+    if(aa.area<=best.area*1.01+1e-9&&(aa.area>1e-9||aa.w+aa.h<=best.w+best.h+1e-9)) best=aa;
+    return best;
+  }
+  RTR._minRect=function(p){ return minRect(hull(p)); };
+  function contem(P,Q){ /* P contém Q? 3 pontos de Q, maioria */
+    var m=Q.length/2, ks=[0,Math.floor(m/3),Math.floor(2*m/3)], dent=0;
+    for(var i=0;i<3;i++){ var k=2*ks[i]; if(pip(P,Q[k],Q[k+1])) dent++; }
+    return dent>=2;
+  }
+  /* peças de um grupo de contornos (mesmo material, mesmo arquivo):
+     contorno de nível 0 = peça; furos e ilhas vão junto com ela */
+  function pecasDe(cts){
+    var fe=[], ab=[], i, j;
+    cts.forEach(function(c){ if(c.c&&Math.abs(c.a)>1e-6) fe.push(c); else ab.push(c); });
+    fe.sort(function(a,b){ return Math.abs(b.a)-Math.abs(a.a); });
+    var n=fe.length, niv=new Array(n), topo=new Array(n), pcs=[], idx={};
+    for(i=0;i<n;i++){
+      var c=fe[i], par=-1;
+      for(j=i-1;j>=0;j--){
+        var o=fe[j], bb=o.bb;
+        if(c.bb[0]<bb[0]-1e-6||c.bb[2]>bb[2]+1e-6||c.bb[1]<bb[1]-1e-6||c.bb[3]>bb[3]+1e-6) continue;
+        if(Math.abs(o.a)<=Math.abs(c.a)) continue;
+        if(contem(o.p,c.p)){ par=j; break; }
+      }
+      if(par<0){ niv[i]=0; topo[i]=i; idx[i]=pcs.length; pcs.push({ext:c, membros:[c], area:Math.abs(c.a)}); }
+      else { niv[i]=niv[par]+1; topo[i]=topo[par]; var pc=pcs[idx[topo[i]]]; pc.membros.push(c); pc.area+=(niv[i]%2?-1:1)*Math.abs(c.a); }
+    }
+    ab.forEach(function(c){
+      var px=c.p[0], py=c.p[1], dono=null;
+      for(var k=0;k<pcs.length&&!dono;k++){ var e=pcs[k].ext, bb=e.bb; if(!e.c||px<bb[0]||px>bb[2]||py<bb[1]||py>bb[3]) continue; if(pip(e.p,px,py)) dono=pcs[k]; }
+      if(dono) dono.membros.push(c); else pcs.push({ext:c, membros:[c], area:0, aberto:true});
+    });
+    pcs.forEach(function(pc){ if(!pc.ext._mr) pc.ext._mr=minRect(hull(pc.ext.p)); pc.mr=pc.ext._mr; if(pc.area<0) pc.area=0; });
+    return pcs;
+  }
+  RTR._pecasDe=pecasDe;
+
+  /* MaxRects (Jylänki): BSSF para encher, BL (mais à esquerda) para compactar a última chapa */
+  function Bin(W,H){ this.W=W; this.H=H; this.free=[{x:0,y:0,w:W,h:H}]; this.pl=[]; this.livre=W*H; }
+  Bin.prototype.melhor=function(w,h,modo){
+    var best=null, F=this.free;
+    for(var i=0;i<F.length;i++){
+      var f=F[i];
+      for(var o=0;o<2;o++){
+        var ww=o?h:w, hh=o?w:h;
+        if(ww<=f.w+1e-6&&hh<=f.h+1e-6){
+          var s1, s2;
+          if(modo==='bl'){ s1=f.x+ww; s2=f.y; } else { var lw=f.w-ww, lh=f.h-hh; s1=Math.min(lw,lh); s2=Math.max(lw,lh); }
+          if(!best||s1<best.s1-1e-9||(Math.abs(s1-best.s1)<=1e-9&&s2<best.s2)) best={x:f.x,y:f.y,w:ww,h:hh,rot:!!o,s1:s1,s2:s2};
+        }
+        if(Math.abs(w-h)<1e-9) break;
+      }
+    }
+    return best;
+  };
+  function dentro(a,b){ return a.x>=b.x-1e-9&&a.y>=b.y-1e-9&&a.x+a.w<=b.x+b.w+1e-9&&a.y+a.h<=b.y+b.h+1e-9; }
+  Bin.prototype.colocar=function(s,k){
+    var R={x:s.x,y:s.y,w:s.w,h:s.h}, F=this.free, nov=[], i, a, b;
+    for(i=0;i<F.length;){
+      var f=F[i];
+      if(R.x>=f.x+f.w-1e-9||R.x+R.w<=f.x+1e-9||R.y>=f.y+f.h-1e-9||R.y+R.h<=f.y+1e-9){ i++; continue; }
+      F.splice(i,1);
+      if(R.x>f.x+1e-9) nov.push({x:f.x,y:f.y,w:R.x-f.x,h:f.h});
+      if(R.x+R.w<f.x+f.w-1e-9) nov.push({x:R.x+R.w,y:f.y,w:f.x+f.w-R.x-R.w,h:f.h});
+      if(R.y>f.y+1e-9) nov.push({x:f.x,y:f.y,w:f.w,h:R.y-f.y});
+      if(R.y+R.h<f.y+f.h-1e-9) nov.push({x:f.x,y:R.y+R.h,w:f.w,h:f.y+f.h-R.y-R.h});
+    }
+    for(i=0;i<nov.length;i++) F.push(nov[i]);
+    for(a=0;a<F.length;a++){
+      for(b=a+1;b<F.length;b++){
+        if(dentro(F[a],F[b])){ F.splice(a,1); a--; break; }
+        if(dentro(F[b],F[a])){ F.splice(b,1); b--; }
+      }
+    }
+    this.pl.push({k:k,x:s.x,y:s.y,w:s.w,h:s.h,rot:s.rot});
+    this.livre-=s.w*s.h;
+  };
+  function maxX(pl){ var m=0; pl.forEach(function(p){ if(p.x+p.w>m) m=p.x+p.w; }); return m; }
+  /* rects: [{k,w,h}] já com a folga; Wu×Hu: área útil + folga */
+  /* muitas peças (> 2500): prateleiras (rápido, um pouco menos eficiente) */
+  function prateleiras(rects,Wu,Hu){
+    var bins=[];
+    rects.forEach(function(r){ r.rot=false; if(r.h>r.w&&r.h<=Wu+1e-6&&r.w<=Hu+1e-6){ var t=r.w; r.w=r.h; r.h=t; r.rot=true; } });
+    rects.sort(function(a,b){ return (b.h-a.h)||(b.w-a.w); });
+    rects.forEach(function(r){
+      var feito=false;
+      for(var i=Math.max(0,bins.length-2);i<bins.length&&!feito;i++){
+        var b=bins[i];
+        for(var j=0;j<b.sh.length&&!feito;j++){ var sh=b.sh[j]; if(r.h<=sh.h+1e-6&&sh.x+r.w<=Wu+1e-6){ b.pl.push({k:r.k,x:sh.x,y:sh.y,w:r.w,h:r.h,rot:r.rot}); sh.x+=r.w; b.livre-=r.w*r.h; feito=true; } }
+        if(!feito&&b.top+r.h<=Hu+1e-6){ b.sh.push({y:b.top,h:r.h,x:r.w}); b.pl.push({k:r.k,x:0,y:b.top,w:r.w,h:r.h,rot:r.rot}); b.top+=r.h; b.livre-=r.w*r.h; feito=true; }
+      }
+      if(!feito){ var nb={sh:[{y:0,h:r.h,x:r.w}],top:r.h,pl:[{k:r.k,x:0,y:0,w:r.w,h:r.h,rot:r.rot}],livre:Wu*Hu-r.w*r.h}; bins.push(nb); }
+    });
+    return bins;
+  }
+  function empacotar(rects,Wu,Hu){
+    var bins=[], grandes=[], rapido=rects.length>2500;
+    if(rapido){
+      var cabem=[];
+      rects.forEach(function(r){
+        var cabe=(r.w<=Wu+1e-6&&r.h<=Hu+1e-6)||(r.h<=Wu+1e-6&&r.w<=Hu+1e-6);
+        if(cabe) cabem.push(r); else { var n1=Math.ceil(r.w/Wu-1e-9)*Math.ceil(r.h/Hu-1e-9), n2=Math.ceil(r.h/Wu-1e-9)*Math.ceil(r.w/Hu-1e-9); grandes.push({k:r.k,n:Math.max(1,Math.min(n1,n2))}); }
+      });
+      return {bins:prateleiras(cabem,Wu,Hu), grandes:grandes};
+    }
+    rects.sort(function(a,b){ var ma=Math.max(a.w,a.h), mb=Math.max(b.w,b.h); return (mb-ma)||(b.w*b.h-a.w*a.h); });
+    rects.forEach(function(r){
+      var cabe=(r.w<=Wu+1e-6&&r.h<=Hu+1e-6)||(r.h<=Wu+1e-6&&r.w<=Hu+1e-6);
+      if(!cabe){
+        var n1=Math.ceil(r.w/Wu-1e-9)*Math.ceil(r.h/Hu-1e-9), n2=Math.ceil(r.h/Wu-1e-9)*Math.ceil(r.w/Hu-1e-9);
+        grandes.push({k:r.k,n:Math.max(1,Math.min(n1,n2))}); return;
+      }
+      var best=null, i0=rapido?Math.max(0,bins.length-3):0;
+      for(var i=i0;i<bins.length;i++){
+        var b=bins[i]; if(b.livre<r.w*r.h-1e-6) continue;
+        var s=b.melhor(r.w,r.h,'bssf');
+        if(s&&(!best||s.s1<best.s.s1-1e-9||(Math.abs(s.s1-best.s.s1)<=1e-9&&s.s2<best.s.s2))) best={b:b,s:s};
+      }
+      if(!best){ var nb=new Bin(Wu,Hu); bins.push(nb); best={b:nb,s:nb.melhor(r.w,r.h,'bssf')}; }
+      best.b.colocar(best.s,r.k);
+    });
+    /* a chapa mais vazia vai por último e é compactada para a esquerda (sobra contínua) */
+    if(bins.length){
+      var iv=0; bins.forEach(function(b,i){ if(b.livre>bins[iv].livre) iv=i; });
+      var ult=bins.splice(iv,1)[0], rs=ult.pl.map(function(p){ return {k:p.k,w:p.rot?p.h:p.w,h:p.rot?p.w:p.h}; });
+      rs.sort(function(a,b){ var ma=Math.max(a.w,a.h), mb=Math.max(b.w,b.h); return (mb-ma)||(b.w*b.h-a.w*a.h); });
+      var nb2=new Bin(Wu,Hu), ok=true;
+      for(var j=0;j<rs.length&&ok;j++){ var s2=nb2.melhor(rs[j].w,rs[j].h,'bl'); if(!s2) ok=false; else nb2.colocar(s2,rs[j].k); }
+      bins.push(ok&&maxX(nb2.pl)<=maxX(ult.pl)+1e-6?nb2:ult);
+    }
+    return {bins:bins, grandes:grandes};
+  }
+
+  /* custo do material conforme o modo: inteira | usada | envolvente */
+  function custoMat(m,modo){
+    if(m.reuso||!(m.preco>0)) return 0;
+    var ach=m.W*m.H/1e6;
+    if(modo==='envolvente') return ach>0?m.areaEnv/ach*m.preco:0;
+    if(modo==='usada') return (m.ovr||m.chapasUsadas)*m.preco;
+    return m.n*m.preco;
+  }
+  RTR.custoMat=custoMat;
+
+  /* itens: [{id, doc, qtd, ops, mat (G-code)}] · opt: {ovr:{mat:n}, reuso:{mat:true}, modo} */
+  RTR.consumo=function(itens,cfg,opt){
+    opt=opt||{};
+    var P=cfg.presets, M=cfg.maq, mats={}, ordem=[], semPeca=[];
+    var margem=Math.max(0,num(M.margem)), folga=Math.max(0,num(M.folga));
+    function grupo(pid){
+      if(!mats[pid]){
+        var pr=P[pid], ch=(pr.chapa||[2750,1850]).slice(0,2).map(num);
+        if(ch[1]>ch[0]) ch=[ch[1],ch[0]];
+        mats[pid]={id:pid, nome:pr.nome, fam:pr.fam||'Outros', W:ch[0], H:ch[1], preco:num(pr.preco), fonte:pr.fonte||'', d:num(pr.d)||0,
+          pecas:[], fixos:[], arqs:{}, nVet:0, areaLiq:0, areaEnv:0, nPecas:0, aprox:false};
+        ordem.push(pid);
+      }
+      return mats[pid];
+    }
     itens.forEach(function(it){
-      var d=it.doc, q=Math.max(1,num(it.qtd)||1), A={id:it.id, nome:d.nome, formato:d.formato, qtd:q, ml:0, mlCobrado:0, tempo:0, maquina:0, chapas:0, setup:0, prog:0, troca:0};
+      var d=it.doc, q=Math.max(1,Math.round(num(it.qtd))||1);
+      if(d.formato==='gcode'){
+        var mid=it.mat, pr=P[mid], bb=d.bb;
+        if(pr&&pr.op==='corte'&&bb&&bb[2]>bb[0]&&bb[3]>bb[1]){
+          var g0=grupo(mid), w=bb[2]-bb[0], h=bb[3]-bb[1];
+          g0.pecas.push({it:it.id, q:q, gcode:true, area:w*h, membros:[], mr:{ang:0,w:w,h:h,minx:bb[0],miny:bb[1],area:w*h}});
+          g0.arqs[it.id]=1; g0.areaLiq+=w*h*q/1e6; g0.areaEnv+=w*h*q/1e6; g0.nPecas+=q; g0.aprox=true;
+        } else semPeca.push({it:it.id,q:q});
+        return;
+      }
+      var grupos={}, trabalho=false;
+      d.contornos.forEach(function(ct){
+        if(ct.off) return;
+        var pid=(it.ops&&it.ops[ct.L])||'mdf15', pr2=P[pid];
+        if(!pr2||pr2.op==='ignorar') return;
+        trabalho=true;
+        if(pr2.op!=='corte') return;
+        (grupos[pid]=grupos[pid]||[]).push(ct);
+      });
+      var ks=Object.keys(grupos);
+      if(!ks.length){ if(trabalho) semPeca.push({it:it.id,q:q}); return; }
+      ks.forEach(function(pid){
+        var g=grupo(pid), cts=grupos[pid], pcs=pecasDe(cts), liq=0, env=0;
+        pcs.forEach(function(pc){ liq+=pc.area; env+=pc.mr.w*pc.mr.h; });
+        g.arqs[it.id]=1; g.nVet+=cts.length*q; g.areaLiq+=liq*q/1e6; g.areaEnv+=env*q/1e6; g.nPecas+=pcs.length*q;
+        /* job do Aspire do tamanho da chapa e tudo dentro dele = já encaixado: 1 chapa por unidade */
+        var ch=d.chapa, fixo=false;
+        if(ch&&ch.w>0&&ch.h>0&&d.formato==='crv3d'){
+          var cw=Math.max(ch.w,ch.h), chh=Math.min(ch.w,ch.h);
+          if(Math.abs(cw-g.W)<=g.W*0.015&&Math.abs(chh-g.H)<=g.H*0.015){
+            var gb=[Infinity,Infinity,-Infinity,-Infinity];
+            fixo=cts.every(function(c){ if(c.bb[0]<gb[0])gb[0]=c.bb[0]; if(c.bb[1]<gb[1])gb[1]=c.bb[1]; if(c.bb[2]>gb[2])gb[2]=c.bb[2]; if(c.bb[3]>gb[3])gb[3]=c.bb[3];
+              return c.bb[0]>=-0.5&&c.bb[1]>=-0.5&&c.bb[2]<=ch.w+0.5&&c.bb[3]<=ch.h+0.5; });
+            /* só vale como encaixe pronto se as peças ocupam boa parte da chapa (job padrão com peça pequena é re-encaixado) */
+            if(fixo&&(gb[2]-gb[0])*(gb[3]-gb[1])<0.6*ch.w*ch.h&&liq<0.35*ch.w*ch.h) fixo=false;
+          }
+        }
+        if(fixo) g.fixos.push({it:it.id, q:q, pcs:pcs, jw:ch.w, jh:ch.h, liq:liq});
+        else pcs.forEach(function(pc){ pc.it=it.id; pc.q=q; g.pecas.push(pc); });
+      });
+    });
+    var modo=opt.modo||(cfg.cob&&cfg.cob.modoMat)||'inteira';
+    var lista=ordem.map(function(pid){
+      var g=mats[pid], gap=g.d+folga, Wu=Math.max(1,g.W-2*margem+gap), Hu=Math.max(1,g.H-2*margem+gap), folhas=[], nGr=0, nFix=0;
+      function so(id){ var o={}; o[id]=1; return o; }
+      g.fixos.forEach(function(fx){ for(var u=0;u<fx.q;u++){ folhas.push({fixo:true, it:fx.it, arqs:so(fx.it), pcs:fx.pcs, jw:fx.jw, jh:fx.jh, liq:fx.liq}); nFix++; } });
+      var rects=[];
+      g.pecas.forEach(function(pc,k){ for(var c=0;c<pc.q;c++) rects.push({k:k,w:pc.mr.w+gap,h:pc.mr.h+gap}); });
+      var pk=empacotar(rects,Wu,Hu);
+      pk.grandes.forEach(function(gr){ var pc=g.pecas[gr.k]; for(var t=0;t<gr.n;t++) folhas.push({grande:true, k:gr.k, parte:t+1, de:gr.n, arqs:so(pc.it), liq:t?0:pc.area}); nGr++; });
+      pk.bins.forEach(function(b){ var arqs={}, liq=0; b.pl.forEach(function(p){ arqs[g.pecas[p.k].it]=1; liq+=g.pecas[p.k].area; }); folhas.push({pl:b.pl, arqs:arqs, liq:liq}); });
+      var n=folhas.length, frac=1, sobra=null;
+      if(pk.bins.length){
+        var ul=pk.bins[pk.bins.length-1], usado=Math.min(g.W,margem+maxX(ul.pl));
+        frac=g.W>0?usado/g.W:1;
+        if(g.W-usado>50) sobra={w:g.W-usado,h:g.H};
+      }
+      var m={id:pid, nome:g.nome, fam:g.fam, W:g.W, H:g.H, preco:g.preco, fonte:g.fonte, gap:gap, margem:margem,
+        chapasAuto:n, ultimaFrac:pk.bins.length?frac:null, chapasUsadas:pk.bins.length?(n-1+frac):n, sobra:sobra,
+        pecas:g.nPecas, nVet:g.nVet, areaLiq:g.areaLiq, areaEnv:g.areaEnv, grandes:nGr, fixas:nFix, aprox:g.aprox,
+        folhas:folhas, defs:g.pecas, arqs:g.arqs};
+      var ov=opt.ovr&&Math.round(num(opt.ovr[pid]))>0?Math.round(num(opt.ovr[pid])):0;
+      m.ovr=ov; m.n=ov||n; m.reuso=!!(opt.reuso&&opt.reuso[pid]);
+      m.aprov=m.n?m.areaLiq/(m.n*g.W*g.H/1e6):0;
+      m.custo=custoMat(m,modo); m.modo=modo;
+      return m;
+    });
+    return {materiais:lista, semPeca:semPeca, modo:modo};
+  };
+
+  /* itens: [{id, doc, qtd, ops:{camada: presetId}, mat}] · cfg: {presets, maq, cob} · opt: ver RTR.consumo */
+  RTR.calcular=function(itens, cfg, opt){
+    opt=opt||{};
+    var P=cfg.presets, M=cfg.maq, B=cfg.cob, R={camadas:[], arquivos:[], materiais:[], tot:null};
+    var T={ml:0, mlCobrado:0, contornos:0, corte:0, mergulho:0, rapido:0, troca:0, maquina:0, setup:0, prog:0, total:0,
+           chapas:0, cargas:0, areaPecas:0, gcode:0, custoMaterial:0};
+    var ferrDe={}, porId={};
+    itens.forEach(function(it){
+      var d=it.doc, q=Math.max(1,num(it.qtd)||1), A={id:it.id, nome:d.nome, formato:d.formato, qtd:q, ml:0, mlCobrado:0, tempo:0, maquina:0, chapas:0, prog:0, troca:0};
+      porId[it.id]=A; ferrDe[it.id]={};
       if(d.formato==='gcode'){
         var g=d.gcode, tm=(g.tempo+g.rapXY/M.rapidoXY+g.rapZ/M.rapidoZ)*(M.fatorGcode||1), tr=(g.trocas||0)*M.trocaMin;
-        A.maquina=(tm+tr)*q; A.troca=tr*q; A.prog=0; A.chapas=num(it.chapas)||q; A.setup=A.chapas*M.setupMin;
-        A.tempo=A.maquina+A.setup; A.gcode={corte:g.corte, tempoCorte:g.tempo, rapXY:g.rapXY, rapZ:g.rapZ, trocas:g.trocas};
-        T.gcode+=A.maquina; T.maquina+=A.maquina; T.troca+=A.troca; T.setup+=A.setup; T.chapas+=A.chapas; T.total+=A.tempo;
+        A.maquina=(tm+tr)*q; A.troca=tr*q; A.tempo=A.maquina;
+        A.gcode={corte:g.corte, tempoCorte:g.tempo, rapXY:g.rapXY, rapZ:g.rapZ, trocas:g.trocas};
+        T.gcode+=A.maquina; T.maquina+=A.maquina; T.troca+=A.troca;
         R.arquivos.push(A); return;
       }
-      var porCam={}, ferr={}, ativos=[];
+      var ferr={}, ativos=[];
       d.contornos.forEach(function(ct){ if(ct.off) return; var pid=(it.ops&&it.ops[ct.L])||'mdf15', pr=P[pid]; if(!pr||pr.op==='ignorar') return; ativos.push(ct); });
       aninhamento(ativos);
       var bbA=[Infinity,Infinity,-Infinity,-Infinity], area=0;
@@ -1105,25 +1432,33 @@
         T.corte+=lin.corte; T.mergulho+=lin.mergulho; T.rapido+=lin.rapido;
         R.camadas.push(lin);
       });
-      var nf=Object.keys(ferr).length;
-      var ch=d.chapa&&d.chapa.w>0?[d.chapa.w,d.chapa.h]:null;
-      if(!ch){ /* chapa do preset dominante */
-        var dom=null, dl=-1; R.camadas.forEach(function(l){ if(l.arquivo===it.id&&l.op!=='ignorar'&&l.ml>dl){ dl=l.ml; dom=l.preset; } });
-        ch=(P[dom]&&P[dom].chapa)||[2750,1850];
-      }
-      var nCh=num(it.chapas)>0?Math.round(num(it.chapas)):Math.max(1,Math.ceil(q*A.bbox[0]*A.bbox[1]/(ch[0]*ch[1])-0.05));
-      if(!ativos.length) nCh=num(it.chapas)>0?Math.round(num(it.chapas)):0;
-      A.chapas=nCh; A.chapaUsada=ch;
-      A.troca=Math.max(0,nf-1)*nCh*M.trocaMin; A.maquina+=A.troca;
-      A.setup=nCh*M.setupMin; A.prog=ativos.length?M.progMin:0;
-      A.tempo=A.maquina+A.setup+A.prog;
-      T.ml+=A.ml; T.mlCobrado+=A.mlCobrado; T.contornos+=ativos.length*q; T.maquina+=A.maquina; T.troca+=A.troca; T.setup+=A.setup; T.prog+=A.prog;
-      T.total+=A.tempo; T.chapas+=nCh; T.areaPecas+=A.areaPecas;
+      ferrDe[it.id]=ferr;
+      A.prog=ativos.length?M.progMin:0;
+      A.tempo=A.maquina+A.prog;
+      T.ml+=A.ml; T.mlCobrado+=A.mlCobrado; T.contornos+=ativos.length*q; T.maquina+=A.maquina; T.prog+=A.prog; T.areaPecas+=A.areaPecas;
       R.arquivos.push(A);
     });
+    /* chapas: encaixe por material; troca de fresa por chapa (ferramentas dos arquivos nela) */
+    var C=RTR.consumo(itens,cfg,opt);
+    C.materiais.forEach(function(m){
+      m.folhas.forEach(function(fo){
+        var tools={};
+        Object.keys(fo.arqs).forEach(function(id){ Object.keys(ferrDe[id]||{}).forEach(function(t){ tools[t]=1; }); if(porId[id]) porId[id].chapas++; });
+        var tc=Math.max(0,Object.keys(tools).length-1)*M.trocaMin; T.troca+=tc; T.maquina+=tc;
+      });
+      T.chapas+=m.n; T.cargas+=m.n; T.custoMaterial+=m.custo;
+    });
+    C.semPeca.forEach(function(sp){
+      var nf=Object.keys(ferrDe[sp.it]||{}).length, tc=Math.max(0,nf-1)*sp.q*M.trocaMin;
+      T.troca+=tc; T.maquina+=tc; T.cargas+=sp.q;
+    });
+    if(!T.cargas&&T.maquina>0) T.cargas=1;
+    T.setup=T.cargas*M.setupMin;
+    T.total=T.maquina+T.setup+T.prog;
     T.valorRouter=T.mlCobrado*B.valorML;
     T.parteMaqPDVEX=T.mlCobrado*B.maqML;
     T.custoMO=(T.maquina+T.setup)/60*B.horaOp+T.prog/60*B.horaProg;
+    R.materiais=C.materiais; R.modoMat=C.modo;
     R.tot=T;
     return R;
   };

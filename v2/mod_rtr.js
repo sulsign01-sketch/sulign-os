@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════
    SULSIGN OS 2.0 — MÓDULO: TEMPO DE ROUTER (rtr)
-   Mede o perímetro dos vetores (m.l.) e estima o tempo de corte.
+   Mede o perímetro dos vetores (m.l.), estima o tempo de corte e o
+   consumo de chapas por material (encaixe, aproveitamento, custo).
    Lê .crv3d do Aspire, EPS (Corel/VCarve), DXF, SVG, PDF e G-code.
    Motor em rtr_core.js (carregado aqui). Grava em router_medicoes,
    vinculado à OS (ordens_servico.id). Parâmetros em router_config.
@@ -15,7 +16,9 @@
   var OPS=[['corte','Corte passante'],['vinco','Vinco (V)'],['rebaixo','Rebaixo/pocket'],['grav','Gravação'],['ignorar','Não cortar']];
   var GENERICAS=/^(0|layer \d+|camada \d+|eps|pdf|svg|cor #[0-9a-f]+|defpoints)$/i;
   var st={itens:[], os:null, job:'', aba:'medir', cfg:null, cfgFonte:'padrão', hist:null, histErro:null, osList:null,
-          anotar:true, msg:null, ocupado:0, seq:0, root:null, c:null, calc:null, abertoParam:{}};
+          anotar:true, msg:null, ocupado:0, seq:0, root:null, c:null, calc:null, abertoParam:{},
+          ovr:{}, reuso:{}, encAberto:{}, famAberta:{}};
+  var MODOS=[['inteira','chapa inteira'],['usada','só o que usar (sobra fica)'],['envolvente','retângulo das peças']];
 
   function esc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
   function num(x){ var v=parseFloat(String(x==null?'':x).replace(/\./g,function(m,i,s){ return s.indexOf(',')>=0?'':'.'; }).replace(',','.')); return isFinite(v)?v:0; }
@@ -43,12 +46,22 @@
     RTR.PRESETS.forEach(function(x){ p[x.id]=copia(x); ordem.push(x.id); });
     return {presets:p, ordem:ordem, maq:copia(RTR.MAQ), cob:copia(RTR.COB)};
   }
+  /* v1 (antes do consumo de chapas) só guarda parâmetros de corte: nome/chapa/preço vêm do catálogo novo */
+  var CORTE_K={d:1,prof:1,passo:1,avanco:1,mergulho:1,fator:1,step:1};
   function mesclar(sv){
     var c=padrao(); if(!sv||typeof sv!=='object') return c;
-    if(sv.presets){ Object.keys(sv.presets).forEach(function(id){ var q=sv.presets[id]; if(!q) return; c.presets[id]=c.presets[id]?mix(c.presets[id],q):q; if(c.ordem.indexOf(id)<0) c.ordem.splice(c.ordem.length-1,0,id); }); }
+    var v2=(sv.v||1)>=2;
+    if(sv.presets){ Object.keys(sv.presets).forEach(function(id){
+      var q=sv.presets[id]; if(!q) return;
+      if(c.presets[id]){
+        if(v2) c.presets[id]=mix(c.presets[id],q);
+        else { var o={}; Object.keys(q).forEach(function(k){ if(CORTE_K[k]) o[k]=q[k]; }); c.presets[id]=mix(c.presets[id],o); }
+      } else if(String(id).charAt(0)==='u'){ q=copia(q); if(!q.fam) q.fam='Outros'; if(q.op==='corte'&&!q.chapa) q.chapa=[2750,1850]; c.presets[id]=q; inserir(c.ordem,id); }
+    }); }
     if(sv.maq) c.maq=mix(c.maq,sv.maq); if(sv.cob) c.cob=mix(c.cob,sv.cob);
     return c;
   }
+  function inserir(ordem,id){ var i=ordem.indexOf('acmv'); if(i<0) ordem.push(id); else ordem.splice(i,0,id); }
   function mix(a,b){ var o=copia(a); Object.keys(b).forEach(function(k){ if(b[k]!=null) o[k]=b[k]; }); return o; }
   function carregarCfg(){
     var loc=null; try{ loc=JSON.parse(localStorage.getItem(LS_CFG)||'null'); }catch(e){}
@@ -58,7 +71,7 @@
     }).catch(function(){ /* tabela ainda não criada: fica com o local/padrão */ });
   }
   function salvarCfg(){
-    var v={presets:st.cfg.presets, maq:st.cfg.maq, cob:st.cfg.cob, v:1};
+    var v={presets:st.cfg.presets, maq:st.cfg.maq, cob:st.cfg.cob, v:2};
     try{ localStorage.setItem(LS_CFG,JSON.stringify(v)); }catch(e){}
     return upsert('router_config',{chave:'parametros',valor:v,updated_at:new Date().toISOString()})
       .then(function(){ st.cfgFonte='sistema'; aviso('Parâmetros salvos no sistema.'); })
@@ -98,8 +111,9 @@
   function novoItem(doc){
     preparar(doc);
     var base=RTR.palpite(doc.nome,'')||'mdf15';
+    var pg=RTR.palpite(doc.nome,''), pgp=st.cfg.presets[pg];
     var it={id:'f'+(++st.seq), doc:doc, qtd:doc.qtdSugerida?doc.qtdSugerida.n:1, qtdFonte:doc.qtdSugerida?doc.qtdSugerida.fonte:null,
-            ops:{}, chapas:'', escala:1, palpiteBase:!RTR.palpite(doc.nome,'')};
+            ops:{}, escala:1, palpiteBase:!pg, mat:(doc.formato==='gcode'&&pgp&&pgp.op==='corte')?pg:''};
     (doc.camadas||[]).forEach(function(cm){ it.ops[cm.nome]=memoria(cm.nome)||RTR.palpite(doc.nome,cm.nome)||base; });
     st.itens.push(it);
   }
@@ -127,10 +141,12 @@
   /* ── cálculo ── */
   function recalc(){
     if(!window.RTR||!st.itens.length){ st.calc=null; return; }
-    st.calc=RTR.calcular(st.itens.map(function(it){ return {id:it.id, doc:it.doc, qtd:it.qtd, ops:it.ops, chapas:it.chapas}; }),
-      {presets:st.cfg.presets, maq:st.cfg.maq, cob:st.cfg.cob});
+    st.calc=RTR.calcular(st.itens.map(function(it){ return {id:it.id, doc:it.doc, qtd:it.qtd, ops:it.ops, mat:it.mat}; }),
+      {presets:st.cfg.presets, maq:st.cfg.maq, cob:st.cfg.cob},
+      {ovr:st.ovr, reuso:st.reuso, modo:st.cfg.cob.modoMat||'inteira'});
   }
   function linhaDe(itId,camada){ var r=null; if(st.calc) st.calc.camadas.forEach(function(l){ if(l.arquivo===itId&&l.camada===camada) r=l; }); return r; }
+  function matDe(id){ var r=null; if(st.calc) st.calc.materiais.forEach(function(m){ if(m.id===id) r=m; }); return r; }
   function arqDe(itId){ var r=null; if(st.calc) st.calc.arquivos.forEach(function(a){ if(a.id===itId) r=a; }); return r; }
 
   function aviso(t,erro){ st.msg={t:t,erro:!!erro}; draw(); setTimeout(function(){ if(st.msg&&st.msg.t===t){ st.msg=null; draw(); } },erro?9000:4500); }
@@ -208,8 +224,24 @@
       +'.rtr-pt td{padding:4px 4px}.rtr-pt input,.rtr-pt select{width:100%}'
       +'.rtr-hist{border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:9px;background:var(--panel)}'
       +'.rtr-so{display:none}.rtr-bk li b{white-space:nowrap}'
+      +'.rtr-mat{border:1px solid var(--line);border-radius:10px;padding:11px 12px;margin-bottom:10px;background:#FCFBF9}'
+      +'.rtr-mt{display:flex;align-items:center;gap:4px;font-size:13.5px;margin-bottom:3px}'
+      +'.rtr-mn{font-family:var(--font-d);font-weight:800;font-size:17px;white-space:nowrap}'
+      +'.rtr-mc{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:9px}'
+      +'.rtr-chk{display:flex;align-items:center;gap:6px;font-size:12.5px;padding-bottom:8px}'
+      +'.rtr-mv{font-family:var(--font-d);font-size:16px;font-weight:800;white-space:nowrap}'
+      +'.rtr-mtot{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:10px;margin-top:4px;font-size:13.5px}'
+      +'.rtr-folhas{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;margin-top:10px}'
+      +'.rtr-folhas.um{grid-template-columns:minmax(0,520px)}'
+      +'.rtr-folha svg{display:block;width:100%;height:auto;background:#fff;border-radius:6px}'
+      +'.rtr-folha .mini{margin-top:3px}'
+      +'.rtr-fam{border:1px solid var(--line);border-radius:10px;margin-bottom:8px;background:var(--panel)}'
+      +'.rtr-fam summary{cursor:pointer;padding:10px 12px;font-weight:700;font-size:13px;list-style-position:inside}'
+      +'.rtr-fam .rtr-famc{padding:0 10px 10px}'
+      +'.rtr-pt th{font-size:9.5px;padding:6px 4px;white-space:nowrap}'
       +'@media(max-width:620px){.rtr-hm{display:none}.rtr-root{padding:14px 12px 60px!important}'
       +'.rtr-root .kpis{grid-template-columns:1fr 1fr;gap:8px}.rtr-root .kpi{padding:10px 11px}.rtr-root .kpi .vl{font-size:19px}'
+      +'.rtr-folhas{grid-template-columns:1fr 1fr;gap:8px}.rtr-folhas.um{grid-template-columns:1fr}'
       +'.rtr-cam thead{display:none}.rtr-cam tr{display:grid;grid-template-columns:1fr auto;gap:5px 10px;padding:9px 12px;border-bottom:1px solid #EFEEE9}'
       +'.rtr-cam td{display:block;padding:0!important;border:none}.rtr-cam td.c-n{grid-column:1;grid-row:1;font-weight:600}'
       +'.rtr-cam td.c-ml{grid-column:2;grid-row:1;text-align:right}.rtr-cam td.c-op{grid-column:1/-1;grid-row:2}.rtr-cam td.c-op select{width:100%;font-size:13px;padding:7px}'
@@ -231,7 +263,7 @@
       +'</label>';
     if(st.ocupado) h+='<div class="loading-view" style="padding:14px">Lendo arquivo…</div>';
     st.itens.forEach(function(it){ h+=cartaoArquivo(it); });
-    if(st.itens.length) h+=cartaoResultado();
+    if(st.itens.length) h+=cartaoResultado()+cartaoChapas()+cartaoSalvar();
     else if(!st.ocupado) h+='<div class="mini" style="text-align:center;padding:6px 0 0">Dica: na ficha da OS, o botão ⏱ ao lado do vetor de corte abre ele aqui já vinculado.</div>';
     return h;
   }
@@ -255,7 +287,9 @@
     h+='</div>';
     h+='<div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">';
     h+='<div style="width:74px"><span class="rtr-lbl">Qtd</span><input class="rtr-in" style="width:100%" type="text" inputmode="numeric" data-rtr="qtd" data-it="'+it.id+'" value="'+esc(it.qtd)+'"></div>';
-    h+='<div style="width:80px"><span class="rtr-lbl">Chapas</span><input class="rtr-in" style="width:100%" type="text" inputmode="numeric" data-rtr="chapas" data-it="'+it.id+'" value="'+esc(it.chapas)+'" placeholder="'+(A&&A.chapas?A.chapas:'auto')+'"></div>';
+    if(d.formato==='gcode'){
+      h+='<div style="min-width:170px;flex:1"><span class="rtr-lbl">Material da chapa</span><select class="rtr-sel" style="width:100%" data-rtr="gmat" data-it="'+it.id+'"><option value="">— não conta chapa —</option>'+opcoesPreset(it.mat,true)+'</select></div>';
+    }
     if(d.formato!=='gcode'){
       h+='<div><span class="rtr-lbl">Escala</span><select class="rtr-sel" data-rtr="escala" data-it="'+it.id+'">';
       [[1,'1:1 (como veio)'],[10,'×10 (arq. em cm)'],[25.4,'×25,4 (polegadas)'],[1000,'×1000 (metros)'],[0.1,'÷10'],[-1,'largura real…']].forEach(function(o){ h+='<option value="'+o[0]+'"'+(Math.abs(it.escala-o[0])<1e-9?' selected':'')+'>'+o[1]+'</option>'; });
@@ -266,7 +300,8 @@
     h+='</div></div>';
     if(it.qtdFonte) h+='<div class="mini" style="padding:0 14px 8px">Qtd '+it.qtd+' tirada do '+esc(it.qtdFonte)+' — confira.</div>';
     (d.avisos||[]).forEach(function(a){ h+='<div class="rtr-av">⚠ '+esc(a)+'</div>'; });
-    if(it.palpiteBase&&d.formato!=='gcode') h+='<div class="rtr-av">⚠ Material não identificado no nome do arquivo: usei MDF 15 mm. Troque nas camadas abaixo.</div>';
+    if(it.palpiteBase&&d.formato!=='gcode') h+='<div class="rtr-av">⚠ Material não identificado no nome do arquivo: usei MDF cru 15 mm. Troque nas camadas abaixo.</div>';
+    if(d.formato==='gcode'&&!it.mat) h+='<div class="rtr-av">⚠ Escolha o material da chapa deste G-code para ele entrar no consumo de chapas.</div>';
     h+=previa(it);
     if(d.formato==='gcode') h+=blocoGcode(it,A);
     else h+=tabelaCamadas(it,A);
@@ -304,10 +339,12 @@
     return r;
   }
 
-  function opcoesPreset(sel){
+  function famDe(p){ return p.fam||(p.op==='corte'?'Outros':(p.op==='ignorar'?'Ignorar':'Vinco e usinagem')); }
+  function rotuloFam(f){ return f==='Vinco e usinagem'?'Vinco, rebaixo e gravação':(f==='Ignorar'?'Não cortar':'Corte · '+f); }
+  function opcoesPreset(sel,soCorte){
     var h='', grupos={};
-    st.cfg.ordem.forEach(function(id){ var p=st.cfg.presets[id]; if(!p) return; (grupos[p.op]=grupos[p.op]||[]).push(p); });
-    OPS.forEach(function(o){ var g=grupos[o[0]]; if(!g) return; h+='<optgroup label="'+o[1]+'">'; g.forEach(function(p){ h+='<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.nome)+'</option>'; }); h+='</optgroup>'; });
+    st.cfg.ordem.forEach(function(id){ var p=st.cfg.presets[id]; if(!p) return; if(soCorte&&p.op!=='corte') return; (grupos[famDe(p)]=grupos[famDe(p)]||[]).push(p); });
+    RTR.FAMILIAS.forEach(function(f){ var g=grupos[f]; if(!g) return; h+='<optgroup label="'+esc(rotuloFam(f))+'">'; g.forEach(function(p){ h+='<option value="'+esc(p.id)+'"'+(p.id===sel?' selected':'')+'>'+esc(p.nome)+'</option>'; }); h+='</optgroup>'; });
     return h;
   }
   function tabelaCamadas(it,A){
@@ -325,7 +362,7 @@
     h+='</tbody></table></div>';
     if(A){
       h+='<div class="mini" style="padding:8px 14px 12px">Arquivo: <b>'+nf(A.mlCobrado,2)+' m.l.</b>'+(q>1?' (já ×'+q+')':'')+' · máquina '+RTR.hm(A.maquina)
-        +' · '+A.chapas+' chapa(s)'+(A.chapaUsada?' de '+nf(A.chapaUsada[0],0)+'×'+nf(A.chapaUsada[1],0):'')
+        +(A.chapas?' · em '+A.chapas+' chapa(s)':'')
         +(A.areaPecas?' · peças '+nf(A.areaPecas,2)+' m²':'')
         +(A.bbox&&A.bbox[0]?' · envolvente '+nf(A.bbox[0]/1000,2)+'×'+nf(A.bbox[1]/1000,2)+' m':'')+'</div>';
     }
@@ -340,6 +377,7 @@
     var fs=Object.keys(g.feeds||{}).sort(function(a,b){ return g.feeds[b]-g.feeds[a]; }).slice(0,4).map(function(f){ return 'F'+f; });
     if(fs.length) h+='<li><span>Avanços usados</span><b>'+fs.join(' · ')+'</b></li>';
     if(A) h+='<li><span>Tempo de máquina estimado'+(num(it.qtd)>1?' (×'+num(it.qtd)+')':'')+'</span><b>'+RTR.hm(A.maquina)+'</b></li>';
+    if(A&&A.chapas) h+='<li><span>Chapas (pelo tamanho do percurso)</span><b>'+A.chapas+'</b></li>';
     h+='</ul><div class="mini" style="margin-top:6px">G-code mede o tempo real do percurso da fresa. Não entra no m.l. cobrado (o m.l. vem do vetor).</div></div>';
     return h;
   }
@@ -352,7 +390,9 @@
     h+=kpi('Corte (m.l.)',nf(T.mlCobrado,2),T.contornos+' vetores'+(T.areaPecas?' · '+nf(T.areaPecas,2)+' m² de peça':''));
     h+=kpi('Máquina',RTR.hm(T.maquina),'corte, mergulho, vazio e troca');
     h+=kpi('Total na OS',RTR.hm(T.total),'+ setup e programação');
-    h+=kpi('Router (m.l.)',fmt(T.valorRouter),nf(cob.valorML,2).replace(/^/,'R$ ')+'/m.l.');
+    h+=kpi('Router (m.l.)',fmt(T.valorRouter),'R$ '+nf(cob.valorML,2)+'/m.l.');
+    h+=kpi('Chapas',String(T.chapas),R.materiais.length?R.materiais.length+' material(is)':'sem corte passante');
+    h+=kpi('Material',fmt(T.custoMaterial),rotuloModo(R.modoMat));
     h+='</div>';
     h+='<ul class="rtr-bk">';
     h+='<li><span>Corte (passadas × trilha ÷ avanço)</span><b>'+RTR.hm(T.corte)+'</b></li>';
@@ -360,13 +400,117 @@
     h+='<li><span>Deslocamento em vazio + Z seguro</span><b>'+RTR.hm(T.rapido)+'</b></li>';
     if(T.gcode) h+='<li><span>Arquivos G-code (percurso real)</span><b>'+RTR.hm(T.gcode)+'</b></li>';
     h+='<li><span>Trocas de fresa</span><b>'+RTR.hm(T.troca)+'</b></li>';
-    h+='<li><span>Setup de chapa ('+T.chapas+' × '+st.cfg.maq.setupMin+' min)</span><b>'+RTR.hm(T.setup)+'</b></li>';
+    h+='<li><span>Setup de chapa ('+T.cargas+' × '+nfIn(st.cfg.maq.setupMin)+' min)</span><b>'+RTR.hm(T.setup)+'</b></li>';
     h+='<li><span>Programação / fechamento de arquivo</span><b>'+RTR.hm(T.prog)+'</b></li>';
     h+='<li style="border-bottom:none"><span>Custo de MO estimado (operador + programação)</span><b>'+fmt(T.custoMO)+'</b></li>';
     h+='</ul>';
     if(cob.maqML) h+='<div class="mini" style="margin-top:4px">Dos '+fmt(T.valorRouter)+', '+fmt(T.parteMaqPDVEX)+' é máquina PDVEX (R$ '+nf(cob.maqML,2)+'/m.l.).</div>';
-    /* salvar */
-    h+='<div style="border-top:1px solid var(--line);margin-top:14px;padding-top:12px">';
+    h+='<div class="mini" style="margin-top:12px;line-height:1.5">Estimativa pelo vetor: trilha = perímetro ± π·Ø da fresa (peça por fora, furo por dentro), passadas pela profundidade, deslocamento pelo vizinho mais próximo e fator de aceleração do preset. Calibre no Histórico com o tempo real da máquina.</div>';
+    h+='</div>';
+    return h;
+  }
+  function rotuloModo(m){ var r='chapa inteira'; MODOS.forEach(function(x){ if(x[0]===m) r=x[1]; }); return 'custo por '+r; }
+
+  /* ── CHAPAS POR MATERIAL ── */
+  function cartaoChapas(){
+    var R=st.calc; if(!R) return '';
+    var L=R.materiais, h='<div class="card rtr-chapas">';
+    h+='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px"><h3 style="margin:0">Chapas por material</h3><span style="flex:1"></span>'
+      +'<label class="mini" style="display:flex;align-items:center;gap:6px">custo por <select class="rtr-sel" data-rtr="modo">'
+      +MODOS.map(function(m){ return '<option value="'+m[0]+'"'+(m[0]===(st.cfg.cob.modoMat||'inteira')?' selected':'')+'>'+m[1]+'</option>'; }).join('')+'</select></label></div>';
+    if(!L.length){
+      h+='<div class="mini" style="padding:6px 0">Nenhuma camada de corte passante: só vinco, rebaixo ou gravação não consomem chapa. Escolha um material de corte nas camadas'+(st.itens.some(function(it){ return it.doc.formato==='gcode'; })?' ou o material do G-code':'')+'.</div></div>';
+      return h;
+    }
+    L.forEach(function(m,mi){ h+=blocoMaterial(m,mi); });
+    var T=R.tot, semPreco=L.filter(function(m){ return !(m.preco>0)&&!m.reuso; });
+    h+='<div class="rtr-mtot"><span><b>'+T.chapas+' chapa(s)</b> no total</span><span style="flex:1"></span><span>material <b>'+fmt(T.custoMaterial)+'</b></span></div>';
+    if(semPreco.length) h+='<div class="rtr-av" style="margin:8px 0 0">⚠ Sem preço: '+semPreco.map(function(m){ return esc(m.nome); }).join(', ')+'. Preencha o R$ da chapa em Parâmetros.</div>';
+    h+='<div class="mini" style="margin-top:10px;line-height:1.5">Encaixe estimado por retângulos: cada peça (com os furos e o miolo aproveitado) vira o menor retângulo que a contém, girado se precisar, com '+nfIn(st.cfg.maq.folga)+' mm + Ø da fresa entre peças e '+nfIn(st.cfg.maq.margem)+' mm de margem. É conservador — o Aspire costuma encaixar um pouco melhor peças curvas. Arquivo do Aspire já encaixado na chapa conta 1 chapa por unidade.</div>';
+    h+='</div>';
+    return h;
+  }
+  function blocoMaterial(m,mi){
+    var cor=RTR.CORFAM[m.fam]||'#888', h='<div class="rtr-mat">';
+    h+='<div class="rtr-mt"><span class="rtr-sw" style="background:'+cor+'"></span><b>'+esc(m.nome)+'</b><span style="flex:1"></span><span class="rtr-mn">'+m.n+' chapa'+(m.n===1?'':'s')+'</span></div>';
+    var l1=[nf(m.W/1000,2)+' × '+nf(m.H/1000,2)+' m'];
+    l1.push(m.preco>0?fmt(m.preco)+' a chapa':'sem preço');
+    l1.push(m.pecas+' peça'+(m.pecas===1?'':'s'));
+    l1.push(nf(m.areaLiq,2)+' m² de peça');
+    l1.push('aprov. '+nf(m.aprov*100,0)+'%');
+    h+='<div class="mini">'+l1.join(' · ')+'</div>';
+    if(m.ultimaFrac!=null&&m.ultimaFrac<0.98) h+='<div class="mini">última chapa usa '+nf(m.ultimaFrac*100,0)+'%'+(m.sobra?' — sobra '+nf(m.sobra.w/1000,2)+' × '+nf(m.sobra.h/1000,2)+' m':'')+'</div>';
+    if(m.fixas) h+='<div class="mini">encaixe do Aspire: '+m.fixas+' chapa'+(m.fixas===1?'':'s')+' contada'+(m.fixas===1?'':'s')+' como no arquivo</div>';
+    if(m.grandes) h+='<div class="rtr-av" style="margin:6px 0 0">⚠ '+m.grandes+' peça'+(m.grandes===1?'':'s')+' maior'+(m.grandes===1?'':'es')+' que a chapa: contei as chapas da emenda.</div>';
+    if(m.aprox) h+='<div class="mini">G-code: área pelo tamanho do percurso da fresa (aproximada)</div>';
+    if(!(m.preco>0)&&!m.reuso) h+='<div class="rtr-av" style="margin:6px 0 0">⚠ Sem preço para '+esc(m.nome)+' — preencha em Parâmetros.</div>';
+    h+='<div class="rtr-mc">';
+    h+='<div style="width:86px"><span class="rtr-lbl">Chapas</span><input class="rtr-in" style="width:100%" type="text" inputmode="numeric" data-rtr="ovr" data-mat="'+esc(m.id)+'" value="'+(m.ovr?m.ovr:'')+'" placeholder="'+m.chapasAuto+'"></div>';
+    h+='<label class="rtr-chk"><input type="checkbox" data-rtr="reuso" data-mat="'+esc(m.id)+'"'+(m.reuso?' checked':'')+'> reuso / sobra (sem custo)</label>';
+    h+='<span style="flex:1"></span>';
+    h+='<div style="text-align:right"><span class="rtr-lbl">Custo</span><b class="rtr-mv">'+(m.reuso?'reuso':fmt(m.custo))+'</b></div>';
+    h+='</div>';
+    if(m.ovr) h+='<div class="mini">ajuste manual · o encaixe calculou '+m.chapasAuto+'</div>';
+    var ab=!!st.encAberto[m.id];
+    h+='<button type="button" class="btn ghost sm" style="margin-top:8px" data-rtr="enc" data-mat="'+esc(m.id)+'">'+(ab?'▾ esconder encaixe':'▸ ver encaixe ('+m.chapasAuto+' chapa'+(m.chapasAuto===1?'':'s')+')')+'</button>';
+    if(ab) h+=desenhoFolhas(m,mi,24);
+    h+='</div>';
+    return h;
+  }
+  /* desenho das chapas: peças como <use> de um <path> por peça (leve no iPhone) */
+  function dPeca(pc){
+    if(pc._d) return pc._d;
+    var mr=pc.mr, co=Math.cos(mr.ang), si=Math.sin(mr.ang), tol=Math.max(mr.w,mr.h)/400, s='';
+    if(pc.gcode){ pc._d='M0 0H'+mr.w.toFixed(1)+'V'+mr.h.toFixed(1)+'H0Z'; return pc._d; }
+    pc.membros.forEach(function(ct){
+      var p=ct.p, lx=null, ly=null;
+      for(var i=0;i<p.length;i+=2){
+        var x=p[i]*co+p[i+1]*si-mr.minx, y=mr.h-(-p[i]*si+p[i+1]*co-mr.miny), last=i>=p.length-2;
+        if(lx!==null&&!last&&(x-lx)*(x-lx)+(y-ly)*(y-ly)<tol*tol) continue;
+        s+=(lx===null?'M':'L')+x.toFixed(1)+' '+y.toFixed(1); lx=x; ly=y;
+      }
+      if(ct.c) s+='Z';
+    });
+    pc._d=s; return s;
+  }
+  function desenhoFolhas(m,mi,lim){
+    var cor=RTR.CORFAM[m.fam]||'#888', defs='', usados={}, h='', n=m.folhas.length, mostra=Math.min(n,lim||n);
+    for(var i=0;i<mostra;i++){
+      var f=m.folhas[i], W=m.W, H=m.H, corpo='', rot='', aprov=0;
+      if(f.fixo){
+        W=f.jw; H=f.jh;
+        var dd='';
+        f.pcs.forEach(function(pc){ pc.membros.forEach(function(ct){ dd+=ct.d||''; }); });
+        corpo='<g transform="translate(0,'+H+')"><path d="'+dd+'" fill="'+cor+'" fill-opacity=".18" fill-rule="evenodd" stroke="'+cor+'" stroke-width="1" vector-effect="non-scaling-stroke"/></g>';
+        rot='Aspire';
+      } else if(f.grande){
+        var pg=m.defs[f.k], kx=(W-2*m.margem)/Math.max(1,pg.mr.w), ky=(H-2*m.margem)/Math.max(1,pg.mr.h), k=Math.min(kx,ky);
+        usados[f.k]=1;
+        corpo='<use href="#rtr-p-'+mi+'-'+f.k+'" xlink:href="#rtr-p-'+mi+'-'+f.k+'" transform="translate('+m.margem+','+m.margem+') scale('+k.toFixed(4)+')"/>';
+        rot='emenda '+f.parte+'/'+f.de;
+      } else {
+        f.pl.forEach(function(pl){
+          var pc=m.defs[pl.k], X=m.margem+pl.x, Y=m.margem+pl.y; usados[pl.k]=1;
+          var tf=pl.rot?('translate('+(X+pc.mr.h).toFixed(1)+','+Y.toFixed(1)+') rotate(90)'):('translate('+X.toFixed(1)+','+Y.toFixed(1)+')');
+          corpo+='<use href="#rtr-p-'+mi+'-'+pl.k+'" xlink:href="#rtr-p-'+mi+'-'+pl.k+'" transform="'+tf+'"/>';
+        });
+      }
+      aprov=f.liq/Math.max(1,W*H);
+      h+='<div class="rtr-folha"><svg viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="xMidYMid meet"><rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fff" stroke="#9aa" stroke-width="1" vector-effect="non-scaling-stroke"/>'+corpo+'</svg>'
+        +'<div class="mini">chapa '+(i+1)+(rot?' · '+rot:'')+(f.grande?'':' · '+nf(aprov*100,0)+'%')+'</div></div>';
+    }
+    Object.keys(usados).forEach(function(k){
+      defs+='<path id="rtr-p-'+mi+'-'+k+'" d="'+dPeca(m.defs[k])+'" fill="'+cor+'" fill-opacity=".18" fill-rule="evenodd" stroke="'+cor+'" stroke-width="1" vector-effect="non-scaling-stroke"'+(m.defs[k].gcode?' stroke-dasharray="6 4"':'')+'/>';
+    });
+    var out='<svg class="rtr-defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>'+defs+'</defs></svg>';
+    out+='<div class="rtr-folhas'+(mostra===1?' um':'')+'">'+h+'</div>';
+    if(n>mostra) out+='<div class="mini">+ '+(n-mostra)+' chapa(s) não desenhada(s)</div>';
+    return out;
+  }
+
+  function cartaoSalvar(){
+    if(!st.calc) return '';
+    var h='<div class="card">';
     h+='<div class="rtr-grid" style="align-items:end">';
     h+='<div style="grid-column:1/-1"><span class="rtr-lbl">Vincular à OS</span><select class="rtr-sel" style="width:100%;font-size:13px;padding:8px" data-rtr="os">'+opcoesOS()+'</select></div>';
     if(!st.os) h+='<div style="grid-column:1/-1"><span class="rtr-lbl">ou Job / orçamento</span><input class="rtr-in" style="width:100%" type="text" data-rtr="job" placeholder="SS-2026_10-## ou nome do evento" value="'+esc(st.job)+'"></div>';
@@ -377,8 +521,6 @@
       +'<button type="button" class="btn ghost" data-rtr="copiar">📋 Copiar resumo</button>'
       +'<button type="button" class="btn ghost" data-rtr="imprimir">🖨 Imprimir</button>'
       +'<button type="button" class="btn ghost" data-rtr="limpar">Limpar</button></div>';
-    h+='</div>';
-    h+='<div class="mini" style="margin-top:12px;line-height:1.5">Estimativa pelo vetor: trilha = perímetro ± π·Ø da fresa (peça por fora, furo por dentro), passadas pela profundidade, deslocamento pelo vizinho mais próximo e fator de aceleração do preset. Calibre no Histórico com o tempo real da máquina.</div>';
     h+='</div>';
     return h;
   }
@@ -403,10 +545,15 @@
   /* resumo em texto (copiar / instruções da OS) */
   function resumo(curto){
     var T=st.calc.tot, cob=st.cfg.cob, linhas=[];
-    var cab='⏱ Router ('+hojeBR()+'): '+nf(T.mlCobrado,1)+' m.l. · máquina '+RTR.hm(T.maquina)+' · total OS '+RTR.hm(T.total)+' · '+T.chapas+' chapa(s)';
+    var chs=st.calc.materiais.map(function(m){ return m.nome+' ×'+m.n; }).join(', ');
+    var cab='⏱ Router ('+hojeBR()+'): '+nf(T.mlCobrado,1)+' m.l. · máquina '+RTR.hm(T.maquina)+' · total OS '+RTR.hm(T.total)+(chs?' · chapas: '+chs:'');
     if(curto) return cab+' — '+st.itens.map(function(it){ return it.doc.nome+(num(it.qtd)>1?' ×'+num(it.qtd):''); }).join(', ');
     linhas.push(cab);
     linhas.push('Valor router: R$ '+nf(T.valorRouter,2)+' (R$ '+nf(cob.valorML,2)+'/m.l.)');
+    if(st.calc.materiais.length){
+      linhas.push('Material ('+rotuloModo(st.calc.modoMat)+'): R$ '+nf(T.custoMaterial,2));
+      st.calc.materiais.forEach(function(m){ linhas.push('• '+m.nome+': '+m.n+' chapa(s) '+nf(m.W/1000,2)+'×'+nf(m.H/1000,2)+' m · aprov. '+nf(m.aprov*100,0)+'% · '+(m.reuso?'reuso':'R$ '+nf(m.custo,2))); });
+    }
     st.itens.forEach(function(it){
       var A=arqDe(it.id); if(!A) return;
       linhas.push('• '+it.doc.nome+(num(it.qtd)>1?' ×'+num(it.qtd):'')+': '+(it.doc.formato==='gcode'?'G-code ':nf(A.mlCobrado,2)+' m.l. · ')+RTR.hm(A.maquina)+' de máquina');
@@ -442,6 +589,9 @@
       tempo_total_min:+T.total.toFixed(2),
       chapas:T.chapas,
       area_pecas_m2:+T.areaPecas.toFixed(4),
+      materiais:st.calc.materiais.map(function(m){ return {id:m.id, nome:m.nome, chapa:[m.W,m.H], chapas:m.n, chapas_auto:m.chapasAuto, manual:!!m.ovr,
+        aprov:+m.aprov.toFixed(4), pecas:m.pecas, area_liq_m2:+m.areaLiq.toFixed(4), area_env_m2:+m.areaEnv.toFixed(4), preco:m.preco, custo:+m.custo.toFixed(2), reuso:m.reuso}; }),
+      custo_material:+T.custoMaterial.toFixed(2),
       valor_ml:cob.valorML,
       valor_router:+T.valorRouter.toFixed(2),
       params:{maq:st.cfg.maq, cob:cob, presets:usados},
@@ -469,22 +619,31 @@
     var css='body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:24px;font-size:12px}h1{font-size:18px;margin:0}.mut{color:#666}'
       +'table{width:100%;border-collapse:collapse;margin:8px 0 14px}td,th{padding:4px 6px;border-bottom:1px solid #ddd;text-align:left}th{font-size:10px;text-transform:uppercase;color:#666}'
       +'.n{text-align:right}.k{display:inline-block;border:1px solid #ccc;border-radius:8px;padding:6px 10px;margin:0 6px 6px 0}.k b{display:block;font-size:16px}'
-      +'svg{width:100%;max-height:300px;border:1px solid #ddd;border-radius:8px;margin:6px 0}path{fill:none;stroke-width:1.2;vector-effect:non-scaling-stroke}';
+      +'.prev svg{width:100%;max-height:300px;border:1px solid #ddd;border-radius:8px;margin:6px 0}.prev path{fill:none;stroke-width:1.2;vector-effect:non-scaling-stroke}'
+      +'.prev .ch{fill:none;stroke:#999;stroke-dasharray:6 4;stroke-width:1;vector-effect:non-scaling-stroke}.prev path.off{stroke:#ccc!important;stroke-dasharray:3 3}'
+      +'.rtr-folhas{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px}.rtr-folha{width:31%}.rtr-folha svg{width:100%;height:auto;border:1px solid #ccc}.mini{font-size:10px;color:#666}';
     var h='<html><head><meta charset="utf-8"><title>Tempo de Router</title><style>'+css+'</style></head><body>';
     h+='<h1>Sul Sign · Tempo de Router</h1><div class="mut">'+dstr(new Date())+(st.os?' · OS '+esc(st.os.label):'')+(st.job&&!st.os?' · '+esc(st.job):'')+'</div><p>';
     h+='<span class="k">Corte<b>'+nf(T.mlCobrado,2)+' m.l.</b></span><span class="k">Máquina<b>'+RTR.hm(T.maquina)+'</b></span><span class="k">Total OS<b>'+RTR.hm(T.total)+'</b></span><span class="k">Chapas<b>'+T.chapas+'</b></span>';
-    if(!SS20.mask) h+='<span class="k">Router<b>R$ '+nf(T.valorRouter,2)+'</b></span>';
+    if(!SS20.mask) h+='<span class="k">Router<b>R$ '+nf(T.valorRouter,2)+'</b></span>'+(st.calc.materiais.length?'<span class="k">Material<b>R$ '+nf(T.custoMaterial,2)+'</b></span>':'');
     h+='</p>';
     st.itens.forEach(function(it){
       var A=arqDe(it.id)||{}, d=it.doc;
       h+='<h3 style="margin:14px 0 2px">'+esc(d.nome)+(num(it.qtd)>1?' · ×'+num(it.qtd):'')+'</h3><div class="mut">'+esc(d.info||d.formato)+' · '+(A.chapas||0)+' chapa(s) · máquina '+RTR.hm(A.maquina||0)+'</div>';
-      var pv=previa(it); var m=/<svg[\s\S]*<\/svg>/.exec(pv); if(m) h+=m[0];
+      var pv=previa(it); var m=/<svg[\s\S]*<\/svg>/.exec(pv); if(m) h+='<div class="prev">'+m[0]+'</div>';
       if(d.formato!=='gcode'){
         h+='<table><tr><th>Camada</th><th>Operação</th><th class="n">m.l.</th><th class="n">vetores</th><th class="n">passadas</th><th class="n">tempo</th></tr>';
         st.calc.camadas.forEach(function(l){ if(l.arquivo!==it.id) return; h+='<tr><td>'+esc(l.camada)+'</td><td>'+esc((st.cfg.presets[l.preset]||{}).nome||'')+'</td><td class="n">'+nf(l.ml,2)+'</td><td class="n">'+l.n+'</td><td class="n">'+(l.passadas||'—')+'</td><td class="n">'+(l.tempo?RTR.hm(l.tempo):'—')+'</td></tr>'; });
         h+='</table>';
       }
     });
+    if(st.calc.materiais.length){
+      h+='<h3 style="margin:16px 0 2px">Chapas por material</h3><div class="mut">'+esc(rotuloModo(st.calc.modoMat))+'</div>';
+      h+='<table><tr><th>Material</th><th>Chapa</th><th class="n">Chapas</th><th class="n">Aprov.</th><th class="n">Peças</th><th class="n">m² peça</th>'+(SS20.mask?'':'<th class="n">Custo</th>')+'</tr>';
+      st.calc.materiais.forEach(function(mt){ h+='<tr><td>'+esc(mt.nome)+'</td><td>'+nf(mt.W/1000,2)+'×'+nf(mt.H/1000,2)+' m</td><td class="n">'+mt.n+(mt.ovr?' (manual)':'')+'</td><td class="n">'+nf(mt.aprov*100,0)+'%</td><td class="n">'+mt.pecas+'</td><td class="n">'+nf(mt.areaLiq,2)+'</td>'+(SS20.mask?'':'<td class="n">'+(mt.reuso?'reuso':'R$ '+nf(mt.custo,2))+'</td>')+'</tr>'; });
+      h+='</table>';
+      st.calc.materiais.forEach(function(mt,mi){ h+='<div class="mut"><b>'+esc(mt.nome)+'</b> — encaixe estimado</div>'+desenhoFolhas(mt,mi,9); });
+    }
     h+='<div class="mut">Setup '+RTR.hm(T.setup)+' · programação '+RTR.hm(T.prog)+' · trocas '+RTR.hm(T.troca)+'. Estimativa pelo vetor; confira com o operador.</div>';
     h+='<script>setTimeout(function(){window.print();},350)<\/script></body></html>';
     w.document.open(); w.document.write(h); w.document.close();
@@ -501,7 +660,8 @@
       h+='<div class="rtr-hist"><div style="display:flex;gap:8px;align-items:flex-start;flex-wrap:wrap">'
         +'<div style="flex:1;min-width:200px"><b style="font-size:13px">'+esc(m.titulo||'medição')+'</b>'
         +'<div class="mini">'+dstr(m.created_at)+(m.job?' · '+esc(m.job):'')+(m.os_id?' · OS '+esc(osNome(m.os_id)):'')+'</div>'
-        +'<div style="font-size:12.5px;margin-top:4px"><b>'+nf(m.ml,2)+' m.l.</b> · máquina '+RTR.hm(m.tempo_maquina_min)+' · total '+RTR.hm(m.tempo_total_min)+' · '+(m.chapas||0)+' chapa(s) · '+fmt(+m.valor_router||0)+calib+'</div></div>'
+        +'<div style="font-size:12.5px;margin-top:4px"><b>'+nf(m.ml,2)+' m.l.</b> · máquina '+RTR.hm(m.tempo_maquina_min)+' · total '+RTR.hm(m.tempo_total_min)+' · '+(m.chapas||0)+' chapa(s) · '+fmt(+m.valor_router||0)+calib+'</div>'
+        +((m.materiais&&m.materiais.length)?'<div class="mini" style="margin-top:2px">'+m.materiais.map(function(x){ return esc(x.nome)+' ×'+x.chapas; }).join(' · ')+(m.custo_material!=null?' · material '+fmt(+m.custo_material||0):'')+'</div>':'')+'</div>'
         +'<div style="display:flex;gap:6px"><button type="button" class="btn ghost sm" data-rtr="real" data-id="'+m.id+'">⏱ tempo real</button>'
         +'<button type="button" class="btn ghost sm" data-rtr="excluirMed" data-id="'+m.id+'">✕</button></div></div></div>';
     });
@@ -509,7 +669,10 @@
   }
   function osNome(id){ var r='vinculada'; (st.osList||[]).forEach(function(o){ if(String(o.id)===String(id)) r=(o.serial_os||o.num||'')+(o.frente?' · '+o.frente:''); }); return r; }
   function carregarHist(){
-    SS20.sb('router_medicoes?select=id,os_id,job,titulo,arquivos,ml,tempo_maquina_min,tempo_total_min,chapas,valor_router,tempo_real_min,params,created_at&deletado_em=is.null&order=created_at.desc&limit=60')
+    var base='router_medicoes?select=id,os_id,job,titulo,arquivos,ml,tempo_maquina_min,tempo_total_min,chapas,valor_router,tempo_real_min,params,created_at';
+    var fim='&deletado_em=is.null&order=created_at.desc&limit=60';
+    SS20.sb(base+',materiais,custo_material'+fim)
+      .catch(function(e){ if(semTabela(e)) throw e; return SS20.sb(base+fim); })  /* tabela da versão anterior, sem colunas de chapa */
       .then(function(r){ st.hist=r||[]; st.histErro=null; draw(); })
       .catch(function(e){ st.hist=[]; st.histErro=semTabela(e)?'A tabela router_medicoes ainda não existe. Rode o arquivo v2/sql/router_medicoes.sql no SQL Editor do Supabase.':('Erro: '+e.message); draw(); });
   }
@@ -544,23 +707,45 @@
       +campo('maq','trocaMin','Troca de fresa (min)',M.trocaMin)+campo('maq','setupMin','Setup por chapa (min)',M.setupMin)+campo('maq','progMin','Programação por arquivo (min)',M.progMin)
       +campo('maq','fatorGcode','Fator G-code (×)',M.fatorGcode);
     h+='</div></div>';
+    h+='<div class="card"><h3>Encaixe nas chapas</h3><div class="rtr-grid">';
+    h+=campo('maq','margem','Margem da borda (mm)',M.margem)+campo('maq','folga','Folga entre peças (mm, + Ø da fresa)',M.folga);
+    h+='<div><span class="rtr-lbl">Custo do material por</span><select class="rtr-sel" style="width:100%;padding:8px" data-rtr="modo">'
+      +MODOS.map(function(m){ return '<option value="'+m[0]+'"'+(m[0]===(B.modoMat||'inteira')?' selected':'')+'>'+m[1]+'</option>'; }).join('')+'</select></div>';
+    h+='</div></div>';
     h+='<div class="card"><h3>Cobrança</h3><div class="rtr-grid">';
     h+=campo('cob','valorML','Router R$/m.l.',B.valorML)+campo('cob','maqML','Parte máquina PDVEX R$/m.l.',B.maqML)+campo('cob','horaOp','Operador R$/h',B.horaOp)+campo('cob','horaProg','Programação R$/h',B.horaProg);
     h+='</div></div>';
-    h+='<div class="card"><h3>Materiais e fresas</h3><div class="mini" style="margin-bottom:8px">Avanço e mergulho em mm/min. Passadas = profundidade ÷ passo. Fator = aceleração real (ajusta sozinho pelo tempo real no Histórico).</div>';
-    h+='<div style="overflow-x:auto"><table class="rtr-pt" style="min-width:760px"><thead><tr><th>Nome</th><th>Operação</th><th class="num">Ø fresa</th><th class="num">Prof.</th><th class="num">Passo</th><th class="num">Avanço</th><th class="num">Mergulho</th><th class="num">Fator</th><th></th></tr></thead><tbody>';
-    st.cfg.ordem.forEach(function(id){
-      var p=st.cfg.presets[id]; if(!p) return;
-      var ign=p.op==='ignorar';
-      h+='<tr><td><input class="rtr-in" type="text" data-rtr="pp" data-id="'+esc(id)+'" data-k="nome" value="'+esc(p.nome)+'"></td>';
-      h+='<td><select class="rtr-sel" data-rtr="pp" data-id="'+esc(id)+'" data-k="op">'+OPS.map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===p.op?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></td>';
-      ['d','prof','passo','avanco','mergulho','fator'].forEach(function(k){ h+='<td><input class="rtr-in" style="text-align:right" type="text" inputmode="decimal" data-rtr="pp" data-id="'+esc(id)+'" data-k="'+k+'" value="'+(ign?'':esc(nfIn(p[k]||0)))+'"'+(ign?' disabled':'')+'></td>'; });
-      h+='<td>'+(RTR.PRESETS.some(function(x){ return x.id===id; })?'':'<button type="button" class="btn ghost sm" data-rtr="delPreset" data-id="'+esc(id)+'">✕</button>')+'</td></tr>';
+    h+='<div class="card"><h3>Materiais, chapas e fresas</h3><div class="mini" style="margin-bottom:10px">Cada material de corte tem a sua chapa (mm) e o preço da chapa (R$). Avanço e mergulho em mm/min; passadas = profundidade ÷ passo; fator = aceleração real (ajusta sozinho pelo tempo real no Histórico).</div>';
+    var grupos={};
+    st.cfg.ordem.forEach(function(id){ var p=st.cfg.presets[id]; if(!p||p.op==='ignorar') return; (grupos[famDe(p)]=grupos[famDe(p)]||[]).push(id); });
+    RTR.FAMILIAS.forEach(function(f){
+      var ids=grupos[f]; if(!ids) return;
+      var maquina=f==='Vinco e usinagem', livre=f==='Outros';
+      h+='<details class="rtr-fam" data-fam="'+esc(f)+'"'+(st.famAberta[f]?' open':'')+'><summary>'+esc(maquina?'Vinco, rebaixo e gravação':f)+' <span class="mini" style="font-weight:500">· '+ids.length+'</span></summary><div class="rtr-famc"><div style="overflow-x:auto">';
+      h+='<table class="rtr-pt" style="min-width:'+(maquina||livre?860:820)+'px"><thead><tr><th>Nome</th>'+(maquina||livre?'<th>Operação</th>':'')
+        +(maquina?'':'<th class="num">R$ chapa</th><th class="num">Chapa L (mm)</th><th class="num">Chapa A (mm)</th>')
+        +'<th class="num">Ø fresa</th><th class="num">Prof.</th><th class="num">Passo</th><th class="num">Avanço</th><th class="num">Mergulho</th><th class="num">Fator</th><th></th></tr></thead><tbody>';
+      var fontes={};
+      ids.forEach(function(id){
+        var p=st.cfg.presets[id], ch=p.chapa||[0,0], corte=p.op==='corte';
+        if(p.fonte) fontes[p.fonte]=1;
+        h+='<tr><td><input class="rtr-in" style="min-width:150px" type="text" data-rtr="pp" data-id="'+esc(id)+'" data-k="nome" value="'+esc(p.nome)+'"></td>';
+        if(maquina||livre) h+='<td><select class="rtr-sel" data-rtr="pp" data-id="'+esc(id)+'" data-k="op">'+OPS.filter(function(o){ return o[0]!=='ignorar'; }).map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===p.op?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></td>';
+        if(!maquina){
+          h+='<td><input class="rtr-in" style="text-align:right;width:100%'+(corte&&!(num(p.preco)>0)?';border-color:var(--warn)':'')+'" type="text" inputmode="decimal" data-rtr="pp" data-id="'+esc(id)+'" data-k="preco" value="'+(corte&&num(p.preco)>0?esc(nfIn(p.preco)):'')+'" placeholder="'+(corte?'sem preço':'')+'"'+(corte?'':' disabled')+'></td>';
+          h+='<td><input class="rtr-in" style="text-align:right;width:100%" type="text" inputmode="decimal" data-rtr="pp" data-id="'+esc(id)+'" data-k="cw" value="'+(corte?esc(nfIn(ch[0])):'')+'"'+(corte?'':' disabled')+'></td>';
+          h+='<td><input class="rtr-in" style="text-align:right;width:100%" type="text" inputmode="decimal" data-rtr="pp" data-id="'+esc(id)+'" data-k="ch" value="'+(corte?esc(nfIn(ch[1])):'')+'"'+(corte?'':' disabled')+'></td>';
+        }
+        ['d','prof','passo','avanco','mergulho','fator'].forEach(function(k){ h+='<td><input class="rtr-in" style="text-align:right;width:100%" type="text" inputmode="decimal" data-rtr="pp" data-id="'+esc(id)+'" data-k="'+k+'" value="'+esc(nfIn(p[k]||0))+'"></td>'; });
+        h+='<td>'+(RTR.PRESETS.some(function(x){ return x.id===id; })?'':'<button type="button" class="btn ghost sm" data-rtr="delPreset" data-id="'+esc(id)+'">✕</button>')+'</td></tr>';
+      });
+      h+='</tbody></table></div>';
+      var fl=Object.keys(fontes); if(fl.length) h+='<div class="mini" style="margin-top:6px">Preços: '+fl.map(esc).join(' · ')+'</div>';
+      h+='</div></details>';
     });
-    h+='</tbody></table></div>';
     h+='<div class="rtr-act"><button type="button" class="btn ghost" data-rtr="novoPreset">＋ Novo material</button></div></div>';
     h+='<div class="rtr-act"><button type="button" class="btn acc" data-rtr="salvarCfg">💾 Salvar parâmetros</button><button type="button" class="btn ghost" data-rtr="restaurar">Restaurar padrão</button></div>';
-    h+='<div class="mini" style="margin-top:12px;line-height:1.5">Valores de partida: MDF 15 com fresa 6 mm, F3000, rampa 1000 e Z seguro 10 mm vêm dos .tap reais da Sul Sign; os outros materiais são estimativas — ajuste com o Max/Edson e use o tempo real do Histórico para calibrar.</div>';
+    h+='<div class="mini" style="margin-top:12px;line-height:1.5">Corte: MDF 15 com fresa 6 mm, F3000, rampa 1000 e Z seguro 10 mm vêm dos .tap reais da Sul Sign; os outros materiais são ponto de partida — ajuste com o Max/Edson e use o tempo real do Histórico para calibrar. Chapas e preços: planilha da Flaviense (MDF e compensado), sua tabela de PVC e acrílico, planilha de policarbonato e lista de chapas do ORC (PS); ACM 4 mm está sem preço.</div>';
     return h;
   }
   function campo(grp,k,lbl,v){ return '<div><span class="rtr-lbl">'+lbl+'</span><input class="rtr-in" style="width:100%" type="text" inputmode="decimal" data-rtr="cfg" data-g="'+grp+'" data-k="'+k+'" value="'+esc(nfIn(v))+'"></div>'; }
@@ -601,15 +786,20 @@
       else if(a==='excluirMed') excluirMed(t.getAttribute('data-id'));
       else if(a==='salvarCfg') salvarCfg().then(function(){ recalc(); draw(); });
       else if(a==='restaurar'){ if(window.confirm('Voltar todos os parâmetros ao padrão?')){ st.cfg=padrao(); recalc(); draw(); } }
-      else if(a==='novoPreset'){ var id='u'+Date.now().toString(36), b=copia(st.cfg.presets.mdf15); b.id=id; b.nome='Novo material'; st.cfg.presets[id]=b; st.cfg.ordem.splice(st.cfg.ordem.length-1,0,id); draw(); }
+      else if(a==='novoPreset'){ var id='u'+Date.now().toString(36), b=copia(st.cfg.presets.mdf15); b.id=id; b.nome='Novo material'; b.fam='Outros'; b.preco=0; b.fonte=''; st.cfg.presets[id]=b; inserir(st.cfg.ordem,id); st.famAberta.Outros=true; draw(); }
+      else if(a==='enc'){ var mid=t.getAttribute('data-mat'); st.encAberto[mid]=!st.encAberto[mid]; draw(); }
       else if(a==='delPreset'){ var did=t.getAttribute('data-id'); delete st.cfg.presets[did]; st.cfg.ordem=st.cfg.ordem.filter(function(x){ return x!==did; }); st.itens.forEach(function(x){ Object.keys(x.ops).forEach(function(k){ if(x.ops[k]===did) x.ops[k]='mdf15'; }); }); recalc(); draw(); }
     });
+    root.addEventListener('toggle',function(e){ var t=e.target; if(t&&t.getAttribute&&t.getAttribute('data-fam')) st.famAberta[t.getAttribute('data-fam')]=!!t.open; },true);
     root.addEventListener('change',function(e){
       var t=e.target, a=t.getAttribute&&t.getAttribute('data-rtr'); if(!a) return;
       var it=itemPor(t.getAttribute('data-it'));
       if(a==='preset'&&it){ var cam=t.getAttribute('data-cam'); it.ops[cam]=t.value; lembrar(cam,t.value); recalc(); draw(); }
       else if(a==='qtd'&&it){ it.qtd=Math.max(1,Math.round(num(t.value))||1); it.qtdFonte=null; recalc(); draw(); }
-      else if(a==='chapas'&&it){ it.chapas=String(t.value).trim()===''?'':Math.max(0,Math.round(num(t.value))); recalc(); draw(); }
+      else if(a==='gmat'&&it){ it.mat=t.value; recalc(); draw(); }
+      else if(a==='ovr'){ var mo=t.getAttribute('data-mat'), nv=Math.round(num(t.value)); if(String(t.value).trim()===''||!(nv>0)) delete st.ovr[mo]; else st.ovr[mo]=nv; recalc(); draw(); }
+      else if(a==='reuso'){ var mr2=t.getAttribute('data-mat'); if(t.checked) st.reuso[mr2]=true; else delete st.reuso[mr2]; recalc(); draw(); }
+      else if(a==='modo'){ st.cfg.cob.modoMat=t.value; recalc(); draw(); }
       else if(a==='escala'&&it){
         var k=num(t.value);
         if(k<0){ var bb=it.doc.bb, wAtual=(bb[2]-bb[0]); var v=window.prompt('Largura real do desenho em mm (hoje lida: '+nf(wAtual,1)+' mm)'); if(!v||!(num(v)>0)||!(wAtual>0)){ draw(); return; } k=num(v)/wAtual*it.escala; }
@@ -619,7 +809,13 @@
       else if(a==='job'){ st.job=t.value; }
       else if(a==='anotar'){ st.anotar=!!t.checked; }
       else if(a==='cfg'){ st.cfg[t.getAttribute('data-g')][t.getAttribute('data-k')]=num(t.value); recalc(); }
-      else if(a==='pp'){ var p=st.cfg.presets[t.getAttribute('data-id')], k2=t.getAttribute('data-k'); if(!p) return; p[k2]=(k2==='nome'||k2==='op')?t.value:num(t.value); recalc(); if(k2==='op') draw(); }
+      else if(a==='pp'){
+        var p=st.cfg.presets[t.getAttribute('data-id')], k2=t.getAttribute('data-k'); if(!p) return;
+        if(k2==='cw'||k2==='ch'){ p.chapa=(p.chapa||[2750,1850]).slice(0,2); p.chapa[k2==='cw'?0:1]=num(t.value); }
+        else if(k2==='op'){ p.op=t.value; if(p.op==='corte'&&!p.chapa) p.chapa=[2750,1850]; }
+        else p[k2]=(k2==='nome')?t.value:num(t.value);
+        recalc(); if(k2==='op') draw();
+      }
     });
   }
   function arquivos(fs){
