@@ -38,7 +38,7 @@
     {k:'referencia',   lbl:'Imagem de referência', accept:'image/*'},
     {k:'projeto',      lbl:'Projeto',              accept:'application/pdf,image/*,.pdf'},
     {k:'detalhamento', lbl:'Detalhamento',         accept:'application/pdf,image/*,.pdf'},
-    {k:'vetor',        lbl:'Vetores de corte',     accept:'.dxf,.ai,.svg,.cdr,.pdf,.eps'},
+    {k:'vetor',        lbl:'Vetores de corte',     accept:'*/*'},  /* .crv3d .eps .dxf .svg .pdf .tap — o iOS bloqueia extensão desconhecida */
     {k:'outro',        lbl:'Outros',               accept:'*/*'}
   ];
   var TLBL={}; TIPOS_ARQ.forEach(function(t){ TLBL[t.k]=t.lbl; });
@@ -482,15 +482,17 @@
     var jobKey=jobKeyOf(f);
     Promise.all([
       SS20.sb('os_arquivos?select=*&os_id=eq.'+f.id+'&deletado_em=is.null&order=created_at.asc').catch(function(){ return []; }),
-      SS20.sb('lancamentos?select=valor,tipo_lancamento,categoria,descricao,data,conciliado&orcamento_numero=eq.'+encodeURIComponent(jobKey)+'&deletado_em=is.null&order=data.desc').catch(function(){ return []; })
+      SS20.sb('lancamentos?select=valor,tipo_lancamento,categoria,descricao,data,conciliado&orcamento_numero=eq.'+encodeURIComponent(jobKey)+'&deletado_em=is.null&order=data.desc').catch(function(){ return []; }),
+      SS20.sb('router_medicoes?select=id,titulo,ml,tempo_maquina_min,tempo_total_min,chapas,valor_router,tempo_real_min,created_at&os_id=eq.'+f.id+'&deletado_em=is.null&order=created_at.desc&limit=5').catch(function(){ return []; })
     ]).then(function(r){
-      desenharFicha(c,d,f,ov,fechar,r[0]||[],r[1]||[]);
+      desenharFicha(c,d,f,ov,fechar,r[0]||[],r[1]||[],r[2]||[]);
     }).catch(function(e){
       ov.firstChild.innerHTML='<div class="err-view">Erro ao abrir ficha: '+esc(e.message)+'</div>';
     });
   }
 
-  function desenharFicha(c,d,f,ov,fechar,arquivos,lancs){
+  function desenharFicha(c,d,f,ov,fechar,arquivos,lancs,meds){
+    meds=meds||[];
     var emp=f.empresa||'SulSign', ecor=ECOR[emp]||'#111418';
     var s=f.status||'Aguardando início', scor=SCOR[s]||'#6B6E76';
     var pcor=PCOR[f.prioridade]||'#6B6E76';
@@ -554,7 +556,7 @@
     h+='</div>';
 
     if(f.escopo){ h+='<div style="font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin:0 0 4px">Escopo</div><div style="font-size:12.5px;line-height:1.4;margin-bottom:14px">'+esc(f.escopo)+'</div>'; }
-    if(f.instrucoes){ h+='<div style="font-size:11.5px;color:var(--ink2);border-left:2px solid var(--accent);padding:7px 10px;margin:0 0 16px;border-radius:0 6px 6px 0;line-height:1.4;background:rgba(127,127,127,.06)">📌 '+esc(f.instrucoes)+'</div>'; }
+    if(f.instrucoes){ h+='<div style="font-size:11.5px;color:var(--ink2);border-left:2px solid var(--accent);padding:7px 10px;margin:0 0 16px;border-radius:0 6px 6px 0;line-height:1.4;background:rgba(127,127,127,.06);white-space:pre-line">📌 '+esc(f.instrucoes)+'</div>'; }
 
     /* ARQUIVOS */
     h+='<div style="font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin:0 0 8px">Arquivos de produção</div>';
@@ -564,16 +566,33 @@
       h+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(lista.length?'7px':'0')+'">'
         +'<span style="font-weight:700;font-size:12px">'+esc(TLBL[tp]||tp)+'</span>'
         +'<span style="flex:1"></span>'
+        +((tp==='vetor'&&lista.length)?'<button type="button" data-fi="medirTodos" title="Medir m.l. e tempo de router" style="background:none;border:none;font-size:11px;font-weight:700;color:var(--ink);cursor:pointer;padding:2px 6px">⏱ medir router</button>':'')
         +'<label style="font-size:11px;font-weight:600;color:var(--accent);cursor:pointer;padding:2px 4px">+ anexar<input type="file" class="fi-up" data-tipo="'+tp+'" accept="'+esc(acceptFor(tp))+'" style="display:none"></label>'
         +'</div>';
       lista.forEach(function(a){
         h+='<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;padding:3px 0">'
           +'<span style="min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">📎 <a href="'+esc(dataUrl(a))+'" download="'+esc(a.nome||'arquivo')+'" target="_blank" rel="noopener" style="color:var(--ink);text-decoration:underline">'+esc(a.nome||'arquivo')+'</a> <span style="color:var(--mut)">'+kb(a.tamanho)+'</span></span>'
+          +(tp==='vetor'?'<button type="button" data-fi="medir" data-aid="'+a.id+'" title="Medir tempo de router deste arquivo" style="background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);cursor:pointer;font-size:11px;padding:1px 6px">⏱</button>':'')
           +'<button type="button" data-fi="delarq" data-aid="'+a.id+'" title="Remover" style="background:none;border:none;color:var(--mut);cursor:pointer;font-size:13px">×</button>'
           +'</div>';
       });
       h+='</div>';
     });
+
+    /* ROUTER (medições do módulo Tempo de Router) */
+    if(meds.length){
+      var m0=meds[0];
+      h+='<div style="font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin:14px 0 6px">Router</div>';
+      h+='<div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:8px">';
+      h+='<div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">'
+        +'<div><div style="font-size:10px;color:var(--mut)">corte</div><div style="font-family:var(--font-d);font-size:18px;font-weight:800">'+rtrNum(m0.ml,1)+' m.l.</div></div>'
+        +'<div><div style="font-size:10px;color:var(--mut)">máquina</div><div style="font-size:13px;font-weight:700">'+rtrHm(m0.tempo_maquina_min)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--mut)">total na OS</div><div style="font-size:13px;font-weight:700">'+rtrHm(m0.tempo_total_min)+'</div></div>'
+        +'<div><div style="font-size:10px;color:var(--mut)">chapas</div><div style="font-size:13px;font-weight:700">'+(m0.chapas||0)+'</div></div>'
+        +'<span style="flex:1"></span><button type="button" data-fi="rtrHist" style="background:none;border:1px solid var(--line);color:var(--ink);font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:7px;cursor:pointer">abrir</button></div>';
+      h+='<div style="font-size:11px;color:var(--mut);margin-top:4px">'+esc(m0.titulo||'')+' · '+dstr(m0.created_at)+(meds.length>1?' · +'+(meds.length-1)+' medição(ões)':'')+'</div>';
+      h+='</div>';
+    }
 
     /* CUSTO REAL */
     h+='<div style="font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--mut);margin:14px 0 6px">Custo real do job <span style="font-weight:500;text-transform:none;letter-spacing:0">· Centro de Custo · '+esc(jobKeyOf(f))+'</span></div>';
@@ -607,11 +626,19 @@
       b.addEventListener('click',function(){
         var a=this.getAttribute('data-fi');
         if(a==='fechar')  return fechar();
-        if(a==='print')   return imprimirFicha(f,arquivos,lancs,custoTotal,venda);
+        if(a==='print')   return imprimirFicha(f,arquivos,lancs,custoTotal,venda,meds);
         if(a==='editar')  { fechar(); return abrirModal(c,d,f); }
         if(a==='status')  { var st=this.getAttribute('data-st'); return mudarStatus2(c,d,f,st,ov,fechar); }
         if(a==='delarq')  return removerArquivo(c,d,f,this.getAttribute('data-aid'),ov,fechar);
         if(a==='custo')   return abrirCusto(c,d,f,ov,fechar);
+        if(a==='medir'||a==='medirTodos'){
+          var aid=this.getAttribute('data-aid');
+          var sel=arquivos.filter(function(x){ return x.tipo==='vetor'&&(a==='medirTodos'||String(x.id)===String(aid)); });
+          SS20.rtrPendente={os:{id:f.id,label:(f.serial_os||f.num||'OS')+(f.frente?' · '+f.frente:''),job:(f.orcamento_numero||f.job||null)},
+            arquivos:sel.map(function(x){ return {nome:x.nome,dados:x.dados,mime:x.mime}; })};
+          fechar(); return SS20.go('rtr');
+        }
+        if(a==='rtrHist'){ fechar(); SS20.rtrAba='hist'; return SS20.go('rtr'); }
       });
     });
     Array.prototype.forEach.call(ov.querySelectorAll('.fi-up'),function(inp){
@@ -619,6 +646,8 @@
     });
   }
 
+  function rtrNum(v,d){ return (Math.round((+v||0)*Math.pow(10,d))/Math.pow(10,d)).toFixed(d).replace('.',','); }
+  function rtrHm(min){ min=Math.round(+min||0); if(min<60) return min+' min'; var hh=Math.floor(min/60), mi=min%60; return hh+'h'+(mi?(' '+(mi<10?'0':'')+mi+'min'):''); }
   function miniBox(lbl,val){
     return '<div style="border:1px solid var(--line);border-radius:9px;padding:9px 11px"><div style="font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.4px;font-weight:700">'+lbl+'</div><div style="font-size:13px;font-weight:700;margin-top:2px">'+val+'</div></div>';
   }
@@ -711,7 +740,7 @@
   }
 
   /* ── IMPRESSÃO DA FICHA (bancada) ── */
-  function imprimirFicha(f,arquivos,lancs,custoTotal,venda){
+  function imprimirFicha(f,arquivos,lancs,custoTotal,venda,meds){
     var w=window.open('','_blank');
     if(!w){ alert('Libere pop-ups para imprimir.'); return; }
     var ref=null; arquivos.forEach(function(a){ if(a.tipo==='referencia'&&!ref) ref=a; });
@@ -737,6 +766,7 @@
     if(f.instrucoes){ html+='<div class="sec">Instruções</div><div>'+esc(f.instrucoes)+'</div>'; }
     if(ref){ html+='<div class="sec">Referência</div><img class="ref" src="'+esc(dataUrl(ref))+'">'; }
     if(listaArq.length){ html+='<div class="sec">Arquivos</div><table>'; listaArq.forEach(function(a){ html+='<tr><td>'+esc(TLBL[a.tipo]||a.tipo)+'</td><td>'+esc(a.nome||'')+'</td><td>'+kb(a.tamanho)+'</td></tr>'; }); html+='</table>'; }
+    if(meds&&meds.length){ var mm=meds[0]; html+='<div class="sec">Router</div><div><b>'+rtrNum(mm.ml,1)+' m.l.</b> · máquina '+rtrHm(mm.tempo_maquina_min)+' · total na OS '+rtrHm(mm.tempo_total_min)+' · '+(mm.chapas||0)+' chapa(s)</div>'; }
     html+='<div class="sec">Custo real do job</div><div>Lançado: <b>'+fmt(custoTotal)+'</b>'+(venda!=null?(' · Venda: '+fmt(venda)):'')+'</div>';
     html+='<div class="mut" style="margin-top:24px;font-size:10px">Sul Sign Group · gerado em '+dstr(hojeISO())+'</div>';
     html+='<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},250);}</scr'+'ipt>';
