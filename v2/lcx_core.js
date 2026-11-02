@@ -417,6 +417,113 @@
   };
   function vinilNome(t){ return {fosco:'fosco',uv:'fosco + UV',lam:'fosco + laminação',recorte:'recorte'}[t]||t; }
 
+
+  /* ═══════════ ORÇAMENTO COM VÁRIOS ITENS ═══════════
+     Cada item é um resultado no mesmo formato de LCX.calcular. Tipos: desenho (calcular), painel (calcularPainel), avulso (calcularAvulso). */
+  var PARAMS_PAINEL={diaria:250, consumPct:5, routerBaseConsum:4, metalonM:7.72, fundoM2PorM:0.12, fundoPreco:12, sapata:40, ferragem:40};
+  LCX.PARAMS_PAINEL=PARAMS_PAINEL;
+  function resultadoBase(job, perfil, fator, qtd, linhas, geo, extra){
+    var custo=0; linhas.forEach(function(l){ custo+=l.custo; }); custo=r2(custo);
+    var venda=r2(custo*fator), nfPct=job.nf?num(perfil.nfPct):0, vendaNF=r2(venda*(1+nfPct/100));
+    var out={job:job, perfil:perfil, fator:fator, qtd:qtd, geo:geo, linhas:linhas, custo:custo, venda:venda, nfPct:nfPct, vendaNF:vendaNF, unitario:r2(vendaNF/qtd), materiais:[], avisos:[], params:{}};
+    for(var k in (extra||{})) out[k]=extra[k];
+    out.grupos=agrupar(linhas);
+    out.bdiOrc=bdiParaOrc(perfil, fator);
+    return out;
+  }
+  function linhaFn(linhas, job){
+    return function(grupo,chave,desc,q,un,pu,v,nota){
+      var l={grupo:grupo, chave:chave, desc:desc, qtd:q, un:un, pu:pu, custo:(v==null?r2(q*pu):v), nota:nota||''};
+      var o=job.ovr&&job.ovr[chave];
+      if(o!=null){ if(typeof o==='object'){ if(o.q!=null) l.qtd=num(o.q); if(o.p!=null) l.pu=num(o.p); l.custo=r2(l.qtd*l.pu); l.manual=true; } else { l.custo=r2(num(o)); l.manual=true; } }
+      linhas.push(l); return l;
+    };
+  }
+  /* painel: L×A m, qtd painéis; material em chapa (m² líquido ÷ aproveitamento), recorte em m.l./m², pintura PU, metalon, sapatas, ferragens e diárias */
+  LCX.calcularPainel=function(job){
+    var pn=job.painel||{}, PP=mix(PARAMS_PAINEL, (job.params||{}).painel||{});
+    var perfil=mix(LCX.PERFIS[job.perfil||'sulsign']||LCX.PERFIS.sulsign, job.perfilOv||{});
+    var fator=LCX.fator(perfil), qtd=Math.max(1,Math.round(num(job.qtd))||1), linhas=[], L=linhaFn(linhas,job);
+    var mat=LCX.catalogo(pn.mat||'mdf15')||{nome:'Material',chapa:[2750,1850],preco:0,fam:''};
+    var chapa=mat.chapa, precoCh=(pn.precoChapa!=null&&pn.precoChapa!==''&&num(pn.precoChapa)>0)?num(pn.precoChapa):mat.preco;
+    var aChapa=chapa[0]*chapa[1]/1e6, pm2=precoCh/aChapa;
+    var Lm=num(pn.L), Am=num(pn.A), area=Lm*Am*qtd, aprov=Math.min(1,Math.max(0.2,(num(pn.aprov)||74)/100));
+    var nome=job.nome||'Painel';
+    var consumo=area/aprov;
+    L('mp','mat',(pn.matNome||mat.nome)+' — '+qtd+' painel(is) '+nf2(Lm)+'×'+nf2(Am)+' m ('+nf2(area)+' m² líq., aprov. '+Math.round(aprov*100)+'%)', r4(consumo), 'm²', r4(pm2), null, 'R$ '+r2(precoCh)+'/chapa '+chapa[0]+'×'+chapa[1]);
+    if(num(pn.reqM2)>0) L('mp','requadro',mat.nome+': requadro/tiras', r4(num(pn.reqM2)/0.65), 'm²', r4(pm2), null, 'aprov. 65%');
+    var pint=0;
+    if(pn.pintura!==false&&pn.pintura!=='nao'){ var pf=num(pn.pinturaFator)||1.2; pint=area*pf+num(pn.reqM2)*2.1; L('mp','pintura','Pintura PU nas 2 faces + parede dos recortes ('+nf2(pf)+' m²/m²)', r4(pint), 'm²', num((job.params||{}).pintura)||85, null, 'R$ 85/m²'); }
+    var metalonM=num(pn.metalonM)*qtd;
+    if(metalonM>0){
+      L('mp','metalon','Estrutura de sustentação: metalon ('+nf2(num(pn.metalonM))+' m/painel)', r4(metalonM), 'm', PP.metalonM, null, 'vara 6 m ÷ 6');
+      L('mp','metalon_fundo','Fundo + esmalte no metalon (0,12 m²/m)', r4(metalonM*PP.fundoM2PorM), 'm²', PP.fundoPreco, null, '');
+    }
+    var sap=Math.round(num(pn.sapatas)*qtd); if(sap>0) L('mp','sapatas','Sapatas com lastro ('+num(pn.sapatas)+'/painel)', sap, 'un', PP.sapata, null, '');
+    var fer=num(pn.ferragens); if(fer>0) L('mp','ferragens','Ferragens: parafusos, cantoneiras, buchas', fer, 'pç', PP.ferragem, null, '');
+    /* router: recorte + módulos (a custo = venda ÷ fator) */
+    var mL=num(pn.modL)||0, mA=num(pn.modA)||0, nMod=(mL>0&&mA>0)?Math.ceil(Lm/mL)*Math.ceil(Am/mA)*qtd:0, contorno=nMod*2*(mL+mA);
+    var ml=num(pn.recorteMlM2)*area+contorno+num(pn.mlExtra);
+    if(ml>0) L('eqp','router','Corte router: '+(num(pn.recorteMlM2)>0?'recortes ('+num(pn.recorteMlM2)+' ml/m² × '+nf2(area)+' m²) + ':'')+'contornos dos módulos — R$ '+nf2(perfil.routerML)+'/ml', r4(ml), 'm.l.', r4(perfil.routerML/fator), null, 'R$ '+perfil.routerML+'/m.l. na venda do perfil');
+    /* consumíveis: % sobre tudo que não é MO nem router, mais o router a R$ 4 */
+    var base=0; linhas.forEach(function(l){ if(l.chave!=='router') base+=l.custo; });
+    base+=ml*PP.routerBaseConsum;
+    L('cons','consum','Consumíveis (cola, lixa, fita, parafusos): '+PP.consumPct+'% s/ material e corte', 1, 'vb', r2(base*PP.consumPct/100), null, '');
+    var d=pn.dias||{};
+    [['marc','MO marceneiro'],['serr','MO serralheiro'],['mont','MO montador'],['desm','MO desmontagem']].forEach(function(x){ var v=num(d[x[0]]); if(v>0) L('mo','mo_'+x[0],x[1],v,'dia',PP.diaria,null,'R$ '+PP.diaria+'/dia'); });
+    (job.extras||[]).forEach(function(x,i){ L(x.grupo||'out','extra'+i,x.desc||'Extra', 1, 'vb', num(x.valor), null, 'linha avulsa'); });
+    var geo={fonte:'painel', nome:nome, pecas:qtd, vazados:0, areaM2:area, perimM:ml, bboxMm:[Lm*1000,Am*1000], pecasLista:[], avisos:[]};
+    var mats=[{chave:'mat', material:mat.nome, fam:mat.fam, uso:'Painel', chapa:chapa, precoChapa:precoCh, envM2:consumo, liqM2:area, m2Cobrado:consumo, chapas:Math.ceil(consumo/aChapa-1e-9), modo:'inteira', custo:linhas[0].custo, nota:'', medida:nf2(Lm)+' × '+nf2(Am)+' m × '+qtd}];
+    var out=resultadoBase(job, perfil, fator, qtd, linhas, geo, {tipo:'painel', materiais:mats, params:mix(LCX.PARAMS,job.params||{}), cx:cxDe(job.complexidade)});
+    var q=qtd, venda=out.venda*(1+out.nfPct/100);
+    out.sintetico={linhas:[{desc:nome+' — '+mat.nome+(pint>0?', pintura PU':'')+(metalonM>0?', estrutura em metalon':'')+' ('+qtd+' × '+nf2(Lm)+'×'+nf2(Am)+' m)', qtd:1, un:'vb', valorUn:r2(venda), total:r2(venda)}], total:r2(venda)};
+    out.descTexto='Painel '+nome+': '+qtd+' un de '+nf2(Lm)+' × '+nf2(Am)+' m em '+mat.nome.toLowerCase()+(num(pn.recorteMlM2)>0?', com recortes em router CNC':'')+(pint>0?', pintura PU nas duas faces':'')+(metalonM>0?', com estrutura posterior de sustentação em metalon':'')+(sap>0?' e sapatas com lastro':'')+'.';
+    return out;
+  };
+  /* avulso: linhas livres (desc, qtd, un, valor unitário; un "ml router" = valor unitário na venda, convertido a custo) */
+  LCX.calcularAvulso=function(job){
+    var av=job.avulso||{}, perfil=mix(LCX.PERFIS[job.perfil||'sulsign']||LCX.PERFIS.sulsign, job.perfilOv||{});
+    var fator=LCX.fator(perfil), qtd=Math.max(1,Math.round(num(job.qtd))||1), linhas=[], L=linhaFn(linhas,job);
+    (av.linhas||[]).forEach(function(x,i){
+      var q=num(x.qtd), pu=num(x.pu), un=x.un||'un', g=x.grupo||'mp';
+      if(!(q>0)&&!(pu>0)) return;
+      if(un==='ml router'){ L('eqp','av'+i,x.desc||'Corte router', q, 'm.l.', r4(pu/fator), null, 'R$ '+pu+'/m.l. na venda'); }
+      else L(g,'av'+i,x.desc||'Item', q, un, pu, null, '');
+    });
+    var geo={fonte:'avulso', nome:job.nome||'Item', pecas:1, vazados:0, areaM2:0, perimM:0, bboxMm:[0,0], pecasLista:[], avisos:[]};
+    var out=resultadoBase(job, perfil, fator, qtd, linhas, geo, {tipo:'avulso', params:mix(LCX.PARAMS,job.params||{}), cx:cxDe(job.complexidade)});
+    var venda=out.venda*(1+out.nfPct/100);
+    out.sintetico={linhas:[{desc:(job.nome||'Item')+(av.desc?' — '+av.desc:''), qtd:qtd, un:'un', valorUn:r2(venda/qtd), total:r2(venda)}], total:r2(venda)};
+    out.descTexto=(job.nome||'Item')+(av.desc?': '+av.desc:'')+'.';
+    return out;
+  };
+  function nf2(v){ return (Math.round((+v||0)*100)/100).toString().replace('.',','); }
+  function r4(v){ return Math.round((+v||0)*10000)/10000; }
+
+  /* soma os itens: um Sintético com uma linha por item; memorial e materiais concatenados; BDI do primeiro item (comum a todos) */
+  LCX.combinar=function(rs){
+    rs=rs.filter(function(r){ return r; });
+    if(!rs.length) return null;
+    var linhas=[], mats=[], avisos=[], sint=[], custo=0, venda=0, vendaNF=0;
+    rs.forEach(function(r,k){
+      var pre='i'+k+'_';
+      r.linhas.forEach(function(l){ var c={}; for(var a in l) c[a]=l[a]; c.item=k; c.chaveOrig=l.chave; c.chave=pre+l.chave; linhas.push(c); });
+      (r.materiais||[]).forEach(function(m){ var c={}; for(var a in m) c[a]=m[a]; c.uso=(r.job.nome||('item '+(k+1)))+(m.uso?' · '+m.uso:''); mats.push(c); });
+      (r.avisos||[]).forEach(function(a){ avisos.push((r.job.nome||('Item '+(k+1)))+': '+a); });
+      (r.sintetico.linhas||[]).forEach(function(l){ sint.push(l); });
+      custo+=r.custo; venda+=r.venda; vendaNF+=r.vendaNF;
+    });
+    var tot=0; sint.forEach(function(l){ tot+=l.total; });
+    var f=rs[0];
+    var out={itens:rs, linhas:linhas, materiais:mats, avisos:avisos, custo:r2(custo), venda:r2(venda), vendaNF:r2(vendaNF), perfil:f.perfil, fator:f.fator, nfPct:f.nfPct, qtd:1, bdiOrc:f.bdiOrc,
+      sintetico:{linhas:sint, total:r2(tot)}, grupos:[]};
+    var partes=[]; rs.forEach(function(r,k){ var d=String(LCX.descritivo(r)||''); var ob=d.split('\n\n')[0].replace(/^OBJETO\n/,''); partes.push((rs.length>1?(k+1)+'. ':'')+ob); });
+    out.descTexto='OBJETO\n'+partes.join('\n')+'\n\nCONDIÇÕES\n'+(f.nfPct>0?'Valores com nota fiscal (+'+f.nfPct+'%).':'Valores sem nota fiscal.')+'\nAlterações de escopo, medidas ou materiais após a aprovação podem alterar valor e prazo.';
+    out.geo={nome:(f.job&&f.job.projeto)||(f.job&&f.job.nome)||'Orçamento', bboxMm:[0,0], pecas:rs.length, vazados:0};
+    out.job=f.job;
+    return out;
+  };
+
   var GRUPOS=[['proj','Projeto / criação'],['mp','Materiais'],['gab','Gabarito de instalação'],['eqp','Equipamentos / corte'],['cons','Consumíveis'],['mo','Mão de obra'],['log','Logística'],['inst','Instalação'],['out','Outros']];
   LCX.GRUPOS=GRUPOS;
   function agrupar(linhas){
@@ -479,8 +586,9 @@
     });
     var itens=[];
     r.linhas.forEach(function(l){
-      if(l.chave==='router'||l.chave==='router_gab') itens.push({item:l.desc, qtd:l.qtd, un:l.un});
-      if(l.chave==='fonte'||l.chave==='fiacao'||l.chave==='fixadores') itens.push({item:l.desc, qtd:l.qtd, un:l.un});
+      var ch=l.chaveOrig||l.chave;
+      if(ch==='router'||ch==='router_gab') itens.push({item:l.desc, qtd:l.qtd, un:l.un});
+      if(ch==='fonte'||ch==='fiacao'||ch==='fixadores') itens.push({item:l.desc, qtd:l.qtd, un:l.un});
     });
     var horas=[];
     r.linhas.forEach(function(l){ if(l.grupo==='mo') horas.push({item:l.desc.replace('M.O. ',''), horas:l.qtd, valorHora:l.pu}); });
@@ -489,6 +597,7 @@
 
   /* ───────────── Memorial descritivo (texto editável) ───────────── */
   LCX.descritivo=function(r){
+    if(r.descTexto) return r.descTexto;
     var j=r.job, g=r.geo, c=j.constr||'chapada', P=r.params, t=[];
     var nome=j.nome||g.nome||'peça';
     var dim=Math.round(g.bboxMm[0])+' × '+Math.round(g.bboxMm[1])+' mm';

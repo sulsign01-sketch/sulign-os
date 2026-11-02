@@ -13,7 +13,7 @@
   var fmt=SulSignCore.fmt;
   var LS_JOB='ss20_lcx_job', LS_PAR='ss20_lcx_params', LS_RTR='ss20_rtr_cfg';
   var PDFJS='https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/';
-  var st={job:null, params:{}, doc:null, buf:null, nomeArq:'', escala:1, larguraReal:0, camadas:{}, geoSalvo:null,
+  var st={itens:[], sel:0, comb:null, printImg:null, job:null, params:{}, doc:null, buf:null, nomeArq:'', escala:1, larguraReal:0, camadas:{}, geoSalvo:null,
           aba:'sint', r:null, msg:null, erro:null, ocupado:false, root:null};
 
   /* ── utilidades ── */
@@ -46,17 +46,48 @@
       chapada:{mat:'pvc15', acab:'vinil', vinil:'lam', cores:1},
       caixa:{face:'acr3', lateral:'pvc10', fundo:'pvc5', prof:5, ilum:'nenhuma', led:'fita', pintura:false, cores:1},
       i3d:{peso_g:0, tempo_h:0, semPerda:false, fil:'petg'},
-      gabarito:{on:true, modo:'mdf3'}, instalacao:'cliente', alturaInst:1, extras:[], ovr:{}, descEdit:null};
+      gabarito:{on:true, modo:'mdf3'}, instalacao:'cliente', alturaInst:1, extras:[], ovr:{}, descEdit:null,
+      tipo:'desenho', perfilOv:{},
+      painel:{mat:'mdf15', precoChapa:'', L:3, A:2.5, aprov:74, pintura:true, pinturaFator:1.2, recorteMlM2:0, modL:2.5, modA:1.5, mlExtra:0, reqM2:0, metalonM:0, sapatas:0, ferragens:0, dias:{marc:0, serr:0, mont:0, desm:0}},
+      avulso:{desc:'', linhas:[{desc:'', qtd:1, un:'un', pu:0, grupo:'mp'}]}};
   }
+  function novoItem(tipo, base){
+    var j=jobPadrao(); j.tipo=tipo||'desenho';
+    if(base){ j.cliente=base.cliente; j.projeto=base.projeto; j.perfil=base.perfil; j.perfilOv=copia(base.perfilOv||{}); j.nf=base.nf; }
+    return {job:j, doc:null, buf:null, nomeArq:'', escala:1, larguraReal:0, camadas:{}, geoSalvo:null, printImg:null, r:null};
+  }
+  function guardar(){
+    var it=st.itens[st.sel]; if(!it) return;
+    it.job=st.job; it.doc=st.doc; it.buf=st.buf; it.nomeArq=st.nomeArq; it.escala=st.escala; it.larguraReal=st.larguraReal; it.camadas=st.camadas; it.printImg=st.printImg;
+    if(st.r&&st.r.geo&&st.r.geo.fonte==='arquivo') it.geoSalvo=st.r.geo; else if(st.geoSalvo) it.geoSalvo=st.geoSalvo;
+  }
+  function abrirItem(i){
+    if(i<0||i>=st.itens.length) return;
+    guardar(); st.sel=i; var it=st.itens[i];
+    st.job=it.job; st.doc=it.doc; st.buf=it.buf; st.nomeArq=it.nomeArq; st.escala=it.escala; st.larguraReal=it.larguraReal; st.camadas=it.camadas; st.geoSalvo=it.geoSalvo; st.printImg=it.printImg; st.r=it.r;
+  }
+  /* cliente, projeto, perfil/BDI e NF valem para o orçamento todo */
+  function sincGlobal(){ st.itens.forEach(function(it){ if(it.job===st.job) return; var j=it.job; j.cliente=st.job.cliente; j.projeto=st.job.projeto; if(j.perfil!==st.job.perfil) j.ovr=j.ovr; j.perfil=st.job.perfil; j.perfilOv=copia(st.job.perfilOv||{}); j.nf=st.job.nf; }); }
   function carregar(){
-    try{ var j=JSON.parse(localStorage.getItem(LS_JOB)||'null'); if(j&&j.job){ st.job=mixJob(jobPadrao(),j.job); st.geoSalvo=j.geo||null; st.nomeArq=j.nomeArq||''; st.escala=j.escala||1; st.larguraReal=j.larguraReal||0; st.camadas=j.camadas||{}; } }catch(e){}
-    if(!st.job) st.job=jobPadrao();
+    try{
+      var j=JSON.parse(localStorage.getItem(LS_JOB)||'null');
+      if(j&&j.itens&&j.itens.length){
+        st.itens=j.itens.map(function(x){ var it=novoItem(); it.job=mixJob(jobPadrao(),x.job||{}); it.geoSalvo=x.geo||null; it.nomeArq=x.nomeArq||''; it.escala=x.escala||1; it.larguraReal=x.larguraReal||0; it.camadas=x.camadas||{}; return it; });
+        st.sel=Math.min(j.sel||0,st.itens.length-1);
+      } else if(j&&j.job){
+        var it0=novoItem(); it0.job=mixJob(jobPadrao(),j.job); it0.geoSalvo=j.geo||null; it0.nomeArq=j.nomeArq||''; it0.escala=j.escala||1; it0.larguraReal=j.larguraReal||0; it0.camadas=j.camadas||{}; st.itens=[it0]; st.sel=0;
+      }
+    }catch(e){}
+    if(!st.itens.length){ st.itens=[novoItem()]; st.sel=0; }
+    var it=st.itens[st.sel];
+    st.job=it.job; st.geoSalvo=it.geoSalvo; st.nomeArq=it.nomeArq; st.escala=it.escala; st.larguraReal=it.larguraReal; st.camadas=it.camadas; st.doc=it.doc; st.buf=it.buf; st.printImg=it.printImg;
     try{ st.params=JSON.parse(localStorage.getItem(LS_PAR)||'{}')||{}; }catch(e){ st.params={}; }
   }
   function mixJob(a,b){ Object.keys(b||{}).forEach(function(k){ var v=b[k]; if(v!=null&&typeof v==='object'&&!Array.isArray(v)&&a[k]&&typeof a[k]==='object') a[k]=mixJob(a[k],v); else if(v!=null) a[k]=v; }); return a; }
   function gravarLocal(){
     try{
-      localStorage.setItem(LS_JOB, JSON.stringify({job:st.job, geo:st.r?st.r.geo:st.geoSalvo, nomeArq:st.nomeArq, escala:st.escala, larguraReal:st.larguraReal, camadas:st.camadas}));
+      guardar();
+      localStorage.setItem(LS_JOB, JSON.stringify({sel:st.sel, itens:st.itens.map(function(it){ return {job:it.job, geo:(it.r&&it.r.geo&&it.r.geo.fonte==='arquivo')?it.r.geo:it.geoSalvo, nomeArq:it.nomeArq, escala:it.escala, larguraReal:it.larguraReal, camadas:it.camadas}; })}));
       localStorage.setItem(LS_PAR, JSON.stringify(st.params));
     }catch(e){}
   }
@@ -107,16 +138,31 @@
   function reLer(){ if(st.buf&&st.nomeArq) return lerArquivo(st.nomeArq, st.buf); return Promise.resolve(); }
 
   /* ── cálculo ── */
+  function geoItem(it){
+    var j=it.job;
+    if(j.entrada==='arquivo'){
+      if(it.doc){ var a=[]; it.doc.camadas.forEach(function(c){ if(it.camadas[c.nome]!=='ignorar') a.push(c.nome); }); return LCX.geoDeDoc(it.doc,a); }
+      if(it.geoSalvo&&it.geoSalvo.fonte==='arquivo'){ var g=copia(it.geoSalvo); g.avisos=(g.avisos||[]).concat(['Arquivo "'+it.nomeArq+'" não está carregado nesta sessão: usando as medidas salvas. Suba de novo para refazer o encaixe de chapas.']); return g; }
+      return null;
+    }
+    return LCX.geoDeTexto(j.texto||j.nome, j.alturaCm, j.qtdLetras);
+  }
+  function calcItem(it){
+    var j=it.job, jc=copia(j); jc.params=copia(st.params);
+    if(j.tipo==='painel'){ if(!jc.nome) jc.nome='Painel'; return LCX.calcularPainel(jc); }
+    if(j.tipo==='avulso'){ if(!jc.nome) jc.nome='Item'; return LCX.calcularAvulso(jc); }
+    var geo=geoItem(it); if(!geo||!(geo.pecas>0)) return null;
+    jc.geo=geo; if(!jc.nome) jc.nome=geo.nome;
+    return LCX.calcular(jc);
+  }
   function recalc(){
     st.r=null; st.erro=st.erro&&st.ocupado?st.erro:null;
     if(!window.LCX||!window.RTR) return;
     aplicarCatalogoRtr();
-    var geo=geoAtual(); if(!geo||!(geo.pecas>0)){ gravarLocal(); return; }
-    try{
-      var jc=copia(st.job); jc.geo=geo; jc.params=copia(st.params);
-      if(!jc.nome) jc.nome=geo.nome;
-      st.r=LCX.calcular(jc);
-    }catch(e){ st.erro='Erro no cálculo: '+e.message; }
+    guardar();
+    st.itens.forEach(function(it,i){ try{ it.r=calcItem(it); }catch(e){ it.r=null; if(i===st.sel) st.erro='Erro no cálculo: '+e.message; } });
+    st.r=st.itens[st.sel].r;
+    st.comb=LCX.combinar(st.itens.map(function(it){ return it.r; }));
     gravarLocal();
   }
 
@@ -169,20 +215,62 @@
     +'.lcx-mut{color:var(--mut);font-size:12px}.lcx-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}.lcx-seg button{background:#fff;border:none;border-right:1px solid var(--line);padding:7px 14px;font:inherit;font-size:13px;cursor:pointer}'
     +'.lcx-seg button:last-child{border-right:none}.lcx-seg button.on{background:var(--ink);color:#fff;font-weight:600}.lcx-geo{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0}'
     +'.lcx-geo div{background:#F5F4F0;border-radius:8px;padding:8px 10px}.lcx-geo b{display:block;font-size:15px}.lcx-geo span{font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut)}'
-    +'.lcx-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.lcx .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:820px){.lcx .two{grid-template-columns:1fr}.lcx{padding:16px}}';
+    +'.lcx-chips{display:flex;gap:6px;flex-wrap:wrap}.lcx-chip{background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;text-align:left}.lcx-chip.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.lcx-chip b{color:var(--accent)}.lcx td input[type=text]{width:100%}.lcx-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.lcx .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}@media(max-width:820px){.lcx .two{grid-template-columns:1fr}.lcx{padding:16px}}';
     document.head.appendChild(s);
   }
 
+  /* ── itens do orçamento ── */
+  var TIPOS={desenho:'Desenho', painel:'Painel', avulso:'Avulso'};
+  function barraItens(){
+    var h='<div class="card"><h3>Itens do orçamento <span class="lcx-mut" style="font-weight:400;text-transform:none;letter-spacing:0">· quantos precisar</span></h3><div class="lcx-chips">';
+    st.itens.forEach(function(it,i){
+      var r=it.r, nome=it.job.nome||(r&&r.geo&&r.geo.nome)||('Item '+(i+1));
+      h+='<button type="button" class="lcx-chip'+(i===st.sel?' on':'')+'" data-a="item-sel" data-v="'+i+'"><b>'+(i+1)+'</b> '+esc(nome)+' <span class="lcx-mut">'+TIPOS[it.job.tipo||'desenho']+(r?' · '+fmt(r.vendaNF):'')+'</span></button>';
+    });
+    h+='</div><div class="lcx-bar" style="margin-top:8px"><button type="button" class="btn acc sm" data-a="item-add" data-v="desenho">+ Desenho (letra, logo)</button><button type="button" class="btn acc sm" data-a="item-add" data-v="painel">+ Painel recortado</button><button type="button" class="btn acc sm" data-a="item-add" data-v="avulso">+ Item avulso</button>'
+      +'<span style="flex:1"></span><button type="button" class="btn ghost sm" data-a="item-dup">Duplicar item</button><button type="button" class="btn ghost sm" data-a="item-up">◀</button><button type="button" class="btn ghost sm" data-a="item-down">▶</button><button type="button" class="btn ghost sm" data-a="item-del">Remover item</button></div>';
+    if(st.comb) h+='<div class="lcx-mut" style="margin-top:8px">'+st.itens.length+' item(ns) · custo '+fmt(st.comb.custo)+' · <b>total '+fmt(st.comb.vendaNF)+'</b>'+(st.comb.nfPct>0?' (com NF)':' (sem NF)')+'</div>';
+    return h+'</div>';
+  }
+  function secPainel(){
+    var j=st.job, p=j.painel, h='<div class="card"><h3>2 · Painel recortado</h3>';
+    var mats=optMat(null);
+    h+='<div class="lcx-row">'+fld('Material', sel('job.painel.mat',p.mat,mats),'2 1 240px')+fld('Nome do material (opcional)', inp('job.painel.matNome',p.matNome||'','t'),'1 1 170px')+fld('R$ por chapa (vazio = catálogo)', inp('job.painel.precoChapa',p.precoChapa,'n'),'1 1 130px')+fld('Largura (m)', inp('job.painel.L',p.L,'n'),'0 1 90px')+fld('Altura (m)', inp('job.painel.A',p.A,'n'),'0 1 90px')+fld('Qtd de painéis', inp('job.qtd',j.qtd,'n'),'0 1 90px')+fld('Aproveitamento (%)', inp('job.painel.aprov',p.aprov,'n'),'0 1 110px')+'</div>';
+    h+='<div class="lcx-row">'+fld('Recorte (m.l. por m²)', inp('job.painel.recorteMlM2',p.recorteMlM2,'n'),'1 1 130px')+fld('Módulo da chapa L (m)', inp('job.painel.modL',p.modL,'n'),'0 1 110px')+fld('Módulo A (m)', inp('job.painel.modA',p.modA,'n'),'0 1 110px')+fld('Corte extra (m.l.)', inp('job.painel.mlExtra',p.mlExtra,'n'),'0 1 110px')+fld('Requadro (m² líq.)', inp('job.painel.reqM2',p.reqM2,'n'),'0 1 110px')+'</div>';
+    h+='<div class="lcx-row"><div>'+chk('job.painel.pintura',p.pintura!==false,'Pintura PU')+'</div>'+fld('Pintura (m² por m²)', inp('job.painel.pinturaFator',p.pinturaFator,'n'),'0 1 120px')+fld('Metalon (m por painel)', inp('job.painel.metalonM',p.metalonM,'n'),'0 1 130px')+fld('Sapatas (por painel)', inp('job.painel.sapatas',p.sapatas,'n'),'0 1 120px')+fld('Ferragens (pç)', inp('job.painel.ferragens',p.ferragens,'n'),'0 1 110px')+'</div>';
+    h+='<div class="lcx-row">'+fld('Diárias marceneiro', inp('job.painel.dias.marc',p.dias.marc,'n'),'0 1 120px')+fld('Diárias serralheiro', inp('job.painel.dias.serr',p.dias.serr,'n'),'0 1 120px')+fld('Diárias montador', inp('job.painel.dias.mont',p.dias.mont,'n'),'0 1 120px')+fld('Diárias desmontagem', inp('job.painel.dias.desm',p.dias.desm,'n'),'0 1 130px')+'</div>';
+    h+='<div class="lcx-mut">Material = área ÷ aproveitamento × preço da chapa por m². Router: recorte × área + contorno dos módulos, a R$ '+nf((LCX.PERFIS[j.perfil]||{}).routerML||0,2)+'/m.l. na venda. Consumíveis 5% sobre tudo menos MO e router (router a R$ 4). Diária R$ 250.</div></div>';
+    return h;
+  }
+  function secAvulso(){
+    var j=st.job, av=j.avulso, h='<div class="card"><h3>2 · Item avulso <span class="lcx-mut" style="font-weight:400;text-transform:none;letter-spacing:0">· linhas livres (arcos, estruturas, o que não é letra nem painel)</span></h3>';
+    h+='<div class="lcx-row">'+fld('Descrição do item para a proposta', inp('job.avulso.desc',av.desc,'t'),'1 1 100%')+fld('Quantidade do item', inp('job.qtd',j.qtd,'n'),'0 1 120px')+'</div>';
+    h+='<table><thead><tr><th>Descrição da linha</th><th class="n">Qtd</th><th>Un</th><th class="n">Valor unit. (R$)</th><th>Grupo</th><th></th></tr></thead><tbody>';
+    var G=[['mp','Materiais'],['eqp','Equipamentos / corte'],['mo','Mão de obra'],['cons','Consumíveis'],['proj','Projeto'],['log','Logística'],['inst','Instalação'],['out','Outros']];
+    av.linhas.forEach(function(x,i){
+      var b='job.avulso.linhas.'+i+'.';
+      h+='<tr><td>'+inp(b+'desc',x.desc,'t')+'</td><td class="n"><input class="v" type="text" inputmode="decimal" data-k="'+b+'qtd" data-t="n" value="'+inVal(x.qtd)+'"></td><td>'+sel(b+'un',x.un,[['un','un'],['m²','m²'],['m','m'],['m.l.','m.l.'],['ml router','ml router (valor na venda)'],['h','h'],['dia','dia'],['chapa','chapa'],['pç','pç'],['vb','vb']])+'</td><td class="n"><input class="v" type="text" inputmode="decimal" data-k="'+b+'pu" data-t="n" value="'+inVal(x.pu)+'"></td><td>'+sel(b+'grupo',x.grupo||'mp',G)+'</td><td><button type="button" class="btn ghost sm" data-a="avulso-del" data-k="'+i+'">×</button></td></tr>';
+    });
+    h+='</tbody></table><div class="lcx-bar"><button type="button" class="btn ghost sm" data-a="avulso-add">+ Linha</button></div>';
+    h+='<div class="lcx-mut" style="margin-top:6px">Valores a custo. Na unidade "ml router" digite o valor de venda por m.l. (ex.: 8): o custo é calculado dividindo pelo fator do BDI.</div></div>';
+    return h;
+  }
+  function secResumo(){
+    var c=st.comb; if(!c||st.itens.length<2&&!c) return '';
+    var h='<div class="card"><h3>Resumo do orçamento · '+st.itens.length+' item(ns)</h3><table><thead><tr><th>#</th><th>Item</th><th>Tipo</th><th class="n">Qtd</th><th class="n">Custo</th><th class="n">Venda</th></tr></thead><tbody>';
+    st.itens.forEach(function(it,i){ var r=it.r; h+='<tr><td>'+(i+1)+'</td><td>'+esc(it.job.nome||(r&&r.geo&&r.geo.nome)||'—')+'</td><td>'+TIPOS[it.job.tipo||'desenho']+'</td><td class="n">'+(r?r.qtd:'—')+'</td><td class="n">'+(r?fmt(r.custo):'—')+'</td><td class="n">'+(r?fmt(r.vendaNF):'<span class="lcx-mut">sem cálculo</span>')+'</td></tr>'; });
+    h+='<tr class="t"><td colspan="4">TOTAL'+(c.nfPct>0?' (com NF)':' (sem NF)')+'</td><td class="n">'+fmt(c.custo)+'</td><td class="n">'+fmt(c.vendaNF)+'</td></tr></tbody></table>';
+    h+='<div class="lcx-bar">'+(window.LCX_EXPORT_ORC?'<button type="button" class="btn acc" data-a="orcfile" style="padding:12px 22px;font-size:14px">⬇ Exportar no formato ORC (todos os itens)</button>':'')+'<button type="button" class="btn ghost" data-a="csvlevall">Levantamento de materiais (CSV, todos)</button><button type="button" class="btn ghost" data-a="csvosall">Linhas para a OS (CSV, todos)</button><button type="button" class="btn ghost" data-a="propostaall">Baixar proposta (todos)</button></div></div>';
+    return h;
+  }
   function secPeca(){
     var j=st.job, perfis=Object.keys(LCX.PERFIS).map(function(k){ return [k, LCX.PERFIS[k].nome]; });
     var h='<div class="card"><h3>1 · Peça e cliente</h3>';
     h+='<div class="lcx-row">'+fld('Nome da peça', inp('job.nome',j.nome,'t'),'2 1 220px')+fld('Cliente', inp('job.cliente',j.cliente,'t'),'2 1 200px')+fld('Projeto / evento', inp('job.projeto',j.projeto,'t'),'2 1 200px')+'</div>';
     h+='<div class="lcx-row">'+fld('Print / imagem do projeto (vai para o ORC)','<input type="file" id="lcx-print" accept="image/*">'+(st.printImg?'<img src="'+st.printImg+'" style="max-height:70px;margin-top:6px;border:1px solid var(--line);border-radius:3px;align-self:flex-start"> <button type="button" class="btn ghost sm" data-a="print-del" style="align-self:flex-start">remover</button>':''),'1 1 300px')+'</div>';
     h+='<div class="lcx-row">'+fld('Perfil de preço (BDI e router)', sel('job.perfil',j.perfil,perfis),'3 1 280px')
-      +fld('Quantidade', inp('job.qtd',j.qtd,'n'),'0 1 90px')
-      +fld('Complexidade', sel('job.complexidade',j.complexidade,LCX.COMPLEX.map(function(c){ return [c.id,c.nome]; })),'1 1 150px')
-      +fld('Instalação', sel('job.instalacao',j.instalacao,[['cliente','Por conta do cliente'],['sulsign','Sul Sign instala'],['pdvex','Por conta da PDVEX']]),'1 1 190px');
-    if(j.instalacao==='sulsign') h+=fld('Fator de altura', inp('job.alturaInst',j.alturaInst,'n'),'0 1 100px');
+      +(j.tipo==='desenho'||!j.tipo?fld('Quantidade', inp('job.qtd',j.qtd,'n'),'0 1 90px')+fld('Complexidade', sel('job.complexidade',j.complexidade,LCX.COMPLEX.map(function(c){ return [c.id,c.nome]; })),'1 1 150px')+fld('Instalação', sel('job.instalacao',j.instalacao,[['cliente','Por conta do cliente'],['sulsign','Sul Sign instala'],['pdvex','Por conta da PDVEX']]),'1 1 190px'):'');
+    if(j.tipo==='desenho'&&j.instalacao==='sulsign') h+=fld('Fator de altura', inp('job.alturaInst',j.alturaInst,'n'),'0 1 100px');
     h+='<div>'+chk('job.nf',j.nf,'Com nota fiscal')+'</div></div></div>';
     return h;
   }
@@ -272,7 +360,7 @@
     h+='<div class="kpi"><div class="lb">Venda · '+esc(r.perfil.id)+'</div><div class="vl">'+fmt(r.venda)+'</div><div class="dt">fator '+nf(r.fator,4)+'×</div></div>';
     if(r.nfPct>0) h+='<div class="kpi"><div class="lb">Venda com NF (+'+r.nfPct+'%)</div><div class="vl">'+fmt(r.vendaNF)+'</div><div class="dt">imposto da nota por fora</div></div>';
     h+='<div class="kpi"><div class="lb">Valor por unidade</div><div class="vl">'+fmt(r.unitario)+'</div><div class="dt">'+r.qtd+' un · '+(r.nfPct>0?'com NF':'sem NF')+'</div></div></div>';
-    if(window.LCX_EXPORT_ORC) h+='<div style="margin:0 0 14px"><button type="button" class="btn acc" data-a="orcfile" style="padding:12px 22px;font-size:14px">⬇ Exportar no formato ORC (orçamento completo)</button> <span class="lcx-mut">memorial, BDIs editáveis, Proposta, Sintético e artes</span></div>';
+    if(window.LCX_EXPORT_ORC) h+='<div style="margin:0 0 14px"><button type="button" class="btn acc" data-a="orcfile" style="padding:12px 22px;font-size:14px">⬇ Exportar no formato ORC (todos os itens)</button> <span class="lcx-mut">memorial, BDIs editáveis, Proposta, Sintético e artes</span></div>';
     (r.avisos||[]).forEach(function(a){ h+='<div class="lcx-aviso">'+esc(a)+'</div>'; });
     if(st.msg) h+='<div class="lcx-ok">'+esc(st.msg)+'</div>';
     h+='<div class="card"><div class="lcx-tabs">';
@@ -287,7 +375,7 @@
     r.sintetico.linhas.forEach(function(l){ h+='<tr><td>'+esc(l.desc)+'</td><td class="n">'+nf(l.qtd,l.qtd%1?2:0)+'</td><td>'+esc(l.un)+'</td><td class="n">'+fmt(l.valorUn)+'</td><td class="n">'+fmt(l.total)+'</td></tr>'; });
     h+='<tr class="t"><td colspan="4">TOTAL'+(r.nfPct>0?' (com NF)':' (sem NF)')+'</td><td class="n">'+fmt(r.sintetico.total)+'</td></tr></tbody></table>';
     h+='<div class="lcx-mut" style="margin-top:8px">Uma linha por peça do orçamento, no formato do Sintético do ORC. Perfil: '+esc(r.perfil.nome)+'.</div>';
-    h+='<div class="lcx-bar">'+(window.LCX_EXPORT_ORC?'<button type="button" class="btn acc" data-a="orcfile">Gerar ORC completo (HTML)</button>':'')+(window.SS20&&SS20.standalone?'':'<button type="button" class="btn acc" data-a="orc">Gravar em Orçamentos</button>')+'<button type="button" class="btn" data-a="proposta">Baixar proposta (HTML)</button><button type="button" class="btn ghost" data-a="csvos">Linhas para a OS (CSV)</button><button type="button" class="btn ghost" data-a="copiarsint">Copiar Sintético</button><button type="button" class="btn ghost" data-a="json">Baixar JSON do cálculo</button><button type="button" class="btn ghost" data-a="novo">Novo orçamento</button></div>';
+    h+='<div class="lcx-bar">'+(window.SS20&&SS20.standalone?'':'<button type="button" class="btn acc" data-a="orc">Gravar em Orçamentos</button>')+'<button type="button" class="btn" data-a="proposta">Baixar proposta (HTML)</button><button type="button" class="btn ghost" data-a="csvos">Linhas para a OS (CSV)</button><button type="button" class="btn ghost" data-a="copiarsint">Copiar Sintético</button><button type="button" class="btn ghost" data-a="json">Baixar JSON do cálculo</button><button type="button" class="btn ghost" data-a="novo">Novo orçamento</button></div>';
     return h;
   }
   function abaCusto(r){
@@ -361,7 +449,8 @@
     var c=st.root; if(!c||!window.LCX) return;
     var h='<div class="lcx"><h2>Letra Caixa</h2><p class="sub">Orçamento, levantamento de materiais e memorial descritivo a partir do desenho real. Mede o arquivo, cobra chapa por consumo, aplica as regras do Lumiforms e o BDI do perfil do cliente.</p>';
     if(st.erro) h+='<div class="lcx-erro">'+esc(st.erro)+'</div>';
-    h+=secPeca()+secBdi()+secDesenho()+secConstr()+secResultado()+'</div>';
+    var tp=st.job.tipo||'desenho';
+    h+=barraItens()+secPeca()+secBdi()+(tp==='painel'?secPainel():(tp==='avulso'?secAvulso():secDesenho()+secConstr()))+secResultado()+secResumo()+'</div>';
     var y=window.pageYOffset;
     c.innerHTML=h;
     window.scrollTo(0,y);
@@ -411,48 +500,56 @@
 
   /* grava no ORC: um grupo por peça do Sintético (peça, gabarito, instalação), linhas a custo; o BDI do perfil reproduz o fator */
   /* linhas para a OS (tabela que vai à PDVEX): matéria-prima, router em m.l. e horas de máquina; sem custos nem margem. Layout provisório até conferir com OS_Router_PDVEX_final. */
-  function csvOS(r){
+  function csvOS(items){
     var j=st.job, hoje=new Date(), dt=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-    var setor=j.constr==='impressao3d'?'Impressão 3D':'Router CNC', med=Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm';
-    var rows=[['Nº OS','Data','Cliente / evento','Setor','Matéria-prima / serviço','Descrição','Medidas','Qtd','Un','Valor do orçamento enviado (R$)']];
-    r.linhas.forEach(function(l){
-      var mp=((l.grupo==='mp'&&l.chave!=='fixadores')||l.chave==='gab_mat'), rt=(l.chave==='router'||l.chave==='router_gab'), maq=(l.grupo==='eqp'&&l.un==='h');
-      if(!(mp||rt||maq)) return;
-      rows.push(['',dt,(j.cliente||'')+(j.projeto?' — '+j.projeto:''),setor,l.desc,(j.nome||r.geo.nome||''),med,nf(l.qtd,l.qtd%1?2:0),l.un,'']);
+    var rows=[['Nº OS','Data','Cliente / evento','Setor','Matéria-prima / serviço','Descrição','Medidas','Qtd','Un','Valor do orçamento enviado (R$)']], tem=false;
+    items.forEach(function(it){
+      var r=it.r; if(!r) return;
+      var setor=(it.job.constr==='impressao3d'&&(it.job.tipo||'desenho')==='desenho')?'Impressão 3D':'Router CNC', med=(r.geo.bboxMm[0]>0)?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'';
+      var primeira=true;
+      r.linhas.forEach(function(l){
+        var mp=((l.grupo==='mp'&&l.chave!=='fixadores'&&l.chave!=='ferragens'&&l.chave!=='sapatas'&&l.chave!=='metalon_fundo')||l.chave==='gab_mat'), rt=(l.chave==='router'||l.chave==='router_gab'||l.un==='m.l.'), maq=(l.grupo==='eqp'&&l.un==='h');
+        if(!(mp||rt||maq)) return;
+        rows.push(['',dt,(j.cliente||'')+(j.projeto?' — '+j.projeto:''),setor,l.desc,(it.job.nome||r.geo.nome||''),med,nf(l.qtd,l.qtd%1?2:0),l.un,primeira?nf(r.vendaNF,2):'']);
+        primeira=false; tem=true;
+      });
     });
-    if(rows.length>1) rows[1][9]=nf(r.venda,2);
     return '\ufeff'+rows.map(function(rw){ return rw.map(function(x){ return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'; }).join(';'); }).join('\r\n');
   }
-  function payloadOrc(r, numero){
-    var j=st.job, gPeca=[], gGab=[], gInst=[], gOut=[];
+  function payloadOrc(c, numero){
+    var j=st.job, grupos=[];
     function ln(l){
       var exato=Math.abs(l.qtd*l.pu-l.custo)<0.006;
       return {desc:l.desc, qtd:String(exato?Math.round(l.qtd*100)/100:1), unit:String(exato?Math.round(l.pu*10000)/10000:l.custo), un:exato?l.un:'vb', m2:false, lv:'', av:'', modified:false};
     }
-    r.linhas.forEach(function(l){
-      if(l.grupo==='gab'||l.chave==='router_gab') gGab.push(ln(l)); else if(l.grupo==='inst') gInst.push(ln(l)); else if(l.grupo==='out') gOut.push(ln(l)); else gPeca.push(ln(l));
+    st.itens.forEach(function(it){
+      var r=it.r; if(!r) return;
+      var gPeca=[], gGab=[], gInst=[], gOut=[], nome=it.job.nome||r.geo.nome||'Item';
+      r.linhas.forEach(function(l){
+        if(l.grupo==='gab'||l.chave==='router_gab') gGab.push(ln(l)); else if(l.grupo==='inst') gInst.push(ln(l)); else if(l.grupo==='out') gOut.push(ln(l)); else gPeca.push(ln(l));
+      });
+      var S=r.sintetico.linhas, dim=(r.geo.bboxMm[0]>0)?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'';
+      function grp(n,linhas,sint,q){ if(linhas.length) grupos.push({nome:n, dim:dim, pecaId:null, sint:sint, sintQ:String(q), setores:[], setor:'', opcional:false, trelicaCfg:null, linhas:linhas}); }
+      grp(nome, gPeca, S[0]?S[0].desc:nome, S[0]?S[0].qtd:r.qtd);
+      grp('Gabarito de instalação — '+nome, gGab, 'Gabarito de instalação (MDF 3 mm, janelas no contorno) — '+nome, r.qtd);
+      grp('Instalação — '+nome, gInst, 'Instalação — '+nome, 1);
+      grp('Outros — '+nome, gOut, 'Outros — '+nome, 1);
     });
-    var S=r.sintetico.linhas, grupos=[], dim=Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm';
-    function grp(nome,linhas,sint,q){ if(linhas.length) grupos.push({nome:nome, dim:dim, pecaId:null, sint:sint, sintQ:String(q), setores:[], setor:'', opcional:false, trelicaCfg:null, linhas:linhas}); }
-    grp(j.nome||r.geo.nome, gPeca, S[0]?S[0].desc:'', r.qtd);
-    grp('Gabarito de instalação', gGab, 'Gabarito de instalação (MDF 3 mm, janelas no contorno)', r.qtd);
-    grp('Instalação', gInst, 'Instalação', 1);
-    grp('Outros', gOut, 'Outros', 1);
-    return {numero:numero, cliente:j.cliente||'', agencia:'', atendimento:'', projeto:j.projeto||j.nome||'', ref:'Letra Caixa (OS 2.0)', validade:'15 dias', bdi:r.bdiOrc, grupos:grupos,
-      inclusos:[], nao_inclusos:[], condicoes:{}, estr:{descricoes:[],imagens:[]}, cronograma:[], status:'Em Orçamento', escopo:textoDesc(r), rev:0, rev_historico:[], updated_at:new Date().toISOString()};
+    return {numero:numero, cliente:j.cliente||'', agencia:'', atendimento:'', projeto:j.projeto||j.nome||'', ref:'Calculadora Letra Caixa (OS 2.0)', validade:'15 dias', bdi:c.bdiOrc, grupos:grupos,
+      inclusos:[], nao_inclusos:[], condicoes:{}, estr:{descricoes:[],imagens:[]}, cronograma:[], status:'Em Orçamento', escopo:c.descTexto, rev:0, rev_historico:[], updated_at:new Date().toISOString()};
   }
   function gravarOrc(){
-    var r=st.r; if(!r) return;
+    var r=st.comb; if(!r) return;
     var d=new Date(), pre='SS-'+d.getFullYear()+'_'+('0'+(d.getMonth()+1)).slice(-2)+'-';
     SS20.sb('orcamentos?select=numero&numero=like.'+encodeURIComponent(pre+'*')).then(function(rows){
       var numero=LCX.proximoNumero((rows||[]).map(function(x){ return x.numero; }), d);
-      var ok=confirm('Gravar este orçamento como '+numero+' em Orçamentos?\n\nPeça: '+(st.job.nome||r.geo.nome)+'\nVenda: '+R(r.sintetico.total)+(r.nfPct>0?' (com NF)':' (sem NF)')+'\n\nDepois você abre e refina no ORC Manager.');
+      var ok=confirm('Gravar este orçamento como '+numero+' em Orçamentos?\n\nItens: '+st.itens.length+'\nVenda: '+R(r.sintetico.total)+(r.nfPct>0?' (com NF)':' (sem NF)')+'\n\nDepois você abre e refina no ORC Manager.');
       if(!ok) return null;
       return SS20.sbw('orcamentos','POST',payloadOrc(r,numero)).then(function(){ SS20.cache.orc=null; st.msg='Gravado como '+numero+'. Abra em Orçamentos para ajustar e enviar.'; draw(); });
     }).catch(function(e){ st.erro='Não consegui gravar: '+e.message; draw(); });
   }
 
-  function novo(){ if(!confirm('Começar um orçamento novo? O atual será descartado.')) return; st.job=jobPadrao(); st.doc=null; st.buf=null; st.nomeArq=''; st.geoSalvo=null; st.camadas={}; st.r=null; st.erro=null; gravarLocal(); draw(); }
+  function novo(){ if(!confirm('Começar um orçamento novo? Todos os itens atuais serão descartados.')) return; st.itens=[novoItem()]; st.sel=0; var it=st.itens[0]; st.job=it.job; st.doc=null; st.buf=null; st.nomeArq=''; st.geoSalvo=null; st.camadas={}; st.printImg=null; st.r=null; st.comb=null; st.erro=null; gravarLocal(); draw(); }
 
   /* ── eventos (delegados no container, uma vez) ── */
   function ligar(c){
@@ -473,6 +570,7 @@
       if(path==='job.qtd') val=Math.max(1,Math.round(val)||1);
       if(path==='job.qtdLetras'&&!val) val=0;
       setPath(st,path,val);
+      if(path==='job.cliente'||path==='job.projeto'||path==='job.perfil'||path==='job.nf'||path.indexOf('job.perfilOv')===0) sincGlobal();
       recalc(); draw();
     });
     c.addEventListener('click', function(e){
@@ -489,12 +587,22 @@
       else if(a==='descauto'){ st.job.descEdit=null; draw(); }
       else if(a==='copiardesc'){ var ta=document.getElementById('lcx-desc'); if(ta) st.job.descEdit=ta.value; copiar(ta?ta.value:textoDesc(st.r),'Descritivo copiado.'); }
       else if(a==='copiarsint'){ var rows=st.r.sintetico.linhas.map(function(l){ return [l.desc,l.qtd,l.un,nf(l.valorUn,2),nf(l.total,2)].join('\t'); }); copiar(rows.join('\n'),'Sintético copiado (colunas separadas por tabulação).'); }
-      else if(a==='csvos'){ baixar('OS_linhas_'+slug(st.job.nome||st.r.geo.nome)+'.csv','text/csv;charset=utf-8',csvOS(st.r)); }
+      else if(a==='csvos'){ baixar('OS_linhas_'+slug(st.job.nome||st.r.geo.nome)+'.csv','text/csv;charset=utf-8',csvOS([st.itens[st.sel]])); }
       else if(a==='csv'){ baixar('levantamento_'+slug(st.job.nome||st.r.geo.nome)+'.csv','text/csv;charset=utf-8',csvLev(st.r)); }
       else if(a==='proposta'){ baixar('proposta_'+slug(st.job.nome||st.r.geo.nome)+'.html','text/html;charset=utf-8',propostaHtml(st.r,'')); }
       else if(a==='json'){ var o=copia(st.r); delete o.job.geo; baixar('calculo_'+slug(st.job.nome||st.r.geo.nome)+'.json','application/json',JSON.stringify(o,null,1)); }
       else if(a==='print-del'){ st.printImg=null; draw(); }
-      else if(a==='bdi-reset'){ st.job.perfilOv={}; recalc(); draw(); }
+      else if(a==='item-sel'){ abrirItem(parseInt(v,10)); recalc(); draw(); }
+      else if(a==='item-add'){ guardar(); var ni=novoItem(v,st.job); st.itens.push(ni); st.sel=st.itens.length-2; abrirItem(st.itens.length-1); recalc(); draw(); window.scrollTo(0,0); }
+      else if(a==='item-dup'){ guardar(); var di=novoItem(st.job.tipo,st.job); di.job=copia(st.job); di.job.nome=(st.job.nome||'Item')+' (cópia)'; di.job.ovr={}; di.doc=st.doc; di.buf=st.buf; di.nomeArq=st.nomeArq; di.escala=st.escala; di.larguraReal=st.larguraReal; di.camadas=copia(st.camadas); di.geoSalvo=st.geoSalvo; di.printImg=st.printImg; st.itens.splice(st.sel+1,0,di); abrirItem(st.sel+1); recalc(); draw(); }
+      else if(a==='item-del'){ if(st.itens.length<2){ st.msg='O orçamento precisa ter ao menos um item.'; draw(); } else if(confirm('Remover o item "'+(st.job.nome||'sem nome')+'"?')){ var k0=st.sel; st.itens.splice(k0,1); st.sel=Math.min(k0,st.itens.length-1); var it2=st.itens[st.sel]; st.job=it2.job; st.doc=it2.doc; st.buf=it2.buf; st.nomeArq=it2.nomeArq; st.escala=it2.escala; st.larguraReal=it2.larguraReal; st.camadas=it2.camadas; st.geoSalvo=it2.geoSalvo; st.printImg=it2.printImg; recalc(); draw(); } }
+      else if(a==='item-up'||a==='item-down'){ guardar(); var d0=a==='item-up'?-1:1, t0=st.sel+d0; if(t0>=0&&t0<st.itens.length){ var tmp=st.itens[st.sel]; st.itens[st.sel]=st.itens[t0]; st.itens[t0]=tmp; st.sel=t0; recalc(); draw(); } }
+      else if(a==='avulso-add'){ st.job.avulso.linhas.push({desc:'',qtd:1,un:'un',pu:0,grupo:'mp'}); recalc(); draw(); }
+      else if(a==='avulso-del'){ st.job.avulso.linhas.splice(parseInt(k,10),1); if(!st.job.avulso.linhas.length) st.job.avulso.linhas.push({desc:'',qtd:1,un:'un',pu:0,grupo:'mp'}); recalc(); draw(); }
+      else if(a==='csvlevall'){ if(st.comb) baixar('levantamento_'+slug(st.job.projeto||st.job.cliente||'orcamento')+'.csv','text/csv;charset=utf-8',csvLev(st.comb)); }
+      else if(a==='csvosall'){ if(st.comb) baixar('OS_linhas_'+slug(st.job.projeto||st.job.cliente||'orcamento')+'.csv','text/csv;charset=utf-8',csvOS(st.itens)); }
+      else if(a==='propostaall'){ if(st.comb) baixar('proposta_'+slug(st.job.projeto||st.job.cliente||'orcamento')+'.html','text/html;charset=utf-8',propostaHtml(st.comb,'')); }
+      else if(a==='bdi-reset'){ st.job.perfilOv={}; sincGlobal(); recalc(); draw(); }
       else if(a==='orcfile'){ if(window.LCX_EXPORT_ORC) window.LCX_EXPORT_ORC(st.r, st); }
       else if(a==='orc'){ gravarOrc(); }
       else if(a==='novo'){ novo(); }

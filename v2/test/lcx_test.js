@@ -69,6 +69,15 @@ RTR.ler('iloja_600x190.dxf',buf).then(function(doc){
 
   console.log('Número do orçamento');
   ok(LCX.proximoNumero(['SS-2026_11-01','SS-2026_11-07','SS-2026_10-12'],new Date(2026,10,1))==='SS-2026_11-08','próximo SS-2026_11-08');
+console.log('Painel recortado (calibrado no Samba, 1.3 rococó, PDVEX)');
+  (function(){
+    var rp=LCX.calcularPainel({nome:'1.3 rococó',perfil:'pdvex',qtd:2,painel:{mat:'mdf15',precoChapa:302,L:5,A:3,aprov:74,pinturaFator:1.195,recorteMlM2:25,modL:2.5,modA:1.5,metalonM:38.4,sapatas:6,ferragens:2,dias:{marc:4,serr:3,mont:2,desm:1}},ovr:{}});
+    perto(rp.venda,19964.86,0.05,'venda do painel rococó = R$ 19.964,86');
+    var ra=LCX.calcularAvulso({nome:'Placas',perfil:'pdvex',qtd:1,avulso:{linhas:[{desc:'ACM',qtd:4,un:'chapa',pu:300},{desc:'router',qtd:50,un:'ml router',pu:8}]},ovr:{}});
+    perto(ra.venda,(1200+50*8/LCX.fator(LCX.PERFIS.pdvex))*LCX.fator(LCX.PERFIS.pdvex),0.05,'avulso: ml router rende R$ 8 na venda');
+    var cb=LCX.combinar([rp,ra]); perto(cb.venda,rp.venda+ra.venda,0.02,'combinar soma as vendas'); ok(cb.sintetico.linhas.length===2,'Sintético com uma linha por item');
+  })();
+  
   console.log(falhas?('\n'+falhas+' FALHA(S)'):'\nTudo certo');
   process.exit(falhas?1:0);
 }).catch(function(e){ console.log('ERRO',e); process.exit(2); });
