@@ -260,7 +260,7 @@
     var h='<div class="card"><h3>Resumo do orçamento · '+st.itens.length+' item(ns)</h3><table><thead><tr><th>#</th><th>Item</th><th>Tipo</th><th class="n">Qtd</th><th class="n">Custo</th><th class="n">Venda</th></tr></thead><tbody>';
     st.itens.forEach(function(it,i){ var r=it.r; h+='<tr><td>'+(i+1)+'</td><td>'+esc(it.job.nome||(r&&r.geo&&r.geo.nome)||'—')+'</td><td>'+TIPOS[it.job.tipo||'desenho']+'</td><td class="n">'+(r?r.qtd:'—')+'</td><td class="n">'+(r?fmt(r.custo):'—')+'</td><td class="n">'+(r?fmt(r.vendaNF):'<span class="lcx-mut">sem cálculo</span>')+'</td></tr>'; });
     h+='<tr class="t"><td colspan="4">TOTAL'+(c.nfPct>0?' (com NF)':' (sem NF)')+'</td><td class="n">'+fmt(c.custo)+'</td><td class="n">'+fmt(c.vendaNF)+'</td></tr></tbody></table>';
-    h+='<div class="lcx-bar">'+(window.LCX_EXPORT_ORC?'<button type="button" class="btn acc" data-a="orcfile" style="padding:12px 22px;font-size:14px">⬇ Exportar no formato ORC (todos os itens)</button>':'')+'<button type="button" class="btn ghost" data-a="csvlevall">Levantamento de materiais (CSV, todos)</button><button type="button" class="btn ghost" data-a="csvosall">Linhas para a OS (CSV, todos)</button><button type="button" class="btn ghost" data-a="propostaall">Baixar proposta (todos)</button></div></div>';
+    h+='<div class="lcx-bar">'+(window.LCX_EXPORT_ORC?'<button type="button" class="btn acc" data-a="orcfile" style="padding:12px 22px;font-size:14px">⬇ Exportar no formato ORC (todos os itens)</button>':'')+'<button type="button" class="btn ghost" data-a="csvlevall">Levantamento de materiais (CSV, todos)</button><select id="lcx-mppor" title="Quem compra a matéria-prima"><option value="pdvex">Chapas: PDVEX fornece (informativo)</option><option value="sulsign">Chapas: Sul Sign compra (cobrada)</option></select><button type="button" class="btn ghost" data-a="osjson">Gerar OS PDVEX (planilha)</button><button type="button" class="btn ghost" data-a="propostaall">Baixar proposta (todos)</button></div></div>';
     return h;
   }
   function secPeca(){
@@ -516,6 +516,49 @@
     });
     return '\ufeff'+rows.map(function(rw){ return rw.map(function(x){ return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'; }).join(';'); }).join('\r\n');
   }
+
+  /* ── OS PDVEX (aba da planilha OS_Router_PDVEX): 4 seções da MODELO; sem margem, só o que a OS mostra ── */
+  var OS_ROUTER_VENDA=8, OS_FECH_H=0.5, OS_FECH_VENDA=60;
+  function nomeBase(n){ return String(n||'').replace('PVC expandido','PVC').replace(/\s+\(gabarito\)/,'').trim(); }
+  function montarOS(items, mpPor){
+    var j=st.job, S={mpP:[],mpS:[],maq:[],mo:[]}, av=[], baseAdd={}, hora3d=null;
+    items.forEach(function(it){
+      var r=it.r; if(!r) return; var nome=it.job.nome||r.geo.nome||'Item', med=(r.geo.bboxMm&&r.geo.bboxMm[0]>0)?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'—', primeiroMat='';
+      if(it.job.constr==='impressao3d'&&(it.job.tipo||'desenho')==='desenho'){
+        /* racional Lumiforms 3D: filamento (g, com perda) + hora de máquina (R$/h); vai como matéria-prima + serviço de máquina */
+        var fil=null, mq=null; r.linhas.forEach(function(l){ if(l.chave==='filamento') fil=l; if(l.chave==='maq3d') mq=l; });
+        if(fil&&mq){
+          var fn=fil.desc.replace(/^Filamento\s+/i,''), fnome='Filamento '+fn, kgPreco=Math.round(fil.pu*1000*100)/100;
+          baseAdd[fnome]={un:'kg',custo:kgPreco}; hora3d=mq.pu;
+          var lf={desc:fnome+' — '+nome+' ('+Math.round(fil.qtd)+' g, já com perda)', tipo:'Matéria-prima', mp:fnome, med:Math.round(fil.qtd)+' g', qtd:Math.round(fil.qtd/10)/100, un:'kg', cobUn:(mpPor==='sulsign'?kgPreco:null)};
+          (mpPor==='sulsign'?S.mpS:S.mpP).push(lf);
+          S.maq.push({desc:nome+' — impressão 3D '+fn, tipo:'Impressão 3D', mp:fnome, med:r.geo.bboxMm&&r.geo.bboxMm[0]>0?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'—', qtd:Math.round(mq.qtd*100)/100, un:'h', cobUn:mq.pu});
+          S.mo.push({desc:'Fechamento de arquivo — '+nome, tipo:'Fechamento de arquivo', mp:'—', med:'—', qtd:OS_FECH_H, un:'h', cobUn:OS_FECH_VENDA});
+        } else av.push('"'+nome+'": 3D sem filamento/hora calculados.');
+        return;
+      }
+      (r.materiais||[]).forEach(function(m){
+        if(m.chapa==null||m.fam==='Vinil'||!(m.m2Cobrado>0)) return;
+        var bn=nomeBase(m.material), gab=(m.chave==='gab_mat');
+        if(!gab&&!primeiroMat) primeiroMat=bn;
+        var ln={desc:(gab?'Gabarito ':'Chapa ')+bn+' — '+nome, tipo:'Matéria-prima', mp:bn, med:m.medida||'—', qtd:Math.round(m.m2Cobrado*100)/100, un:'m²', cobUn:null};
+        (mpPor==='sulsign'?S.mpS:S.mpP).push(ln);
+      });
+      if(it.job.tipo==='avulso') r.linhas.forEach(function(l){ if(l.grupo==='mp'&&l.un!=='m.l.'){ var ln2={desc:l.desc+' — '+nome, tipo:'Matéria-prima', mp:nomeBase(l.desc), med:'—', qtd:Math.round(l.qtd*100)/100, un:l.un, cobUn:null}; (mpPor==='sulsign'?S.mpS:S.mpP).push(ln2); if(!primeiroMat) primeiroMat=nomeBase(l.desc); } });
+      var ml=0, temGab=false; r.linhas.forEach(function(l){ if(l.un==='m.l.'&&(l.chave==='router'||l.chave==='router_gab'||it.job.tipo==='avulso')){ ml+=l.qtd; if(l.chave==='router_gab') temGab=true; } });
+      if(ml>0) S.maq.push({desc:nome+' — corte '+(primeiroMat||'')+(temGab?' + gabarito':''), tipo:'Corte router CNC', mp:primeiroMat||'—', med:med, qtd:Math.round(ml*10)/10, un:'m.l.', cobUn:OS_ROUTER_VENDA});
+      S.mo.push({desc:'Fechamento de arquivo — '+nome, tipo:'Fechamento de arquivo', mp:'—', med:'—', qtd:OS_FECH_H, un:'h', cobUn:OS_FECH_VENDA});
+    });
+    var c=st.comb;
+    return {versao:1, evento:(j.cliente?j.cliente+' — ':'')+(j.projeto||j.nome||''), cliente:j.cliente||'', job:'A definir (sem SS)', tipoServico:'Corte CNC (router)', setor:'Router CNC', solicitante:'PDVEX', periodo:'A confirmar',
+      orcNumero:'', orcValor:c?c.vendaNF:null, mpPor:mpPor, baseAdd:baseAdd, hora3d:hora3d, perfil:(j.perfil==='pdvex'?'PDVEX':'Orçamento'), secoes:S, avisos:av, gerado:new Date().toISOString()};
+  }
+  function csvOSplanilha(os){
+    var rows=[['Seção','Nº','Descrição','Tipo','Matéria-prima','Medidas','Qtd','Un','Cobrado unit. (R$)']], n=0;
+    [['1','mpP'],['2','mpS'],['3','maq'],['4','mo']].forEach(function(s){ os.secoes[s[1]].forEach(function(l){ n++; rows.push([s[0],n,l.desc,l.tipo,l.mp,l.med,String(l.qtd).replace('.',','),l.un,l.cobUn==null?'':String(l.cobUn).replace('.',',')]); }); });
+    rows.push([]); rows.push(['','','Orçamento enviado nº','','','','','',os.orcNumero]); rows.push(['','','VALOR DO ORÇAMENTO ENVIADO','','','','','',os.orcValor==null?'':String(os.orcValor).replace('.',',')]);
+    return '﻿'+rows.map(function(rw){ return rw.map(function(x){ return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'; }).join(';'); }).join('\r\n');
+  }
   function payloadOrc(c, numero){
     var j=st.job, grupos=[];
     function ln(l){
@@ -600,6 +643,7 @@
       else if(a==='avulso-add'){ st.job.avulso.linhas.push({desc:'',qtd:1,un:'un',pu:0,grupo:'mp'}); recalc(); draw(); }
       else if(a==='avulso-del'){ st.job.avulso.linhas.splice(parseInt(k,10),1); if(!st.job.avulso.linhas.length) st.job.avulso.linhas.push({desc:'',qtd:1,un:'un',pu:0,grupo:'mp'}); recalc(); draw(); }
       else if(a==='csvlevall'){ if(st.comb) baixar('levantamento_'+slug(st.job.projeto||st.job.cliente||'orcamento')+'.csv','text/csv;charset=utf-8',csvLev(st.comb)); }
+      else if(a==='osjson'){ var mp=(document.getElementById('lcx-mppor')||{}).value||'pdvex'; var os=montarOS(st.itens,mp), bn=slug(st.job.projeto||st.job.cliente||'orcamento'); baixar('OS_'+bn+'.json','application/json',JSON.stringify(os,null,1)); baixar('OS_'+bn+'_linhas.csv','text/csv;charset=utf-8',csvOSplanilha(os)); st.msg='OS gerada. '+(os.avisos.join(' ')||'')+' Mande o .json que eu gravo a aba na planilha.'; draw(); }
       else if(a==='csvosall'){ if(st.comb) baixar('OS_linhas_'+slug(st.job.projeto||st.job.cliente||'orcamento')+'.csv','text/csv;charset=utf-8',csvOS(st.itens)); }
       else if(a==='propostaall'){ if(st.comb) baixar('proposta_'+slug(st.job.projeto||st.job.cliente||'orcamento')+'.html','text/html;charset=utf-8',propostaHtml(st.comb,'')); }
       else if(a==='bdi-reset'){ st.job.perfilOv={}; sincGlobal(); recalc(); draw(); }
