@@ -84,7 +84,7 @@
     /* instalação Sul Sign (⚠ do CALC antigo, sem histórico novo) */
     instBase:150, instPeca:20, instLuz:1.3,
     /* impressão 3D (Lumiforms/Shell) */
-    p3d:{ghora:286, fator:1.07, perda:20, horaMaq:12, kg:{petg:60, petg_tr:60, petg_bo:80, pla:75, asa:140}, parede:1.2, densidade:1.25,
+    p3d:{ghora:286, fator:1.07, perda:20, horaMaq:12, kg:{petg:60, petg_tr:60, petg_bo:130, pla:75, asa:140}, parede:1.2, densidade:1.25,
       /* peso estimado: parede = kParede × contorno(m) × altura(mm) × espessura(mm); piso = área × baseMm × densidade (calibrado: ≈115,5 g/m por 40 mm de altura com parede 1,2 mm, Letrix/PROLED + BATE PAPO 1,68 kg) */
       kParede:2.406, baseMm:1, dens:1.27,
       fils:{petg_tr:{nome:'PETG translúcido'}, petg_bo:{nome:'PETG blockout'}, pla:{nome:'PLA'}, asa:{nome:'ASA'}}}
