@@ -65,7 +65,7 @@ RTR.ler('iloja_600x190.dxf',buf).then(function(doc){
   var r3=LCX.calcular({nome:'Letra 3D',perfil:'sulsign',qtd:1,geo:LCX.geoDeTexto('A',20,1),constr:'impressao3d',i3d:{peso_g:300,tempo_h:12,fil:'petg'},caixa:{ilum:'nenhuma'}});
   var fil=r3.linhas.filter(function(l){return l.chave==='filamento';})[0];
   perto(fil.qtd,360,0.5,'peso 300 g + 20% de perda = 360 g');
-  perto(fil.custo,360*95/1000,0.02,'filamento a R$ 95/kg');
+  perto(fil.custo,360*60/1000,0.02,'filamento PETG translúcido a R$ 60/kg');
 
   console.log('Número do orçamento');
   ok(LCX.proximoNumero(['SS-2026_11-01','SS-2026_11-07','SS-2026_10-12'],new Date(2026,10,1))==='SS-2026_11-08','próximo SS-2026_11-08');
