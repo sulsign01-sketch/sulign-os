@@ -177,6 +177,7 @@
     var j=st.job, perfis=Object.keys(LCX.PERFIS).map(function(k){ return [k, LCX.PERFIS[k].nome]; });
     var h='<div class="card"><h3>1 · Peça e cliente</h3>';
     h+='<div class="lcx-row">'+fld('Nome da peça', inp('job.nome',j.nome,'t'),'2 1 220px')+fld('Cliente', inp('job.cliente',j.cliente,'t'),'2 1 200px')+fld('Projeto / evento', inp('job.projeto',j.projeto,'t'),'2 1 200px')+'</div>';
+    h+='<div class="lcx-row">'+fld('Print / imagem do projeto (vai para o ORC)','<input type="file" id="lcx-print" accept="image/*">'+(st.printImg?'<img src="'+st.printImg+'" style="max-height:70px;margin-top:6px;border:1px solid var(--line);border-radius:3px;align-self:flex-start"> <button type="button" class="btn ghost sm" data-a="print-del" style="align-self:flex-start">remover</button>':''),'1 1 300px')+'</div>';
     h+='<div class="lcx-row">'+fld('Perfil de preço (BDI e router)', sel('job.perfil',j.perfil,perfis),'3 1 280px')
       +fld('Quantidade', inp('job.qtd',j.qtd,'n'),'0 1 90px')
       +fld('Complexidade', sel('job.complexidade',j.complexidade,LCX.COMPLEX.map(function(c){ return [c.id,c.nome]; })),'1 1 150px')
@@ -286,7 +287,7 @@
     r.sintetico.linhas.forEach(function(l){ h+='<tr><td>'+esc(l.desc)+'</td><td class="n">'+nf(l.qtd,l.qtd%1?2:0)+'</td><td>'+esc(l.un)+'</td><td class="n">'+fmt(l.valorUn)+'</td><td class="n">'+fmt(l.total)+'</td></tr>'; });
     h+='<tr class="t"><td colspan="4">TOTAL'+(r.nfPct>0?' (com NF)':' (sem NF)')+'</td><td class="n">'+fmt(r.sintetico.total)+'</td></tr></tbody></table>';
     h+='<div class="lcx-mut" style="margin-top:8px">Uma linha por peça do orçamento, no formato do Sintético do ORC. Perfil: '+esc(r.perfil.nome)+'.</div>';
-    h+='<div class="lcx-bar">'+(window.LCX_EXPORT_ORC?'<button type="button" class="btn acc" data-a="orcfile">Gerar ORC completo (HTML)</button>':'')+(window.SS20&&SS20.standalone?'':'<button type="button" class="btn acc" data-a="orc">Gravar em Orçamentos</button>')+'<button type="button" class="btn" data-a="proposta">Baixar proposta (HTML)</button><button type="button" class="btn ghost" data-a="copiarsint">Copiar Sintético</button><button type="button" class="btn ghost" data-a="json">Baixar JSON do cálculo</button><button type="button" class="btn ghost" data-a="novo">Novo orçamento</button></div>';
+    h+='<div class="lcx-bar">'+(window.LCX_EXPORT_ORC?'<button type="button" class="btn acc" data-a="orcfile">Gerar ORC completo (HTML)</button>':'')+(window.SS20&&SS20.standalone?'':'<button type="button" class="btn acc" data-a="orc">Gravar em Orçamentos</button>')+'<button type="button" class="btn" data-a="proposta">Baixar proposta (HTML)</button><button type="button" class="btn ghost" data-a="csvos">Linhas para a OS (CSV)</button><button type="button" class="btn ghost" data-a="copiarsint">Copiar Sintético</button><button type="button" class="btn ghost" data-a="json">Baixar JSON do cálculo</button><button type="button" class="btn ghost" data-a="novo">Novo orçamento</button></div>';
     return h;
   }
   function abaCusto(r){
@@ -409,6 +410,19 @@
   }
 
   /* grava no ORC: um grupo por peça do Sintético (peça, gabarito, instalação), linhas a custo; o BDI do perfil reproduz o fator */
+  /* linhas para a OS (tabela que vai à PDVEX): matéria-prima, router em m.l. e horas de máquina; sem custos nem margem. Layout provisório até conferir com OS_Router_PDVEX_final. */
+  function csvOS(r){
+    var j=st.job, hoje=new Date(), dt=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
+    var setor=j.constr==='impressao3d'?'Impressão 3D':'Router CNC', med=Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm';
+    var rows=[['Nº OS','Data','Cliente / evento','Setor','Matéria-prima / serviço','Descrição','Medidas','Qtd','Un','Valor do orçamento enviado (R$)']];
+    r.linhas.forEach(function(l){
+      var mp=((l.grupo==='mp'&&l.chave!=='fixadores')||l.chave==='gab_mat'), rt=(l.chave==='router'||l.chave==='router_gab'), maq=(l.grupo==='eqp'&&l.un==='h');
+      if(!(mp||rt||maq)) return;
+      rows.push(['',dt,(j.cliente||'')+(j.projeto?' — '+j.projeto:''),setor,l.desc,(j.nome||r.geo.nome||''),med,nf(l.qtd,l.qtd%1?2:0),l.un,'']);
+    });
+    if(rows.length>1) rows[1][9]=nf(r.venda,2);
+    return '\ufeff'+rows.map(function(rw){ return rw.map(function(x){ return '"'+String(x==null?'':x).replace(/"/g,'""')+'"'; }).join(';'); }).join('\r\n');
+  }
   function payloadOrc(r, numero){
     var j=st.job, gPeca=[], gGab=[], gInst=[], gOut=[];
     function ln(l){
@@ -446,6 +460,7 @@
     c.addEventListener('change', function(e){
       var el=e.target; if(!el||!c.querySelector('.lcx')) return;
       if(el.id==='lcx-file'){ var f=el.files&&el.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ lerArquivo(f.name, rd.result); }; rd.readAsArrayBuffer(f); return; }
+      if(el.id==='lcx-print'){ var pf=el.files&&el.files[0]; if(!pf) return; var pr=new FileReader(); pr.onload=function(){ var im=new Image(); im.onload=function(){ var m=Math.min(1,1000/Math.max(im.width,im.height)), cv=document.createElement('canvas'); cv.width=Math.round(im.width*m); cv.height=Math.round(im.height*m); var cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(im,0,0,cv.width,cv.height); st.printImg=cv.toDataURL('image/jpeg',0.85); draw(); }; im.src=pr.result; }; pr.readAsDataURL(pf); return; }
       if(el.hasAttribute('data-camada')){ st.camadas[el.getAttribute('data-camada')]=el.value; recalc(); draw(); return; }
       if(el.hasAttribute('data-ovr')){ var k=el.getAttribute('data-ovr'); st.job.ovr[k]=num(el.value); recalc(); draw(); return; }
       if(el.hasAttribute('data-par')){ var p=el.getAttribute('data-par'), v=num(el.value); if(el.value.trim()==='') delPath(st.params,p); else setPath(st.params,p,v); recalc(); draw(); return; }
@@ -474,9 +489,11 @@
       else if(a==='descauto'){ st.job.descEdit=null; draw(); }
       else if(a==='copiardesc'){ var ta=document.getElementById('lcx-desc'); if(ta) st.job.descEdit=ta.value; copiar(ta?ta.value:textoDesc(st.r),'Descritivo copiado.'); }
       else if(a==='copiarsint'){ var rows=st.r.sintetico.linhas.map(function(l){ return [l.desc,l.qtd,l.un,nf(l.valorUn,2),nf(l.total,2)].join('\t'); }); copiar(rows.join('\n'),'Sintético copiado (colunas separadas por tabulação).'); }
+      else if(a==='csvos'){ baixar('OS_linhas_'+slug(st.job.nome||st.r.geo.nome)+'.csv','text/csv;charset=utf-8',csvOS(st.r)); }
       else if(a==='csv'){ baixar('levantamento_'+slug(st.job.nome||st.r.geo.nome)+'.csv','text/csv;charset=utf-8',csvLev(st.r)); }
       else if(a==='proposta'){ baixar('proposta_'+slug(st.job.nome||st.r.geo.nome)+'.html','text/html;charset=utf-8',propostaHtml(st.r,'')); }
       else if(a==='json'){ var o=copia(st.r); delete o.job.geo; baixar('calculo_'+slug(st.job.nome||st.r.geo.nome)+'.json','application/json',JSON.stringify(o,null,1)); }
+      else if(a==='print-del'){ st.printImg=null; draw(); }
       else if(a==='bdi-reset'){ st.job.perfilOv={}; recalc(); draw(); }
       else if(a==='orcfile'){ if(window.LCX_EXPORT_ORC) window.LCX_EXPORT_ORC(st.r, st); }
       else if(a==='orc'){ gravarOrc(); }
