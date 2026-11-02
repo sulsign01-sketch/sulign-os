@@ -45,7 +45,7 @@
       entrada:'arquivo', texto:'', alturaCm:20, qtdLetras:0, constr:'chapada',
       chapada:{mat:'pvc15', acab:'vinil', vinil:'lam', cores:1},
       caixa:{face:'acr3', lateral:'pvc10', fundo:'pvc5', prof:5, ilum:'nenhuma', led:'fita', pintura:false, cores:1},
-      i3d:{peso_g:0, tempo_h:0, semPerda:false, fil:'petg'},
+      i3d:{peso_g:0, tempo_h:0, semPerda:false, fil:'petg_tr', paredeMm:0, kg:0},
       gabarito:{on:true, modo:'mdf3'}, instalacao:'cliente', alturaInst:1, extras:[], ovr:{}, descEdit:null,
       tipo:'desenho', perfilOv:{},
       painel:{mat:'mdf15', precoChapa:'', L:3, A:2.5, aprov:74, pintura:true, pinturaFator:1.2, recorteMlM2:0, modL:2.5, modA:1.5, mlExtra:0, reqM2:0, metalonM:0, sapatas:0, ferragens:0, dias:{marc:0, serr:0, mont:0, desm:0}},
@@ -337,8 +337,15 @@
       h+='</div>';
     } else {
       var i3=j.i3d;
+      var fl=LCX.PARAMS.p3d.fils, fk=(i3.fil==='petg'||!i3.fil)?'petg_tr':i3.fil, kgp=LCX.PARAMS.p3d.kg[fk];
+      var tpa=(i3.paredeMm>0?i3.paredeMm:null), geoM=(st.r&&st.r.geo&&st.r.geo.bboxMm)||[0,0], tauto=LCX.paredeAuto(Math.max(geoM[0]||0,geoM[1]||0,(j.caixa.prof||5)*10));
       h+='<div class="lcx-row">'+fld('Peso do fatiador (g, 1 un)', inp('job.i3d.peso_g',i3.peso_g||'','n'),'1 1 150px')+fld('Tempo do fatiador (h, 1 un)', inp('job.i3d.tempo_h',i3.tempo_h||'','n'),'1 1 150px')
-        +fld('Filamento', sel('job.i3d.fil',i3.fil,[['petg','PETG'],['pla','PLA'],['asa','ASA']]),'1 1 120px')+'<div>'+chk('job.i3d.semPerda',i3.semPerda,'Já inclui perda/falhas')+'</div></div>';
+        +'<div style="padding-bottom:6px"><label class="btn ghost sm" style="cursor:pointer">Ler G-code do PrusaSlicer…<input type="file" id="lcx-gcode" accept=".gcode,.gco,.g,.txt" multiple style="display:none"></label></div>'
+        +'<div>'+chk('job.i3d.semPerda',i3.semPerda,'Já inclui perda/falhas')+'</div></div>';
+      h+='<div class="lcx-row">'+fld('Filamento (acabamento)', sel('job.i3d.fil',fk,Object.keys(fl).map(function(k){ return [k,fl[k].nome+' — R$ '+LCX.PARAMS.p3d.kg[k]+'/kg']; })),'2 1 230px')
+        +fld('R$/kg (vazio = padrão)', inp('job.i3d.kg',i3.kg||'','n'),'0 1 130px')
+        +fld('Parede (mm) — vazio = automática ('+nf(tauto,1)+' mm)', inp('job.i3d.paredeMm',tpa||'','n'),'1 1 200px')+'</div>';
+      if(st.gcMsg) h+='<div class="lcx-mut" style="margin:-4px 0 8px">'+esc(st.gcMsg)+'</div>';
       h+='<div class="lcx-row">'+fld('Profundidade (cm)', inp('job.caixa.prof',j.caixa.prof,'n'),'0 1 110px')+fld('Iluminação', sel('job.caixa.ilum',j.caixa.ilum,[['nenhuma','Sem luz'],['halo','Bafo de luz'],['frontlit','Frontal'],['backlight','Backlight']]),'1 1 170px');
       if(j.caixa.ilum!=='nenhuma') h+=fld('Tipo de LED', sel('job.caixa.led',j.caixa.led,Object.keys(LCX.PARAMS.led).map(function(k){ return [k,LCX.PARAMS.led[k].nome]; })),'1 1 170px');
       h+='</div>';
@@ -500,6 +507,31 @@
 
   /* grava no ORC: um grupo por peça do Sintético (peça, gabarito, instalação), linhas a custo; o BDI do perfil reproduz o fator */
   /* linhas para a OS (tabela que vai à PDVEX): matéria-prima, router em m.l. e horas de máquina; sem custos nem margem. Layout provisório até conferir com OS_Router_PDVEX_final. */
+
+  /* lê peso (g) e tempo (h) dos G-codes do PrusaSlicer (rodapé do arquivo); soma os arquivos = 1 unidade */
+  function lerGcodes(files){
+    if(!files.length) return; var tot={g:0,h:0,n:0,camada:'',bico:''}, falhas=[], pend=files.length;
+    files.forEach(function(f){
+      var rd=new FileReader(), ini=Math.max(0,f.size-400000);
+      rd.onload=function(){
+        var t=String(rd.result), g=null, h=null, m;
+        m=t.match(/;\s*total filament used \[g\]\s*=\s*([\d.]+)/i); if(m) g=parseFloat(m[1]);
+        if(g==null){ m=t.match(/;\s*filament used \[g\]\s*=\s*([\d.,\s]+)/i); if(m) g=m[1].split(',').reduce(function(a,x){ return a+(parseFloat(x)||0); },0); }
+        m=t.match(/;\s*estimated printing time \(normal mode\)\s*=\s*([^\r\n]+)/i);
+        if(m){ var d=/(\d+)d/.exec(m[1]), hh=/(\d+)h/.exec(m[1]), mm=/(\d+)m/.exec(m[1]), ss=/(\d+)s/.exec(m[1]); h=(d?+d[1]*24:0)+(hh?+hh[1]:0)+(mm?+mm[1]/60:0)+(ss?+ss[1]/3600:0); }
+        var lc=t.match(/;\s*layer_height\s*=\s*([\d.]+)/i), nz=t.match(/;\s*nozzle_diameter\s*=\s*([\d.]+)/i); if(lc) tot.camada=lc[1]; if(nz) tot.bico=nz[1];
+        if(g>0&&h>0){ tot.g+=g; tot.h+=h; tot.n++; } else falhas.push(f.name);
+        if(--pend===0){
+          if(tot.n){ st.job.i3d.peso_g=Math.round(tot.g*10)/10; st.job.i3d.tempo_h=Math.round(tot.h*100)/100; st.job.i3d.semPerda=false;
+            st.gcMsg=tot.n+' G-code(s) somados: '+nf(tot.g,0)+' g · '+nf(tot.h,2)+' h'+(tot.camada?' · camada '+tot.camada+' mm':'')+(tot.bico?' · bico '+tot.bico+' mm':'')+'. A perda/falhas ('+LCX.PARAMS.p3d.perda+'%) é somada por cima; marque "Já inclui perda" se não quiser.'+(falhas.length?' Não li: '+falhas.join(', ')+' (.bgcode binário? desligue "Supports binary G-code" no PrusaSlicer).':''); recalc(); }
+          else st.gcMsg='Não achei peso/tempo em: '+falhas.join(', ')+'. Se for .bgcode (binário), desligue "Supports binary G-code" na impressora do PrusaSlicer e fatie de novo.';
+          draw();
+        }
+      };
+      rd.onerror=function(){ falhas.push(f.name); if(--pend===0){ st.gcMsg='Não consegui ler os arquivos.'; draw(); } };
+      rd.readAsText(f.slice(ini));
+    });
+  }
   function csvOS(items){
     var j=st.job, hoje=new Date(), dt=('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
     var rows=[['Nº OS','Data','Cliente / evento','Setor','Matéria-prima / serviço','Descrição','Medidas','Qtd','Un','Valor do orçamento enviado (R$)']], tem=false;
@@ -600,6 +632,7 @@
     c.addEventListener('change', function(e){
       var el=e.target; if(!el||!c.querySelector('.lcx')) return;
       if(el.id==='lcx-file'){ var f=el.files&&el.files[0]; if(!f) return; var rd=new FileReader(); rd.onload=function(){ lerArquivo(f.name, rd.result); }; rd.readAsArrayBuffer(f); return; }
+      if(el.id==='lcx-gcode'){ lerGcodes(Array.prototype.slice.call(el.files||[])); el.value=''; return; }
       if(el.id==='lcx-print'){ var pf=el.files&&el.files[0]; if(!pf) return; var pr=new FileReader(); pr.onload=function(){ var im=new Image(); im.onload=function(){ var m=Math.min(1,1000/Math.max(im.width,im.height)), cv=document.createElement('canvas'); cv.width=Math.round(im.width*m); cv.height=Math.round(im.height*m); var cx=cv.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(im,0,0,cv.width,cv.height); st.printImg=cv.toDataURL('image/jpeg',0.85); draw(); }; im.src=pr.result; }; pr.readAsDataURL(pf); return; }
       if(el.hasAttribute('data-camada')){ st.camadas[el.getAttribute('data-camada')]=el.value; recalc(); draw(); return; }
       if(el.hasAttribute('data-ovr')){ var k=el.getAttribute('data-ovr'); st.job.ovr[k]=num(el.value); recalc(); draw(); return; }

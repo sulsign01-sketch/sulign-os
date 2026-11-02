@@ -84,7 +84,10 @@
     /* instalação Sul Sign (⚠ do CALC antigo, sem histórico novo) */
     instBase:150, instPeca:20, instLuz:1.3,
     /* impressão 3D (Lumiforms/Shell) */
-    p3d:{ghora:286, fator:1.07, perda:20, horaMaq:12, kg:{petg:95, pla:75, asa:140}, parede:1.2, densidade:1.25}
+    p3d:{ghora:286, fator:1.07, perda:20, horaMaq:12, kg:{petg:60, petg_tr:60, petg_bo:80, pla:75, asa:140}, parede:1.2, densidade:1.25,
+      /* peso estimado: parede = kParede × contorno(m) × altura(mm) × espessura(mm); piso = área × baseMm × densidade (calibrado: ≈115,5 g/m por 40 mm de altura com parede 1,2 mm, Letrix/PROLED + BATE PAPO 1,68 kg) */
+      kParede:2.406, baseMm:1, dens:1.27,
+      fils:{petg_tr:{nome:'PETG translúcido'}, petg_bo:{nome:'PETG blockout'}, pla:{nome:'PLA'}, asa:{nome:'ASA'}}}
   };
 
   /* ───────────── catálogo de materiais ─────────────
@@ -188,7 +191,7 @@
        geo (geoDeDoc/geoDeTexto), constr: 'chapada'|'caixa'|'impressao3d',
        chapada:{mat, acab:'vinil'|'pintura'|'nenhum', vinil:'fosco'|'uv'|'lam'|'recorte', cores},
        caixa:{face, lateral, fundo ('sem' ou id), prof (cm), ilum:'nenhuma'|'halo'|'frontlit'|'backlight'|'dupla', led, pintura(bool), cores},
-       i3d:{peso_g, tempo_h, semPerda, fil:'petg'|'pla'|'asa'},
+       i3d:{peso_g, tempo_h, semPerda, fil:'petg_tr'|'petg_bo'|'pla'|'asa', paredeMm(0=auto), kg(R$/kg, 0=padrão)},
        gabarito:{on, modo:'mdf3'|'papel'}, instalacao:'cliente'|'sulsign'|'pdvex', alturaInst,
        extras:[{desc,valor,grupo}], params (override), ovr:{chave:{q,p}|valor}
      } */
@@ -311,16 +314,17 @@
     } else { /* impressão 3D */
       var i3=job.i3d||{}, p3=P.p3d;
       var prof3=Math.max(0.5,num(job.caixa&&job.caixa.prof)||5)/100;
-      var peso;
+      var peso, filKey=(i3.fil==='petg'||!i3.fil)?'petg_tr':i3.fil, filNome=(p3.fils[filKey]||{nome:String(filKey).toUpperCase()}).nome, Hmm=prof3*1000;
+      var maior=Math.max(geo.bboxMm[0]||0,geo.bboxMm[1]||0,Hmm), tpar=num(i3.paredeMm)>0?num(i3.paredeMm):LCX.paredeAuto(maior);
       if(num(i3.peso_g)>0){ peso=num(i3.peso_g)*qtd*(i3.semPerda?1:(1+p3.perda/100)); }
-      else { var desenv=(area*1.6+perim*prof3)*10000; peso=desenv*(p3.parede/10)*p3.densidade*1.15*qtd*(1+p3.perda/100); avisos.push('Peso do filamento ESTIMADO pela geometria: informe o peso do fatiador.'); }
+      else { var pu=p3.kParede*perim*Hmm*tpar + area*p3.baseMm*1000*p3.dens; peso=pu*qtd*(1+p3.perda/100); avisos.push('Peso do filamento ESTIMADO (parede '+tpar+' mm'+(num(i3.paredeMm)>0?'':' automática')+', altura '+Math.round(Hmm)+' mm): leia o G-code ou informe o peso do fatiador para o valor real.'); }
       var horas=num(i3.tempo_h)>0?num(i3.tempo_h)*qtd*(i3.semPerda?1:(1+p3.perda/100)):peso/(p3.ghora*p3.fator);
-      var kg=p3.kg[i3.fil||'petg']||p3.kg.petg;
-      var lFil=L('mp','filamento','Filamento '+String(i3.fil||'petg').toUpperCase(), r2(peso), 'g', kg/1000, null, num(i3.peso_g)>0?'peso informado'+(i3.semPerda?'':' + '+p3.perda+'% de perda'):'estimado');
+      var kg=num(i3.kg)>0?num(i3.kg):(p3.kg[filKey]||p3.kg.petg);
+      var lFil=L('mp','filamento','Filamento '+filNome, r2(peso), 'g', kg/1000, null, num(i3.peso_g)>0?'peso informado'+(i3.semPerda?'':' + '+p3.perda+'% de perda'):'estimado');
       mpTotal+=lFil.custo;
       var lMq=L('eqp','maq3d','Hora de máquina 3D', r2(horas), 'h', p3.horaMaq, null, num(i3.tempo_h)>0?'tempo informado':'peso ÷ ('+p3.ghora+' g/h × '+p3.fator+')');
       mpTotal+=lMq.custo;
-      materiais.push({chave:'filamento', material:'Filamento '+String(i3.fil||'petg').toUpperCase(), fam:'3D', uso:'Impressão', chapa:null, precoChapa:kg, envM2:0, liqM2:0, m2Cobrado:0, custo:lFil.custo, nota:lFil.nota, medida:r2(peso)+' g · '+r2(horas)+' h'});
+      materiais.push({chave:'filamento', material:'Filamento '+filNome, fam:'3D', uso:'Impressão', chapa:null, precoChapa:kg, envM2:0, liqM2:0, m2Cobrado:0, custo:lFil.custo, nota:lFil.nota, medida:r2(peso)+' g · '+r2(horas)+' h'});
       var ilu3=(job.caixa&&job.caixa.ilum)||'nenhuma';
       if(ilu3!=='nenhuma'){ luz=true; var tp3=P.led[(job.caixa&&job.caixa.led)||'fita']||P.led.fita; ledM=perim*qtd;
         var l3=L('mp','led',tp3.nome+' ('+ilu3+')', r2(ledM), 'm', tp3.preco, null, 'contorno'); mpTotal+=l3.custo;
@@ -440,6 +444,8 @@
     };
   }
   /* painel: L×A m, qtd painéis; material em chapa (m² líquido ÷ aproveitamento), recorte em m.l./m², pintura PU, metalon, sapatas, ferragens e diárias */
+  /* espessura de parede automática: peças maiores/mais altas pedem mais estrutura (⚠ regra provisória; Arena Jockey usou ~4 mm) */
+  LCX.paredeAuto=function(maiorMm){ return maiorMm<=300?1.2:maiorMm<=600?2:maiorMm<=1200?3:4; };
   LCX.calcularPainel=function(job){
     var pn=job.painel||{}, PP=mix(PARAMS_PAINEL, (job.params||{}).painel||{});
     var perfil=mix(LCX.PERFIS[job.perfil||'sulsign']||LCX.PERFIS.sulsign, job.perfilOv||{});
@@ -615,7 +621,7 @@
       if(cj.pintura) t.push('Acabamento: pintura PU na face e na lateral, nas cores do projeto.');
       if(cj.ilum&&cj.ilum!=='nenhuma'){ var tp=P.led[cj.led||'fita']||P.led.fita; t.push('Iluminação: '+tp.nome+' ('+({halo:'bafo de luz (halo)',frontlit:'frontal',backlight:'backlight',dupla:'frontal e bafo de luz'}[cj.ilum])+'), com fonte chaveada dimensionada com folga de '+Math.round((P.fonteFolga-1)*100)+'%, fiação e conectores. Tensão e ponto de força por conta do local.'); }
     } else {
-      t.push('Fornecimento de '+r.qtd+' ('+r.qtd+') '+nome+' em letra caixa impressa em 3D ('+String((j.i3d||{}).fil||'petg').toUpperCase()+'), '+g.pecas+' peça(s), medindo '+dim+'.');
+      t.push('Fornecimento de '+r.qtd+' ('+r.qtd+') '+nome+' em letra caixa impressa em 3D ('+((LCX.PARAMS.p3d.fils[(j.i3d||{}).fil]||LCX.PARAMS.p3d.fils.petg_tr).nome)+'), '+g.pecas+' peça(s), medindo '+dim+'.');
       if(cj.ilum&&cj.ilum!=='nenhuma') t.push('Iluminação em LED com fonte chaveada, fiação e conectores.');
     }
     if((j.gabarito||{}).on) t.push('Acompanha gabarito de instalação '+((j.gabarito.modo||'mdf3')==='mdf3'?'em MDF 3 mm, com janelas no contorno de cada peça e margem de '+P.gabMargem/10+' cm,':'impresso em escala 1:1 com marcas de furo,')+' que posiciona todas as peças com o espaçamento do projeto e dispensa medição na parede.');
