@@ -267,6 +267,7 @@
     var j=st.job, perfis=Object.keys(LCX.PERFIS).map(function(k){ return [k, LCX.PERFIS[k].nome]; });
     var h='<div class="card"><h3>1 · Peça e cliente</h3>';
     h+='<div class="lcx-row">'+fld('Nome da peça', inp('job.nome',j.nome,'t'),'2 1 220px')+fld('Cliente', inp('job.cliente',j.cliente,'t'),'2 1 200px')+fld('Projeto / evento', inp('job.projeto',j.projeto,'t'),'2 1 200px')+'</div>';
+    h+='<div class="lcx-row"><div>'+chk('job.opcional',j.opcional,'Item opcional / alternativa (aparece no ORC como OPCIONAL, fora do total e fora da OS)')+'</div></div>';
     h+='<div class="lcx-row">'+fld('Print / imagem do projeto (vai para o ORC)','<input type="file" id="lcx-print" accept="image/*">'+(st.printImg?'<img src="'+st.printImg+'" style="max-height:70px;margin-top:6px;border:1px solid var(--line);border-radius:3px;align-self:flex-start"> <button type="button" class="btn ghost sm" data-a="print-del" style="align-self:flex-start">remover</button>':''),'1 1 300px')+'</div>';
     h+='<div class="lcx-row">'+fld('Perfil de preço (BDI e router)', sel('job.perfil',j.perfil,perfis),'3 1 280px')
       +(j.tipo==='desenho'||!j.tipo?fld('Quantidade', inp('job.qtd',j.qtd,'n'),'0 1 90px')+fld('Complexidade', sel('job.complexidade',j.complexidade,LCX.COMPLEX.map(function(c){ return [c.id,c.nome]; })),'1 1 150px')+fld('Instalação', sel('job.instalacao',j.instalacao,[['cliente','Por conta do cliente'],['sulsign','Sul Sign instala'],['pdvex','Por conta da PDVEX']]),'1 1 190px'):'');
@@ -559,7 +560,7 @@
   function montarOS(items, mpPor){
     var j=st.job, S={mpP:[],mpS:[],maq:[],mo:[]}, av=[], baseAdd={}, hora3d=null;
     items.forEach(function(it){
-      var r=it.r; if(!r) return; var nome=it.job.nome||r.geo.nome||'Item', med=(r.geo.bboxMm&&r.geo.bboxMm[0]>0)?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'—', primeiroMat='';
+      var r=it.r; if(!r||it.job.opcional) return; var nome=it.job.nome||r.geo.nome||'Item', med=(r.geo.bboxMm&&r.geo.bboxMm[0]>0)?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'—', primeiroMat='';
       if(it.job.constr==='impressao3d'&&(it.job.tipo||'desenho')==='desenho'){
         /* racional Lumiforms 3D: filamento (g, com perda) + hora de máquina (R$/h); vai como matéria-prima + serviço de máquina */
         var fil=null, mq=null; r.linhas.forEach(function(l){ if(l.chave==='filamento') fil=l; if(l.chave==='maq3d') mq=l; });
@@ -608,7 +609,7 @@
         if(l.grupo==='gab'||l.chave==='router_gab') gGab.push(ln(l)); else if(l.grupo==='inst') gInst.push(ln(l)); else if(l.grupo==='out') gOut.push(ln(l)); else gPeca.push(ln(l));
       });
       var S=r.sintetico.linhas, dim=(r.geo.bboxMm[0]>0)?Math.round(r.geo.bboxMm[0])+' × '+Math.round(r.geo.bboxMm[1])+' mm':'';
-      function grp(n,linhas,sint,q){ if(linhas.length) grupos.push({nome:n, dim:dim, pecaId:null, sint:sint, sintQ:String(q), setores:[], setor:'', opcional:false, trelicaCfg:null, linhas:linhas}); }
+      function grp(n,linhas,sint,q){ if(linhas.length) grupos.push({nome:n, dim:dim, pecaId:null, sint:sint, sintQ:String(q), setores:[], setor:'', opcional:!!it.job.opcional, trelicaCfg:null, linhas:linhas}); }
       grp(nome, gPeca, S[0]?S[0].desc:nome, S[0]?S[0].qtd:r.qtd);
       grp('Gabarito de instalação — '+nome, gGab, 'Gabarito de instalação (MDF 3 mm, janelas no contorno) — '+nome, r.qtd);
       grp('Instalação — '+nome, gInst, 'Instalação — '+nome, 1);

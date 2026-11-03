@@ -552,10 +552,11 @@
       r.linhas.forEach(function(l){ var c={}; for(var a in l) c[a]=l[a]; c.item=k; c.chaveOrig=l.chave; c.chave=pre+l.chave; linhas.push(c); });
       (r.materiais||[]).forEach(function(m){ var c={}; for(var a in m) c[a]=m[a]; c.uso=(r.job.nome||('item '+(k+1)))+(m.uso?' · '+m.uso:''); mats.push(c); });
       (r.avisos||[]).forEach(function(a){ avisos.push((r.job.nome||('Item '+(k+1)))+': '+a); });
-      (r.sintetico.linhas||[]).forEach(function(l){ sint.push(l); });
-      custo+=r.custo; venda+=r.venda; vendaNF+=r.vendaNF;
+      var opc=!!(r.job&&r.job.opcional);
+      (r.sintetico.linhas||[]).forEach(function(l){ if(opc){ var o={}; for(var q in l) o[q]=l[q]; o.opcional=true; sint.push(o); } else sint.push(l); });
+      if(!opc){ custo+=r.custo; venda+=r.venda; vendaNF+=r.vendaNF; }
     });
-    var tot=0; sint.forEach(function(l){ tot+=l.total; });
+    var tot=0; sint.forEach(function(l){ if(!l.opcional) tot+=l.total; });
     var f=rs[0];
     var out={itens:rs, linhas:linhas, materiais:mats, avisos:avisos, custo:r2(custo), venda:r2(venda), vendaNF:r2(vendaNF), perfil:f.perfil, fator:f.fator, nfPct:f.nfPct, qtd:1, bdiOrc:f.bdiOrc,
       sintetico:{linhas:sint, total:r2(tot)}, grupos:[]};
