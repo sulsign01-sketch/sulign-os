@@ -322,7 +322,7 @@
     h+='<div class="lcx-row"><div class="lcx-seg"><button type="button" data-a="constr" data-v="chapada" class="'+(c==='chapada'?'on':'')+'">Chapada + vinil</button><button type="button" data-a="constr" data-v="caixa" class="'+(c==='caixa'?'on':'')+'">Caixa com face</button><button type="button" data-a="constr" data-v="impressao3d" class="'+(c==='impressao3d'?'on':'')+'">Impressão 3D</button></div></div>';
     if(c==='chapada'){
       h+='<div class="lcx-row">'+fld('Material da peça', sel('job.chapada.mat',j.chapada.mat,optMat(['PVC','MDF','ACM','Acrílico','Compensado','PS'])),'3 1 300px')
-        +fld('Acabamento da frente', sel('job.chapada.acab',j.chapada.acab,[['vinil','Adesivo vinil impresso'],['pintura','Pintura PU'],['nenhum','Sem acabamento']]),'1 1 200px');
+        +'<div>'+chk('job.soCorte',j.soCorte,'Só corte (sem acabamento, fixação e montagem)')+'</div>'+fld('Acabamento da frente', sel('job.chapada.acab',j.chapada.acab,[['vinil','Adesivo vinil impresso'],['pintura','Pintura PU'],['nenhum','Sem acabamento']]),'1 1 200px');
       if(j.chapada.acab==='vinil') h+=fld('Vinil', sel('job.chapada.vinil',j.chapada.vinil,[['fosco','Fosco'],['uv','Fosco + UV'],['lam','Fosco + laminação'],['recorte','Recorte (cores)']]),'1 1 180px');
       if(j.chapada.acab==='pintura') h+=fld('Nº de cores', inp('job.chapada.cores',j.chapada.cores,'n'),'0 1 100px');
       h+='</div>';

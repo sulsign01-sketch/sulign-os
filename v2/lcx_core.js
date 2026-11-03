@@ -266,7 +266,7 @@
       var rm=matLinha('mp','mat_face','Letra chapada', cf.mat||'pvc15', pecasPrincipais, minDe(LCX.catalogo(cf.mat||'pvc15')), Math.round(geo.bboxMm[0])+' × '+Math.round(geo.bboxMm[1])+' mm');
       if(rm){ mpTotal+=rm.l.custo; espMat=rm.mat; }
       corteML=perim*qtd; temRouter=true;
-      var ac=cf.acab||'vinil';
+      var ac=job.soCorte?'nenhum':(cf.acab||'vinil');
       if(ac==='vinil'){
         var sg=P.vinilSangria/1000, tipo=cf.vinil||'lam';
         var m2v=Math.max(P.vinilMinM2*qtd, (geo.bboxMm[0]/1000+2*sg)*(geo.bboxMm[1]/1000+2*sg)*qtd);
@@ -385,8 +385,11 @@
       L('mo','mo_router','M.O. operador de router', r2(horasOp), 'h', P.horaOperador, null, Math.round(minOp)+' min calculados · mínimo '+P.opMinHoras+' h');
     }
 
+    /* só corte: material + router + operador + arte-final; sem fixação, consumíveis, montagem, acabamento nem embalagem */
+    var soCorte=!!job.soCorte&&constr==='chapada';
+
     /* ── 4. FIXAÇÃO ── */
-    if(constr!=='impressao3d'){
+    if(constr!=='impressao3d'&&!soCorte){
       var nFix=pecas*qtd*(constr==='chapada'?P.fixPorPecaChapada:P.fixPorPecaCaixa);
       L('mp','fixadores','Fixadores (pinos, espaçadores, fita VHB)', nFix, 'conj', P.fixConj, null, 'por peça');
       mpTotal+=nFix*P.fixConj;
@@ -394,15 +397,15 @@
 
     /* ── 5. CONSUMÍVEIS (% da matéria-prima pela complexidade) ── */
     var cons=mpTotal*cx.pct/100;
-    L('cons','consum','Consumíveis ('+cx.pct+'% da matéria-prima)', 1, 'vb', r2(cons), null, 'cola, lixa, silicone, EPI');
+    if(!soCorte) L('cons','consum','Consumíveis ('+cx.pct+'% da matéria-prima)', 1, 'vb', r2(cons), null, 'cola, lixa, silicone, EPI');
 
     /* ── 6. MÃO DE OBRA ── */
     var tMont=0;
     if(constr==='chapada') tMont=(P.montBaseMin+P.montPecaMin*pecas)*cx.f*qtd/60;
     else if(constr==='caixa') tMont=(P.montBaseMin+P.montMinPorM*perim)*cx.f*qtd/60;
     else tMont=(P.montBaseMin+P.montPecaMin*pecas)*cx.f*qtd/60;
-    L('mo','mo_mont','M.O. montagem e acabamento', r2(tMont), 'h', P.horaMontador, null, constr==='caixa'?'min/m de contorno × complexidade':'base + min/peça × complexidade');
-    if(constr==='chapada'&&(job.chapada||{}).acab==='vinil'){
+    if(!soCorte) L('mo','mo_mont','M.O. montagem e acabamento', r2(tMont), 'h', P.horaMontador, null, constr==='caixa'?'min/m de contorno × complexidade':'base + min/peça × complexidade');
+    if(constr==='chapada'&&!soCorte&&(job.chapada||{}).acab==='vinil'){
       var m2a=bboxM2*qtd, hA=P.aplicBaseH+P.aplicHPorM2*m2a;
       L('mo','mo_aplic','M.O. aplicação do vinil', r2(hA), 'h', P.horaAplicador, null, P.aplicBaseH+' h + '+P.aplicHPorM2+' h/m²');
     }
@@ -417,7 +420,7 @@
     var arte=Math.max(P.arteMin, custoParcial/qtd*cx.pct/100);
     L('proj','arte','Arte-final e preparo de arquivo', 1, 'vb', r2(arte), null, 'maior entre R$ '+P.arteMin+' e '+cx.pct+'% do custo de 1 un');
     var emb=Math.max(P.embalMin*cx.f, P.embalM2*Math.max(bboxM2,0)*qtd*cx.f);
-    L('log','embal','Embalagem', 1, 'vb', r2(emb), null, 'maior entre R$ '+r2(P.embalMin*cx.f)+' e R$ '+P.embalM2+'/m² × complexidade');
+    if(!soCorte) L('log','embal','Embalagem', 1, 'vb', r2(emb), null, 'maior entre R$ '+r2(P.embalMin*cx.f)+' e R$ '+P.embalM2+'/m² × complexidade');
 
     /* ── 8. INSTALAÇÃO ── */
     var inst=job.instalacao||'cliente';
