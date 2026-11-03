@@ -71,7 +71,7 @@
     eletSetupMin:20, eletPecaMin:5, eletMinPorM:2, eletMin:50,
     /* iluminação */
     led:{
-      fita:  {nome:'Fita LED',        preco:30, w:9.6, fonte:true},
+      fita:  {nome:'Fita LED',        preco:12, w:9.6, fonte:true},
       cob:   {nome:'Neon COB',        preco:35, w:10,  fonte:true},
       neon:  {nome:'Neon flex',       preco:35, w:12,  fonte:true},
       v220:  {nome:'LED 220 V',       preco:30, w:0,   fonte:false}
@@ -377,7 +377,7 @@
       var mlTotal=corteML+corteGab;
       var vendaML=num(perfil.routerML);
       var puCusto=vendaML/fator;
-      L('eqp','router','Router — corte da peça', r2(corteML), 'm.l.', puCusto, null, 'R$ '+r2(vendaML)+'/m.l. na venda do perfil');
+      L('eqp','router',(constr==='impressao3d'?'Router — corte do acrílico (frente e fundo)':'Router — corte da peça'), r2(corteML), 'm.l.', puCusto, null, 'R$ '+r2(vendaML)+'/m.l. na venda do perfil');
       if(corteGab>0) L('eqp','router_gab','Router — corte do gabarito', r2(corteGab), 'm.l.', puCusto, null, 'janelas + perímetro externo');
       var jobsRouter=1+(corteGab>0?1:0);
       var minOp=(P.opSetupMin*jobsRouter+P.opMinPorM*mlTotal);
