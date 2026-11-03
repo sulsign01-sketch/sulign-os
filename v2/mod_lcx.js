@@ -328,10 +328,11 @@
       h+='</div>';
     } else if(c==='caixa'){
       var cj=j.caixa;
-      h+='<div class="lcx-row">'+fld('Face', sel('job.caixa.face',cj.face,optMat(['Acrílico','PVC','ACM','PS'])),'2 1 260px')+fld('Lateral', sel('job.caixa.lateral',cj.lateral,optMat(['PVC','ACM','MDF','Compensado','Acrílico'])),'2 1 260px')
+      h+='<div class="lcx-row">'+fld('Face', sel('job.caixa.face',cj.face,optMat(['Acrílico','PVC','ACM','PS','MDF'])),'2 1 260px')+fld('Lateral', sel('job.caixa.lateral',cj.lateral,optMat(['PVC','ACM','MDF','Compensado','Acrílico'])),'2 1 260px')
         +fld('Fundo', sel('job.caixa.fundo',cj.fundo,optMat(['PVC','ACM','MDF'],[['sem','Sem fundo']])),'2 1 260px')+fld('Profundidade (cm)', inp('job.caixa.prof',cj.prof,'n'),'0 1 110px')+'</div>';
       h+='<div class="lcx-row">'+fld('Iluminação', sel('job.caixa.ilum',cj.ilum,[['nenhuma','Sem luz'],['halo','Bafo de luz (halo)'],['frontlit','Frontal'],['backlight','Backlight'],['dupla','Frontal + bafo']]),'1 1 190px');
       if(cj.ilum!=='nenhuma') h+=fld('Tipo de LED', sel('job.caixa.led',cj.led,Object.keys(LCX.PARAMS.led).map(function(k){ return [k,LCX.PARAMS.led[k].nome]; })),'1 1 170px');
+      h+='<div>'+chk('job.caixa.vinilFace',cj.vinilFace,'Adesivo impresso na face')+'</div>';
       h+='<div>'+chk('job.caixa.pintura',cj.pintura,'Pintura PU (face e lateral)')+'</div>';
       if(cj.pintura) h+=fld('Nº de cores', inp('job.caixa.cores',cj.cores,'n'),'0 1 100px');
       h+='</div>';
@@ -346,7 +347,7 @@
         +fld('R$/kg (vazio = padrão)', inp('job.i3d.kg',i3.kg||'','n'),'0 1 130px')
         +fld('Parede (mm) — vazio = automática pela maior peça ('+nf(tauto,1)+' mm)', inp('job.i3d.paredeMm',tpa||'','n'),'1 1 200px')+'</div>';
       var acrs=[['nenhum','— sem —']].concat(LCX.listaMateriais(['Acrílico']).map(function(m){ return [m.id, m.nome+(m.preco>0?' — '+fmt(m.preco)+'/chapa':'')]; }));
-      h+='<div class="lcx-row">'+fld('Frente em acrílico', sel('job.i3d.frente',i3.frente||'nenhum',acrs),'1 1 230px')+fld('Chapa de fundo / fixação (acrílico)', sel('job.i3d.fundo',i3.fundo||'nenhum',acrs),'1 1 230px')+'</div>';
+      h+='<div class="lcx-row">'+fld('Frente em acrílico', sel('job.i3d.frente',i3.frente||'nenhum',acrs),'1 1 230px')+fld('Chapa de fundo / fixação', sel('job.i3d.fundo',i3.fundo||'nenhum',[['nenhum','— sem —']].concat(LCX.listaMateriais(['Acrílico','PVC','ACM','MDF']).map(function(m){ return [m.id, m.nome+(m.preco>0?' — '+fmt(m.preco)+'/chapa':'')]; }))),'1 1 230px')+'</div>';
       if(st.gcMsg) h+='<div class="lcx-mut" style="margin:-4px 0 8px">'+esc(st.gcMsg)+'</div>';
       h+='<div class="lcx-row">'+fld('Profundidade (cm)', inp('job.caixa.prof',j.caixa.prof,'n'),'0 1 110px')+fld('Iluminação', sel('job.caixa.ilum',j.caixa.ilum,[['nenhuma','Sem luz'],['halo','Bafo de luz'],['frontlit','Frontal'],['backlight','Backlight']]),'1 1 170px');
       if(j.caixa.ilum!=='nenhuma') h+=fld('Cor da luz', inp('job.caixa.ledCor',j.caixa.ledCor||'','t'),'1 1 130px');

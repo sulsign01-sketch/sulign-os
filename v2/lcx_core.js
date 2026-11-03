@@ -100,6 +100,7 @@
     mdf15:{nome:'MDF cru 15 mm',fam:'MDF',chapa:[2750,1850],preco:259},
     mdf3:{nome:'MDF cru 3 mm',fam:'MDF',chapa:[2750,1850],preco:73},
     acm3:{nome:'ACM 3 mm',fam:'ACM',chapa:[5000,1220],preco:300},
+    mdfl9:{nome:'MDF branco 9 mm 1 face',fam:'MDF',chapa:[2750,1850],preco:195},
     acr3:{nome:'Acrílico branco 3 mm',fam:'Acrílico',chapa:[2000,1000],preco:376.25},
     acrc3:{nome:'Acrílico cristal 3 mm',fam:'Acrílico',chapa:[2000,1000],preco:300}
   };
@@ -115,6 +116,7 @@
   LCX.listaMateriais=function(fam){
     var out=[], R=root.RTR, i;
     if(R&&R.PRESETS){ for(i=0;i<R.PRESETS.length;i++){ var p=R.PRESETS[i]; if(p.op==='corte'&&(!fam||fam.indexOf(p.fam)>=0)){ var cc=LCX.catalogo(p.id); out.push({id:p.id,nome:p.nome,fam:p.fam,preco:cc?cc.preco:num(p.preco)}); } } }
+    if(R&&R.PRESETS){ Object.keys(CAT_MIN).forEach(function(k){ var ja=out.some(function(o){ return o.id===k; }), c=CAT_MIN[k]; if(!ja&&(!fam||fam.indexOf(c.fam)>=0)){ var cc2=LCX.catalogo(k); out.push({id:k,nome:c.nome,fam:c.fam,preco:cc2?cc2.preco:c.preco}); } }); }
     else { Object.keys(CAT_MIN).forEach(function(k){ var c=CAT_MIN[k]; if(!fam||fam.indexOf(c.fam)>=0){ var cc=LCX.catalogo(k); out.push({id:k,nome:c.nome,fam:c.fam,preco:cc.preco}); } }); }
     return out;
   };
@@ -275,8 +277,8 @@
         mpTotal+=lv.custo;
         materiais.push({chave:'vinil', material:'Vinil '+vinilNome(tipo), fam:'Vinil', uso:'Frente', chapa:null, precoChapa:pv, envM2:m2v, liqM2:area*qtd, m2Cobrado:m2v, custo:lv.custo, nota:lv.nota, medida:''});
       } else if(ac==='pintura'){
-        var nc=Math.max(1,Math.round(num(cf.cores))||1), mp2=area*qtd*nc;
-        var lp=L('mp','pintura','Pintura PU'+(nc>1?' ('+nc+' cores)':''), r2(mp2), 'm²', P.pintura, null, '');
+        var nc=Math.max(1,Math.round(num(cf.cores))||1), tMm=(function(){ var mm=/(\d+(?:[.,]\d+)?)\s*mm/.exec((espMat&&espMat.nome)||''); return mm?parseFloat(mm[1].replace(',','.')):0; })(), mp2=(area+perim*tMm/1000)*qtd*nc;
+        var lp=L('mp','pintura','Pintura PU'+(nc>1?' ('+nc+' cores)':''), r2(mp2), 'm²', P.pintura, null, tMm?'face + laterais ('+tMm+' mm)':'');
         mpTotal+=lp.custo;
         materiais.push({chave:'pintura', material:'Pintura PU', fam:'Acabamento', uso:'Face', chapa:null, precoChapa:P.pintura, envM2:mp2, liqM2:mp2, m2Cobrado:mp2, custo:lp.custo, nota:'', medida:''});
       }
@@ -300,6 +302,13 @@
       }
       var nFaces=(fundoId!=='sem'?2:1);
       corteML=perim*qtd*(nFaces+num(P.latBordas)); temRouter=true;
+      if(cj.vinilFace){
+        var sgC=P.vinilSangria/1000, tpC=cj.vinil||'lam';
+        var m2C=Math.max(P.vinilMinM2*qtd, (geo.bboxMm[0]/1000+2*sgC)*(geo.bboxMm[1]/1000+2*sgC)*qtd), pvC=P.vinil[tpC]!=null?P.vinil[tpC]:P.vinil.lam;
+        var lvC=L('mp','vinil','Adesivo vinil impresso na face ('+vinilNome(tpC)+')', r2(m2C), 'm²', pvC, null, 'sangria '+P.vinilSangria+' mm · mínimo '+P.vinilMinM2+' m²');
+        mpTotal+=lvC.custo;
+        materiais.push({chave:'vinil', material:'Vinil '+vinilNome(tpC), fam:'Vinil', uso:'Face', chapa:null, precoChapa:pvC, envM2:m2C, liqM2:area*qtd, m2Cobrado:m2C, custo:lvC.custo, nota:lvC.nota, medida:''});
+      }
       var acC=cj.pintura;
       if(acC){
         var ncc=Math.max(1,Math.round(num(cj.cores))||1), mpC=(area+perim*prof)*qtd*ncc;
@@ -405,7 +414,7 @@
     else if(constr==='caixa') tMont=(P.montBaseMin+P.montMinPorM*perim)*cx.f*qtd/60;
     else tMont=(P.montBaseMin+P.montPecaMin*pecas)*cx.f*qtd/60;
     if(!soCorte) L('mo','mo_mont','M.O. montagem e acabamento', r2(tMont), 'h', P.horaMontador, null, constr==='caixa'?'min/m de contorno × complexidade':'base + min/peça × complexidade');
-    if(constr==='chapada'&&!soCorte&&(job.chapada||{}).acab==='vinil'){
+    if(!soCorte&&((constr==='chapada'&&(job.chapada||{}).acab==='vinil')||(constr==='caixa'&&(job.caixa||{}).vinilFace))){
       var m2a=bboxM2*qtd, hA=P.aplicBaseH+P.aplicHPorM2*m2a;
       L('mo','mo_aplic','M.O. aplicação do vinil', r2(hA), 'h', P.horaAplicador, null, P.aplicBaseH+' h + '+P.aplicHPorM2+' h/m²');
     }
