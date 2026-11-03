@@ -71,7 +71,7 @@
     eletSetupMin:20, eletPecaMin:5, eletMinPorM:2, eletMin:50,
     /* iluminação */
     led:{
-      fita:  {nome:'Fita LED',        preco:12, w:9.6, fonte:true},
+      fita:  {nome:'Fita LED',        preco:30, w:9.6, fonte:true},
       cob:   {nome:'Neon COB',        preco:35, w:10,  fonte:true},
       neon:  {nome:'Neon flex',       preco:35, w:12,  fonte:true},
       v220:  {nome:'LED 220 V',       preco:30, w:0,   fonte:false}
@@ -132,6 +132,23 @@
       cts.push(ct); per+=ct.len;
       if(ct.bb[0]<bb[0])bb[0]=ct.bb[0]; if(ct.bb[1]<bb[1])bb[1]=ct.bb[1]; if(ct.bb[2]>bb[2])bb[2]=ct.bb[2]; if(ct.bb[3]>bb[3])bb[3]=ct.bb[3];
     });
+    /* contornos idênticos em camadas diferentes (mesmo desenho duplicado) contam uma vez */
+    var dup=0, vistos=[];
+    cts=cts.filter(function(ct){
+      for(var i=0;i<vistos.length;i++){ var v=vistos[i]; if(Math.abs(v.bb[0]-ct.bb[0])<0.5&&Math.abs(v.bb[1]-ct.bb[1])<0.5&&Math.abs(v.bb[2]-ct.bb[2])<0.5&&Math.abs(v.bb[3]-ct.bb[3])<0.5&&Math.abs(v.len-ct.len)<0.005*v.len){ per-=ct.len; dup++; return false; } }
+      vistos.push(ct); return true;
+    });
+    /* moldura: contorno retangular do tamanho de todo o conjunto, desenhado junto com as peças → não é peça (só se houver outros contornos) */
+    var avMold=null;
+    if(cts.length>3){
+      var W0=bb[2]-bb[0], H0=bb[3]-bb[1], fr=[];
+      cts.forEach(function(ct){ var w=ct.bb[2]-ct.bb[0], h=ct.bb[3]-ct.bb[1]; if(ct.c&&w>=0.985*W0&&h>=0.985*H0&&ct.len>=1.8*(w+h)) fr.push(ct); });
+      if(fr.length){
+        fr.forEach(function(ct){ cts.splice(cts.indexOf(ct),1); per-=ct.len; });
+        bb=[Infinity,Infinity,-Infinity,-Infinity]; cts.forEach(function(ct){ if(ct.bb[0]<bb[0])bb[0]=ct.bb[0]; if(ct.bb[1]<bb[1])bb[1]=ct.bb[1]; if(ct.bb[2]>bb[2])bb[2]=ct.bb[2]; if(ct.bb[3]>bb[3])bb[3]=ct.bb[3]; });
+        avMold='Moldura retangular do arquivo ('+Math.round(W0)+' × '+Math.round(H0)+' mm) ignorada: não é peça.';
+      }
+    }
     if(!cts.length) return {fonte:'arquivo', nome:doc.nome, pecas:0, vazados:0, areaM2:0, perimM:0, bboxMm:[0,0], pecasLista:[], avisos:['Nenhum contorno nas camadas escolhidas.']};
     var pcs=R._pecasDe(cts), area=0, vaz=0, lista=[];
     pcs.forEach(function(pc){
@@ -139,6 +156,8 @@
       lista.push({w:pc.mr.w, h:pc.mr.h, areaMm2:pc.area});
     });
     var geo={fonte:'arquivo', nome:doc.nome, pecas:pcs.length, vazados:vaz, areaM2:area/1e6, perimM:per/1000, bboxMm:[bb[2]-bb[0], bb[3]-bb[1]], pecasLista:lista, avisos:(doc.avisos||[]).slice()};
+    if(avMold) geo.avisos.push(avMold);
+    if(dup) geo.avisos.push(dup+' contorno(s) duplicado(s) em outras camadas contado(s) uma vez.');
     var lays={}; cts.forEach(function(c){ lays[c.L]=1; });
     Object.defineProperty(geo,'_doc',{value:doc,enumerable:false,writable:true});
     Object.defineProperty(geo,'_camadas',{value:Object.keys(lays),enumerable:false,writable:true});
@@ -191,7 +210,7 @@
        geo (geoDeDoc/geoDeTexto), constr: 'chapada'|'caixa'|'impressao3d',
        chapada:{mat, acab:'vinil'|'pintura'|'nenhum', vinil:'fosco'|'uv'|'lam'|'recorte', cores},
        caixa:{face, lateral, fundo ('sem' ou id), prof (cm), ilum:'nenhuma'|'halo'|'frontlit'|'backlight'|'dupla', led, pintura(bool), cores},
-       i3d:{peso_g, tempo_h, semPerda, fil:'petg_tr'|'petg_bo'|'pla'|'asa', paredeMm(0=auto), kg(R$/kg, 0=padrão)},
+       i3d:{peso_g, tempo_h, semPerda, fil:'petg_tr'|'petg_bo'|'pla'|'asa', paredeMm(0=auto), kg(R$/kg, 0=padrão), frente:'nenhum'|id acrílico, fundo:'nenhum'|id},
        gabarito:{on, modo:'mdf3'|'papel'}, instalacao:'cliente'|'sulsign'|'pdvex', alturaInst,
        extras:[{desc,valor,grupo}], params (override), ovr:{chave:{q,p}|valor}
      } */
@@ -315,7 +334,8 @@
       var i3=job.i3d||{}, p3=P.p3d;
       var prof3=Math.max(0.5,num(job.caixa&&job.caixa.prof)||5)/100;
       var peso, filKey=(i3.fil==='petg'||!i3.fil)?'petg_tr':i3.fil, filNome=(p3.fils[filKey]||{nome:String(filKey).toUpperCase()}).nome, Hmm=prof3*1000;
-      var maior=Math.max(geo.bboxMm[0]||0,geo.bboxMm[1]||0,Hmm), tpar=num(i3.paredeMm)>0?num(i3.paredeMm):LCX.paredeAuto(maior);
+      var maior=Hmm; (geo.pecasLista||[]).forEach(function(q){ maior=Math.max(maior,q.w||0,q.h||0); }); if(!(geo.pecasLista||[]).length) maior=Math.max(maior,geo.bboxMm[0]||0,geo.bboxMm[1]||0);
+      var tpar=num(i3.paredeMm)>0?num(i3.paredeMm):LCX.paredeAuto(maior);
       if(num(i3.peso_g)>0){ peso=num(i3.peso_g)*qtd*(i3.semPerda?1:(1+p3.perda/100)); }
       else { var pu=p3.kParede*perim*Hmm*tpar + area*p3.baseMm*1000*p3.dens; peso=pu*qtd*(1+p3.perda/100); avisos.push('Peso do filamento ESTIMADO (parede '+tpar+' mm'+(num(i3.paredeMm)>0?'':' automática')+', altura '+Math.round(Hmm)+' mm): leia o G-code ou informe o peso do fatiador para o valor real.'); }
       var horas=num(i3.tempo_h)>0?num(i3.tempo_h)*qtd*(i3.semPerda?1:(1+p3.perda/100)):peso/(p3.ghora*p3.fator);
@@ -325,6 +345,10 @@
       var lMq=L('eqp','maq3d','Hora de máquina 3D', r2(horas), 'h', p3.horaMaq, null, num(i3.tempo_h)>0?'tempo informado':'peso ÷ ('+p3.ghora+' g/h × '+p3.fator+')');
       mpTotal+=lMq.custo;
       materiais.push({chave:'filamento', material:'Filamento '+filNome, fam:'3D', uso:'Impressão', chapa:null, precoChapa:kg, envM2:0, liqM2:0, m2Cobrado:0, custo:lFil.custo, nota:lFil.nota, medida:r2(peso)+' g · '+r2(horas)+' h'});
+      /* frente e fundo em acrílico (placa de fixação no contorno do logo) */
+      var fr3=i3.frente||'nenhum', fu3=i3.fundo||'nenhum', medBb=Math.round(geo.bboxMm[0])+' × '+Math.round(geo.bboxMm[1])+' mm';
+      if(fr3!=='nenhum'){ var rF=matLinha('mp','mat_face','Frente em acrílico', fr3, pecasPrincipais, minDe(LCX.catalogo(fr3)), medBb); if(rF){ mpTotal+=rF.l.custo; if(rF.mat.fam==='Acrílico') temAcr=true; corteML+=perim*qtd; temRouter=true; } }
+      if(fu3!=='nenhum'){ var rU=matLinha('mp','mat_fundo','Chapa de fundo (fixação)', fu3, pecasPrincipais, minDe(LCX.catalogo(fu3)), medBb); if(rU){ mpTotal+=rU.l.custo; if(rU.mat.fam==='Acrílico') temAcr=true; corteML+=perim*qtd; temRouter=true; } }
       var ilu3=(job.caixa&&job.caixa.ilum)||'nenhuma';
       if(ilu3!=='nenhuma'){ luz=true; var tp3=P.led[(job.caixa&&job.caixa.led)||'fita']||P.led.fita; ledM=perim*qtd;
         var l3=L('mp','led',tp3.nome+' ('+ilu3+')', r2(ledM), 'm', tp3.preco, null, 'contorno'); mpTotal+=l3.custo;
@@ -622,7 +646,10 @@
       if(cj.ilum&&cj.ilum!=='nenhuma'){ var tp=P.led[cj.led||'fita']||P.led.fita; t.push('Iluminação: '+tp.nome+' ('+({halo:'bafo de luz (halo)',frontlit:'frontal',backlight:'backlight',dupla:'frontal e bafo de luz'}[cj.ilum])+'), com fonte chaveada dimensionada com folga de '+Math.round((P.fonteFolga-1)*100)+'%, fiação e conectores. Tensão e ponto de força por conta do local.'); }
     } else {
       t.push('Fornecimento de '+r.qtd+' ('+r.qtd+') '+nome+' em letra caixa impressa em 3D ('+((LCX.PARAMS.p3d.fils[(j.i3d||{}).fil]||LCX.PARAMS.p3d.fils.petg_tr).nome)+'), '+g.pecas+' peça(s), medindo '+dim+'.');
-      if(cj.ilum&&cj.ilum!=='nenhuma') t.push('Iluminação em LED com fonte chaveada, fiação e conectores.');
+      var i3t=j.i3d||{}, fa=i3t.frente&&i3t.frente!=='nenhum'?LCX.catalogo(i3t.frente):null, fu=i3t.fundo&&i3t.fundo!=='nenhum'?LCX.catalogo(i3t.fundo):null;
+      if(fa) t.push('Frente em '+fa.nome.toLowerCase()+' cortada no contorno'+(fu?'; chapa de fundo em '+fu.nome.toLowerCase()+' cortada no contorno do logo, para fixação.':'.'));
+      else if(fu) t.push('Chapa de fundo em '+fu.nome.toLowerCase()+' cortada no contorno do logo, para fixação.');
+      if(cj.ilum&&cj.ilum!=='nenhuma') t.push('Iluminação em '+(P.led[cj.led||'fita']||P.led.fita).nome+(cj.ledCor?' '+cj.ledCor:'')+' com fonte chaveada, fiação e conectores.');
     }
     if((j.gabarito||{}).on) t.push('Acompanha gabarito de instalação '+((j.gabarito.modo||'mdf3')==='mdf3'?'em MDF 3 mm, com janelas no contorno de cada peça e margem de '+P.gabMargem/10+' cm,':'impresso em escala 1:1 com marcas de furo,')+' que posiciona todas as peças com o espaçamento do projeto e dispensa medição na parede.');
     t.push('');

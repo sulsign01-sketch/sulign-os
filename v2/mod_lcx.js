@@ -44,8 +44,8 @@
     return {nome:'', cliente:'', projeto:'', perfil:'sulsign', nf:false, qtd:1, complexidade:'normal',
       entrada:'arquivo', texto:'', alturaCm:20, qtdLetras:0, constr:'chapada',
       chapada:{mat:'pvc15', acab:'vinil', vinil:'lam', cores:1},
-      caixa:{face:'acr3', lateral:'pvc10', fundo:'pvc5', prof:5, ilum:'nenhuma', led:'fita', pintura:false, cores:1},
-      i3d:{peso_g:0, tempo_h:0, semPerda:false, fil:'petg_tr', paredeMm:0, kg:0},
+      caixa:{face:'acr3', lateral:'pvc10', fundo:'pvc5', prof:5, ilum:'nenhuma', led:'fita', ledCor:'branco frio', pintura:false, cores:1},
+      i3d:{peso_g:0, tempo_h:0, semPerda:false, fil:'petg_tr', paredeMm:0, kg:0, frente:'nenhum', fundo:'nenhum'},
       gabarito:{on:true, modo:'mdf3'}, instalacao:'cliente', alturaInst:1, extras:[], ovr:{}, descEdit:null,
       tipo:'desenho', perfilOv:{},
       painel:{mat:'mdf15', precoChapa:'', L:3, A:2.5, aprov:74, pintura:true, pinturaFator:1.2, recorteMlM2:0, modL:2.5, modA:1.5, mlExtra:0, reqM2:0, metalonM:0, sapatas:0, ferragens:0, dias:{marc:0, serr:0, mont:0, desm:0}},
@@ -338,15 +338,18 @@
     } else {
       var i3=j.i3d;
       var fl=LCX.PARAMS.p3d.fils, fk=(i3.fil==='petg'||!i3.fil)?'petg_tr':i3.fil, kgp=LCX.PARAMS.p3d.kg[fk];
-      var tpa=(i3.paredeMm>0?i3.paredeMm:null), geoM=(st.r&&st.r.geo&&st.r.geo.bboxMm)||[0,0], tauto=LCX.paredeAuto(Math.max(geoM[0]||0,geoM[1]||0,(j.caixa.prof||5)*10));
+      var tpa=(i3.paredeMm>0?i3.paredeMm:null), geoM=(st.r&&st.r.geo&&st.r.geo.bboxMm)||[0,0], tauto=LCX.paredeAuto(Math.max.apply(null,[(j.caixa.prof||5)*10].concat((st.r&&st.r.geo&&st.r.geo.pecasLista||[]).map(function(q){ return Math.max(q.w||0,q.h||0); }))));
       h+='<div class="lcx-row">'+fld('Peso do fatiador (g, 1 un)', inp('job.i3d.peso_g',i3.peso_g||'','n'),'1 1 150px')+fld('Tempo do fatiador (h, 1 un)', inp('job.i3d.tempo_h',i3.tempo_h||'','n'),'1 1 150px')
         +'<div style="padding-bottom:6px"><label class="btn ghost sm" style="cursor:pointer">Ler G-code do PrusaSlicer…<input type="file" id="lcx-gcode" accept=".gcode,.gco,.g,.txt" multiple style="display:none"></label></div>'
         +'<div>'+chk('job.i3d.semPerda',i3.semPerda,'Já inclui perda/falhas')+'</div></div>';
       h+='<div class="lcx-row">'+fld('Filamento (acabamento)', sel('job.i3d.fil',fk,Object.keys(fl).map(function(k){ return [k,fl[k].nome+' — R$ '+LCX.PARAMS.p3d.kg[k]+'/kg']; })),'2 1 230px')
         +fld('R$/kg (vazio = padrão)', inp('job.i3d.kg',i3.kg||'','n'),'0 1 130px')
-        +fld('Parede (mm) — vazio = automática ('+nf(tauto,1)+' mm)', inp('job.i3d.paredeMm',tpa||'','n'),'1 1 200px')+'</div>';
+        +fld('Parede (mm) — vazio = automática pela maior peça ('+nf(tauto,1)+' mm)', inp('job.i3d.paredeMm',tpa||'','n'),'1 1 200px')+'</div>';
+      var acrs=[['nenhum','— sem —']].concat(LCX.listaMateriais(['Acrílico']).map(function(m){ return [m.id, m.nome+(m.preco>0?' — '+fmt(m.preco)+'/chapa':'')]; }));
+      h+='<div class="lcx-row">'+fld('Frente em acrílico', sel('job.i3d.frente',i3.frente||'nenhum',acrs),'1 1 230px')+fld('Chapa de fundo / fixação (acrílico)', sel('job.i3d.fundo',i3.fundo||'nenhum',acrs),'1 1 230px')+'</div>';
       if(st.gcMsg) h+='<div class="lcx-mut" style="margin:-4px 0 8px">'+esc(st.gcMsg)+'</div>';
       h+='<div class="lcx-row">'+fld('Profundidade (cm)', inp('job.caixa.prof',j.caixa.prof,'n'),'0 1 110px')+fld('Iluminação', sel('job.caixa.ilum',j.caixa.ilum,[['nenhuma','Sem luz'],['halo','Bafo de luz'],['frontlit','Frontal'],['backlight','Backlight']]),'1 1 170px');
+      if(j.caixa.ilum!=='nenhuma') h+=fld('Cor da luz', inp('job.caixa.ledCor',j.caixa.ledCor||'','t'),'1 1 130px');
       if(j.caixa.ilum!=='nenhuma') h+=fld('Tipo de LED', sel('job.caixa.led',j.caixa.led,Object.keys(LCX.PARAMS.led).map(function(k){ return [k,LCX.PARAMS.led[k].nome]; })),'1 1 170px');
       h+='</div>';
     }
